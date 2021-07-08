@@ -1,0 +1,60 @@
+@Library('csm-shared-library') _
+
+pipeline {
+    agent {
+        label "metal-gcp-builder"
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: "10"))
+        timestamps()
+    }
+
+    environment {
+        NAME = "hms-trs-app-api"
+        DESCRIPTION = "Cray HMS TRS API library package."
+        IS_STABLE = getBuildIsStable()
+        VERSION = getDockerBuildVersion(isStable: env.IS_STABLE)
+        DOCKER_ARGS = getDockerBuildArgs(name: env.NAME, description: env.DESCRIPTION)
+    }
+
+    stages {
+        stage("Build") {
+            steps {
+                sh "make image"
+            }
+        }
+
+        stage("Run Unit Tests") {
+            steps {
+                sh "make unittest"
+            }
+        }
+
+        stage("Run Coverage Tests") {
+            steps {
+                sh "make coverage"
+            }
+        }
+
+        stage("Snyk") {
+            steps {
+                sh "make snyk"
+            }
+        }
+   
+        stage("Integration") {
+            steps {
+                sh "make integration"
+            }
+        }
+
+        stage("Publish") {
+            steps {
+                script {
+                    publishCsmDockerImage(image: env.NAME, tag: env.VERSION, isStable: env.IS_STABLE)
+                }
+            }
+        }
+    }
+}
