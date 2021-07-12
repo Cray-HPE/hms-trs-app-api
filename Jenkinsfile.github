@@ -37,12 +37,6 @@ pipeline {
             }
         }
 
-        stage("Snyk") {
-            steps {
-                sh "make snyk"
-            }
-        }
-   
         stage("Integration") {
             steps {
                 sh "make integration"

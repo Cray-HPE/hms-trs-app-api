@@ -1,7 +1,7 @@
 NAME ?= hms-trs-app-api
 VERSION ?= $(shell cat .version)
 
-all: image unittest coverage snyk integration
+all: image unittest coverage integration
 
 image:
 	docker build --pull ${DOCKER_ARGS} --tag '${NAME}:${VERSION}' .
@@ -11,9 +11,6 @@ unittest:
 
 coverage:
 	./runCoverage.sh
-
-snyk:
-	./runSnyk.sh
 
 integration:
 	./runIntegration.sh
