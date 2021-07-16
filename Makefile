@@ -15,6 +15,3 @@ coverage:
 integration:
 	./runIntegration.sh
 
-buildbase:
-	docker build -t cray/hms-trs-app-api-build-base -f Dockerfile.build-base .
-
