@@ -26,14 +26,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
 	"os"
-	trsapi "github.com/Cray-HPE/hms-trs-app-api/v2/pkg/trs_http_api"
 	"strconv"
 	"strings"
 	"time"
+
+	trsapi "github.com/Cray-HPE/hms-trs-app-api/v2/pkg/trs_http_api"
+	"github.com/sirupsen/logrus"
 )
 
 type PayloadData struct {
@@ -53,11 +54,11 @@ func main() {
 
 	var source trsapi.HttpTask
 
-
 	var envstr string
 	var tloc trsapi.TrsAPI
 	//var worker interface{}
 
+	exitCode := 0
 
 	deadline := 10
 	numops := 2
@@ -75,7 +76,6 @@ func main() {
 		worker.Logger = logy
 		tloc = worker
 	}
-
 
 	envstr = os.Getenv("DEADLINE")
 	if envstr != "" {
@@ -135,8 +135,6 @@ func main() {
 		logy.SetLevel(logrus.GetLevel())
 	}
 
-
-
 	source.Request, _ = http.NewRequest(opType, "http://www.example.org", nil)
 
 	source.Request.Method = opType
@@ -154,10 +152,9 @@ func main() {
 	taskArray := tloc.CreateTaskList(&source, numops)
 
 	for ii := 0; ii < numops; ii++ {
-			//TODO make this several types of things to try!
-			logrus.Trace(ii, taskArray[ii].GetID())
-			taskArray[ii].Request.URL, _ = url.Parse(fmt.Sprintf("http://www.example.org/v1/EP/%d", ii))
-
+		//TODO make this several types of things to try!
+		logrus.Trace(ii, taskArray[ii].GetID())
+		taskArray[ii].Request.URL, _ = url.Parse(fmt.Sprintf("http://www.example.org/v1/EP/%d", ii))
 
 	}
 	rchan, err := tloc.Launch(&taskArray)
@@ -165,9 +162,9 @@ func main() {
 		logrus.Printf("Launch() return error: '%v'\n", err)
 	}
 
+	goterr := false
 	if useChan {
 		logrus.Printf("using CHAN")
-		goterr := false
 		nDone := 0
 		nErr := 0
 		for {
@@ -200,7 +197,6 @@ func main() {
 		//and call the Cancel() method at the right time.
 
 		startTime := time.Now()
-		goterr := false
 		var ix int
 		for ix = 0; ix < 1000000; ix++ {
 			if cancelTime > 0 {
@@ -217,6 +213,7 @@ func main() {
 				goterr = true
 			}
 			if !running {
+				exitCode = 1
 				break
 			}
 			time.Sleep(100 * time.Millisecond)
@@ -233,9 +230,10 @@ func main() {
 	tloc.Cleanup()
 	time.Sleep(2 * time.Second)
 
-
-
 	logrus.Printf("Goodbye")
 
-	os.Exit(0)
+	if goterr {
+		exitCode = 1
+	}
+	os.Exit(exitCode)
 }

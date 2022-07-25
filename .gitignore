@@ -1,6 +1,7 @@
 .idea/
 go_build_testApp_go
 testApp
+*.swp
 
 # Prevent certificates from getting checked in
 *.ca
