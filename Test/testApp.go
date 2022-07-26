@@ -199,6 +199,7 @@ func main() {
 		startTime := time.Now()
 		var ix int
 		for ix = 0; ix < 1000000; ix++ {
+			logrus.Printf("Polling %d", ix)
 			if cancelTime > 0 {
 				elapsed := time.Since(startTime)
 				logrus.Printf("EL: %f, CT: %f", elapsed.Seconds(), float64(cancelTime))
@@ -211,9 +212,10 @@ func main() {
 			running, err := tloc.Check(&taskArray)
 			if err != nil {
 				goterr = true
+				logrus.Printf("Got error: %v", err)
+				break
 			}
 			if !running {
-				exitCode = 1
 				break
 			}
 			time.Sleep(100 * time.Millisecond)
