@@ -25,20 +25,14 @@
 NAME ?= hms-trs-app-api
 VERSION ?= $(shell cat .version)
 
-#all:  unittest integration
-#.PHONY:  unittest integration
 all:  unittest ct_image
-.PHONY:  unittest integration
+.PHONY:  unittest ct_image
 
 unittest:
 	go test  ./pkg/trs_http_api/... -cover
 	# no -v -tags musl
 
-# integration:
-# 	go run ./Test
-# 	# no -v -tags musl
-
 ct_image:
-	docker build ${NO_CACHE} --pull ${DOCKER_ARGS} --tag '${NAME}:${VERSION}' -f Dockerfile.integration .
+	docker build ${NO_CACHE} --pull ${DOCKER_ARGS} --tag '${NAME}-testapp:${VERSION}' -f Dockerfile.testapp .
 
 
