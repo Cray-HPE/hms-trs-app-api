@@ -1,6 +1,6 @@
-# github.com/Cray-HPE/hms-base v1.15.0
+# github.com/Cray-HPE/hms-base/v2 v2.0.1
 ## explicit
-github.com/Cray-HPE/hms-base
+github.com/Cray-HPE/hms-base/v2
 # github.com/Cray-HPE/hms-trs-kafkalib/v2 v2.0.1
 ## explicit
 github.com/Cray-HPE/hms-trs-kafkalib/v2/pkg/trs-kafkalib
@@ -15,9 +15,9 @@ github.com/fsnotify/fsnotify
 # github.com/google/uuid v1.1.1
 ## explicit
 github.com/google/uuid
-# github.com/hashicorp/go-cleanhttp v0.5.1
+# github.com/hashicorp/go-cleanhttp v0.5.2
 github.com/hashicorp/go-cleanhttp
-# github.com/hashicorp/go-retryablehttp v0.6.4
+# github.com/hashicorp/go-retryablehttp v0.7.7
 ## explicit
 github.com/hashicorp/go-retryablehttp
 # github.com/pmezard/go-difflib v1.0.0
@@ -25,11 +25,13 @@ github.com/pmezard/go-difflib/difflib
 # github.com/sirupsen/logrus v1.8.1
 ## explicit
 github.com/sirupsen/logrus
-# github.com/stretchr/testify v1.3.0
+# github.com/stretchr/testify v1.7.2
 ## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
 github.com/stretchr/testify/suite
-# golang.org/x/sys v0.0.0-20191026070338-33540a1f6037
+# golang.org/x/sys v0.20.0
 golang.org/x/sys/unix
 golang.org/x/sys/windows
+# gopkg.in/yaml.v3 v3.0.1
+gopkg.in/yaml.v3

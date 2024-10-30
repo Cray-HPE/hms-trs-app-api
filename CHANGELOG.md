@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2024-10-31
+
+### Changed
+
+- Updated go-retryablehttp from v0.6.4 to v0.7.7
+- Updated hms-base from v1.15.0 to v2.0.1
+
 ## [2.0.0] - 2022-01-07
 
 ### Changed
