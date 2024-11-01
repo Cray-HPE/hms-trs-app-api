@@ -334,7 +334,7 @@ func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 	for _, v := range *taskList {
 		if (v.Ignore == false) {
 			if v.Request.Response != nil && v.Err == nil {
-				v.Response.Body.Close()
+				v.Request.Response.Body.Close()
 			}
 		}
 		tloc.taskMutex.Lock()
