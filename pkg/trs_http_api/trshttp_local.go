@@ -333,7 +333,7 @@ func (tloc *TRSHTTPLocal) Cancel(taskList *[]HttpTask) {
 func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 	for _, v := range *taskList {
 		if (v.Ignore == false) {
-			if v.Request.Response != nil && v.Err == nil {
+			if v.Request.Response != nil && v.Request.Response.Body != nil && v.Err == nil {
 				v.Request.Response.Body.Close()
 			}
 		}
