@@ -235,8 +235,17 @@ func (tloc *TRSHTTPLocal) Launch(taskList *[]HttpTask) (chan *HttpTask, error) {
 		return rchan, err
 	}
 
-	//Set all time stamps
-	taskListChannel := make(chan *HttpTask, len(*taskList))
+    
+	// Calculate the actual number of tasks that will use the channel
+	activeTaskCount := 0
+	for _, task := range *taskList {
+		if !task.Ignore {
+			activeTaskCount++
+		}
+	}
+
+	// Create the channel sized appropriately
+	taskListChannel := make(chan *HttpTask, activeTaskCount)
 
 	for ii := 0; ii < len(*taskList); ii++ {
 		if (*taskList)[ii].Ignore == true {
@@ -325,22 +334,40 @@ func (tloc *TRSHTTPLocal) Cancel(taskList *[]HttpTask) {
 	}
 }
 
-// Close out a task list transaction.  The frees up a small amount of resources
-// so it should not be skipped.
+// Close out a task list transaction and free up all associated resources
 //
 // taskList:  Ptr to a recently launched task list.
 
 func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 	for _, v := range *taskList {
-		if (v.Ignore == false) {
-			if v.Request.Response != nil && v.Request.Response.Body != nil {
-				v.Request.Response.Body.Close()
-			}
+		if (v.Ignore == true) {
+			// If we're ignoring this task then it has no context,
+			// response body, or channel.  Just delete it from the
+			// task map and continue to the next task
+			tloc.taskMutex.Lock()
+			delete(tloc.taskMap, v.id)
+			tloc.taskMutex.Unlock()
+			continue
 		}
-		tloc.taskMutex.Lock()
-		delete(tloc.taskMap, v.id)
-		tloc.taskMutex.Unlock()
 
+		// Cancel the context to signal termination to the processes in
+		// the task if they haven't already terminated
+		v.contextCancel()
+
+		// Close the response body - Terminates the connection if the
+		// cancelled context hasn't already done so.  Releases all
+		// resources associated with the response.
+		if v.Request != nil && v.Request.Response != nil && v.Request.Response.Body != nil {
+			v.Request.Response.Body.Close()
+		}
+
+		// Close the channel and delete the task from the task map
+		tloc.taskMutex.Lock()
+		if tct, ok := tloc.taskMap[v.id]; ok {
+			close(tct.taskListChannel)
+			delete(tloc.taskMap, v.id)
+		}
+		tloc.taskMutex.Unlock()
 	}
 }
 
