@@ -36,6 +36,8 @@ import (
 var svcName = "TestMe"
 
 func TestInit(t *testing.T) {
+	t.Logf("TestInit started")
+
 	tloc := &TRSHTTPLocal{}
 
 	tloc.Init(svcName,nil)
@@ -48,9 +50,12 @@ func TestInit(t *testing.T) {
 	if (tloc.svcName != svcName) {
 		t.Errorf("Init() failed to set service name")
 	}
+	t.Logf("TestInit completed")
 }
 
 func TestCreateTaskList(t *testing.T) {
+	t.Logf("TestCreateTaskList started")
+
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName,nil)
 	req,_ := http.NewRequest("GET","http://www.example.com",nil)
@@ -83,6 +88,7 @@ func TestCreateTaskList(t *testing.T) {
 			t.Errorf("CreateTaskList() didn't copy User-Agent header.")
 		}
 	}
+	t.Logf("TestCreateTaskList completed")
 }
 
 func hasUserAgentHeader(r *http.Request) bool {
@@ -119,6 +125,8 @@ func stallHandler(w http.ResponseWriter, req *http.Request) {
 
 
 func TestLaunch(t *testing.T) {
+	t.Logf("TestLaunch started")
+
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName,nil)
 
@@ -170,9 +178,12 @@ func TestLaunch(t *testing.T) {
 	if (nErr != 0) {
 		t.Errorf("Got %d errors from Launch",nErr)
 	}
+	t.Logf("TestLaunch completed")
 }
 
 func TestLaunchTimeout(t *testing.T) {
+	t.Logf("TestLaunchTimeout started")
+
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName,nil)
 	srv := httptest.NewServer(http.HandlerFunc(stallHandler))
@@ -213,6 +224,7 @@ func TestLaunchTimeout(t *testing.T) {
 	if (nErr != 0) {
 		t.Errorf("Got %d errors from Launch",nErr)
 	}
+	t.Logf("TestLaunchTimeout completed")
 }
 
 // CustomReadCloser wraps an io.ReadCloser and tracks if it was closed.
@@ -237,6 +249,8 @@ func stallForeverHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func TestClose(t *testing.T) {
+	t.Logf("TestClose started")
+
 	numTasks := 5
 	numStallTasks := 5
 
@@ -327,9 +341,13 @@ func TestClose(t *testing.T) {
 	if (len(tloc.taskMap) != 0) {
 		t.Errorf("Close() failed to clear task map.")
 	}
+
+	t.Logf("TestClose completed")
 }
 
 func TestCleanup(t *testing.T) {
+	t.Logf("TestCleanup started")
+
 	numTasks := 5
 
 	// Initialize the tloc
@@ -376,4 +394,5 @@ func TestCleanup(t *testing.T) {
 		t.Errorf("Cleanup() failed to clear task map.")
 	}
 
+	t.Logf("TestCleanup completed")
 }
