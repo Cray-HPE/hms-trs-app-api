@@ -354,7 +354,7 @@ func TestCleanup(t *testing.T) {
 	// Call Close() without calling Cleanup()
 	tloc.Cleanup()
 
-	// TestClose() thoroughly tests the Close() function so we only need
+	// TestClose() thoroughly tests the closeTask() function so we only need
 	// to test higher level things
 
 	// Check if the context was canceled
