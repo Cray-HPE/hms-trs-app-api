@@ -26,7 +26,7 @@ all:  unittest integration
 .PHONY:  unittest integration
 
 unittest:
-	go test  ./pkg/trs_http_api/... -cover
+	go test -v ./pkg/trs_http_api/... -cover
 	# no -v -tags musl
 
 integration:
