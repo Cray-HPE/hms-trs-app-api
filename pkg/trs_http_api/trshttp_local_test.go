@@ -239,7 +239,6 @@ func stallForeverHandler(w http.ResponseWriter, req *http.Request) {
 func TestClose(t *testing.T) {
 	numTasks := 5
 	numStallTasks := 5
-	totalTasks := numTasks + numStallTasks
 
 	// Initialize the tloc
 	tloc := &TRSHTTPLocal{}
@@ -279,8 +278,8 @@ func TestClose(t *testing.T) {
 		t.Errorf("Launch ERROR: %v", err)
 	}
 
-	// Wait for the tasks to finish
-	for i := 0; i < totalTasks; i++ {
+	// Wait for the tasks we expect to finish, to finish
+	for i := 0; i < numTasks; i++ {
 		<-taskListChannel
 	}
 
