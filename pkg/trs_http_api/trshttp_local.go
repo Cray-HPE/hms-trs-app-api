@@ -345,10 +345,19 @@ func (tloc *TRSHTTPLocal) closeTask(task *HttpTask) {
 
 	// Close the channel and delete the task from the task map
 	// Note that ignored tasks were allocated a channel and thus
-	// need to have theirs closed too
+	// need to have their channels closed too
 	tloc.taskMutex.Lock()
 	if tct, ok := tloc.taskMap[task.id]; ok {
-		close(tct.taskListChannel)
+		// If coming in through Cleanup(), the channel may already be closed
+		select {
+		case <-tct.taskListChannel:
+			//Channel is already closed, do nothing
+		default:
+			//Channel is open, close it
+			close(tct.taskListChannel)
+		}
+
+		// Delete the task from the task map
 		delete(tloc.taskMap, task.id)
 	}
 	tloc.taskMutex.Unlock()
@@ -388,5 +397,4 @@ func (tloc *TRSHTTPLocal) Cleanup() {
 	for k := range tloc.taskMap {
 		tloc.closeTask(tloc.taskMap[k].task)
 	}
-	// this really just a big red button to STOP ALL? b/c im not clearing any memory
 }
