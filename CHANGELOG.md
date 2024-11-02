@@ -9,8 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fixed primary resource leak where non-active tasks were included in task list channel size
-- Explicitly cancel each task's context and close its channel when closing the task list
+- Fixed taskListChannel resource leak in Close()
+- Explicitly call contextCancel() on every task at Close() time
+- Fixed multiple resource leaks in Cleanup()
+- Add unit tests for Close() and Cleanup()
 
 ## [2.1.1] - 2024-10-31
 
