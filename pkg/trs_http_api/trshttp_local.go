@@ -1,17 +1,17 @@
 // MIT License
-// 
+//
 // (C) Copyright [2020-2021,2024] Hewlett Packard Enterprise Development LP
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
 // to deal in the Software without restriction, including without limitation
 // the rights to use, copy, modify, merge, publish, distribute, sublicense,
 // and/or sell copies of the Software, and to permit persons to whom the
 // Software is furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included
 // in all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
@@ -19,7 +19,6 @@
 // OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
-
 
 package trs_http_api
 
@@ -29,12 +28,13 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net/http"
+	"time"
+
+	base "github.com/Cray-HPE/hms-base/v2"
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/sirupsen/logrus"
-	"net/http"
-	"time"
-	"github.com/Cray-HPE/hms-base/v2"
 )
 
 const (
@@ -235,17 +235,7 @@ func (tloc *TRSHTTPLocal) Launch(taskList *[]HttpTask) (chan *HttpTask, error) {
 		return rchan, err
 	}
 
-    
-	// Calculate the actual number of tasks that will use the channel
-	activeTaskCount := 0
-	for _, task := range *taskList {
-		if !task.Ignore {
-			activeTaskCount++
-		}
-	}
-
-	// Create the channel sized appropriately
-	taskListChannel := make(chan *HttpTask, activeTaskCount)
+	taskListChannel := make(chan *HttpTask, len(*taskList))
 
 	for ii := 0; ii < len(*taskList); ii++ {
 		if (*taskList)[ii].Ignore == true {
@@ -334,40 +324,43 @@ func (tloc *TRSHTTPLocal) Cancel(taskList *[]HttpTask) {
 	}
 }
 
+// Close out an individual task transaction and free up all associated
+// resources
+//
+// task:  Ptr to a recently launched task
+
+func (tloc *TRSHTTPLocal) closeTask(task *HttpTask) {
+	if (task.Ignore == false) {
+		// Cancel the context to signal termination to the context
+		// if it has not already terminated or timed out
+		task.contextCancel()
+
+		// Close the response body to release all resources associated
+		// with the response. It first terminates the http connection
+		// if its still up
+		if task.Request.Response != nil && task.Request.Response.Body != nil {
+			task.Request.Response.Body.Close()
+		}
+	}
+
+	// Close the channel and delete the task from the task map
+	// Note that ignored tasks were allocated a channel and thus
+	// need to have theirs closed too
+	tloc.taskMutex.Lock()
+	if tct, ok := tloc.taskMap[task.id]; ok {
+		close(tct.taskListChannel)
+		delete(tloc.taskMap, task.id)
+	}
+	tloc.taskMutex.Unlock()
+}
+
 // Close out a task list transaction and free up all associated resources
 //
 // taskList:  Ptr to a recently launched task list.
 
 func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 	for _, v := range *taskList {
-		if (v.Ignore == true) {
-			// If we're ignoring this task then it has no context,
-			// response body, or channel.  Just delete it from the
-			// task map and continue to the next task
-			tloc.taskMutex.Lock()
-			delete(tloc.taskMap, v.id)
-			tloc.taskMutex.Unlock()
-			continue
-		}
-
-		// Cancel the context to signal termination to the processes in
-		// the task if they haven't already terminated
-		v.contextCancel()
-
-		// Close the response body - Terminates the connection if the
-		// cancelled context hasn't already done so.  Releases all
-		// resources associated with the response.
-		if v.Request != nil && v.Request.Response != nil && v.Request.Response.Body != nil {
-			v.Request.Response.Body.Close()
-		}
-
-		// Close the channel and delete the task from the task map
-		tloc.taskMutex.Lock()
-		if tct, ok := tloc.taskMap[v.id]; ok {
-			close(tct.taskListChannel)
-			delete(tloc.taskMap, v.id)
-		}
-		tloc.taskMutex.Unlock()
+		tloc.closeTask(&v)
 	}
 }
 
@@ -393,15 +386,7 @@ func (tloc *TRSHTTPLocal) Cleanup() {
 
 	//clean up task map
 	for k := range tloc.taskMap {
-		//cancel it first
-		tloc.taskMap[k].task.contextCancel()
-		//close the channel
-		close(tloc.taskMap[k].taskListChannel)
-		//delete it out of the map
-		tloc.taskMutex.Lock()
-		delete(tloc.taskMap, k)
-		tloc.taskMutex.Unlock()
-
+		tloc.closeTask(tloc.taskMap[k].task)
 	}
 	// this really just a big red button to STOP ALL? b/c im not clearing any memory
 }

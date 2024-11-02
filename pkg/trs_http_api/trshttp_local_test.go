@@ -1,17 +1,17 @@
 // MIT License
-// 
+//
 // (C) Copyright [2021,2024] Hewlett Packard Enterprise Development LP
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
 // to deal in the Software without restriction, including without limitation
 // the rights to use, copy, modify, merge, publish, distribute, sublicense,
 // and/or sell copies of the Software, and to permit persons to whom the
 // Software is furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included
 // in all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
@@ -20,15 +20,17 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-
 package trs_http_api
 
 import (
-	"github.com/Cray-HPE/hms-base/v2"
-	"testing"
-	"time"
+	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"testing"
+	"time"
+
+	base "github.com/Cray-HPE/hms-base/v2"
 )
 
 var svcName = "TestMe"
@@ -213,3 +215,166 @@ func TestLaunchTimeout(t *testing.T) {
 	}
 }
 
+// CustomReadCloser wraps an io.ReadCloser and tracks if it was closed.
+// This is used to test if response bodies are being closed properly.
+type CustomReadCloser struct {
+    io.ReadCloser
+	closed bool
+}
+
+func (c *CustomReadCloser) Close() error {
+	c.closed = true
+	return c.ReadCloser.Close()
+}
+
+func (c *CustomReadCloser) WasClosed() bool {
+	return c.closed
+}
+
+// Simulate a long-running task by stalling indefinitely
+func stallHandler(w http.ResponseWriter, req *http.Request) {
+    select {}
+}
+
+func TestClose(t *testing.T) {
+	numTasks := 5
+	numStallTasks := 5
+	totalTasks := numTasks + numStallTasks
+
+	// Initialize the tloc
+	tloc := &TRSHTTPLocal{}
+	tloc.Init(svcName, nil)
+
+	// Create a test server and http requests for tasks that complete
+	srv := httptest.NewServer(http.HandlerFunc(launchHandler))
+	defer srv.Close()
+
+	req, err := http.NewRequest("GET", srv.URL, nil)
+	if err != nil {
+        t.Fatalf("Failed to create request: %v", err)
+    }
+	tproto := HttpTask{Request: req, Timeout: 8*time.Second,}
+
+	// Create a task list with these initial tasks
+	tList := tloc.CreateTaskList(&tproto, numTasks)
+
+	// Create a second test server to simulate long-running
+	// tasks that never finish
+	stallSrv := httptest.NewServer(http.HandlerFunc(stallHandler))
+	defer stallSrv.Close()
+
+	stallReq, err := http.NewRequest("GET", stallSrv.URL, nil)
+	if err != nil {
+        t.Fatalf("Failed to create request: %v", err)
+    }
+	stallProto := HttpTask{Request: stallReq, Timeout: 8*time.Second,}
+	stallList := tloc.CreateTaskList(&stallProto, numStallTasks)
+
+	// Append the long-running tasks to the task list
+	tList = append(tList, stallList...)
+
+	// Launch the task list
+	taskListChannel, err := tloc.Launch(&tList)
+	if (err != nil) {
+		t.Errorf("Launch ERROR: %v", err)
+	}
+
+	// Wait for the tasks to finish
+	for i := 0; i < totalTasks; i++ {
+		<-taskListChannel
+	}
+
+	// Wrap the response body in a CustomReadCloser so we can
+	// test if the response body gets closed
+	for _, tsk := range(tList) {
+		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
+		}
+	}
+
+	// Close the task list
+	tloc.Close(&tList)
+
+	for _, tsk := range(tList) {
+	    // Check if the context was canceled
+		select {
+		case <-tsk.context.Done():
+			if tsk.context.Err() != context.Canceled {
+				t.Errorf("Expected context to be canceled, but got: %v", tsk.context.Err())
+			}
+		default:
+			t.Errorf("Expected context to be done, but it is still active")
+		}
+
+		// Check if the response body was closed
+		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+			if !tsk.Request.Response.Body.(*CustomReadCloser).WasClosed() {
+				t.Errorf("Expected response body to be closed, but it was not")
+			}
+		}
+	}
+
+	// Check if the taskListChannel was closed
+	select {
+	case _, ok := <-taskListChannel:
+		if ok {
+			t.Errorf("CloseTask() failed to close taskListChannel.")
+		}
+	default:
+		t.Errorf("CloseTask() failed to close taskListChannel.")
+	}
+
+	// Task list should be empty
+	if (len(tloc.taskMap) != 0) {
+		t.Errorf("Close() failed to clear task map.")
+	}
+}
+
+func TestCleanup(t *testing.T) {
+	numTasks := 5
+
+	// Initialize the tloc
+	tloc := &TRSHTTPLocal{}
+	tloc.Init(svcName, nil)
+
+	// Create a test server and http requests
+	srv := httptest.NewServer(http.HandlerFunc(launchHandler))
+	defer srv.Close()
+
+	req,_ := http.NewRequest("GET", srv.URL, nil)
+	tproto := HttpTask{Request: req, Timeout: 8*time.Second,}
+	tList := tloc.CreateTaskList(&tproto, numTasks)
+
+	// Launch the task list
+	_, err := tloc.Launch(&tList)
+	if (err != nil) {
+		t.Errorf("Launch ERROR: %v", err)
+	}
+
+	// Call Close() without calling Cleanup()
+	tloc.Cleanup()
+
+	// TestClose() thoroughly tests the Close() function so we only need
+	// to test higher level things
+
+	// Check if the context was canceled
+	select {
+	case <-tloc.ctx.Done():
+		if tloc.ctx.Err() != context.Canceled {
+			t.Errorf("Expected context to be canceled, but got: %v", tloc.ctx.Err())
+		}
+	default:
+		t.Errorf("Expected context to be done, but it is still active")
+	}
+
+	// Client map should be empty
+	if (len(tloc.clientMap) != 0) {
+		t.Errorf("Cleanup() failed to clear client map.")
+	}
+
+	// Double check that the task list is empty
+	if (len(tloc.taskMap) != 0) {
+		t.Errorf("Cleanup() failed to clear task map.")
+	}
+
+}
