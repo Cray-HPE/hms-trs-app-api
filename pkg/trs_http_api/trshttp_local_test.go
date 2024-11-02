@@ -232,7 +232,7 @@ func (c *CustomReadCloser) WasClosed() bool {
 }
 
 // Simulate a long-running task by stalling indefinitely
-func stallHandler(w http.ResponseWriter, req *http.Request) {
+func stallForeverHandler(w http.ResponseWriter, req *http.Request) {
     select {}
 }
 
@@ -260,7 +260,7 @@ func TestClose(t *testing.T) {
 
 	// Create a second test server to simulate long-running
 	// tasks that never finish
-	stallSrv := httptest.NewServer(http.HandlerFunc(stallHandler))
+	stallSrv := httptest.NewServer(http.HandlerFunc(stallForeverHandler))
 	defer stallSrv.Close()
 
 	stallReq, err := http.NewRequest("GET", stallSrv.URL, nil)
