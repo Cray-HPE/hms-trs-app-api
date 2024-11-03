@@ -270,7 +270,7 @@ func TestClose(t *testing.T) {
     }
 	tproto := HttpTask{Request: req, Timeout: 8*time.Second,}
 
-	// Create a task list with these initial tasks
+	t.Logf("Creating completing task list with %v tasks", numStallTasks)
 	tList := tloc.CreateTaskList(&tproto, numTasks)
 
 	// Create a second test server to simulate long-running
@@ -283,12 +283,15 @@ func TestClose(t *testing.T) {
         t.Fatalf("Failed to create request: %v", err)
     }
 	stallProto := HttpTask{Request: stallReq,}
+
+	t.Logf("Creating stalling task list with %v tasks", numStallTasks)
 	stallList := tloc.CreateTaskList(&stallProto, numStallTasks)
 
 	// Append the long-running tasks to the task list
 	tList = append(tList, stallList...)
 
 	// Launch the task list
+	t.Logf("Launching tasks")
 	taskListChannel, err := tloc.Launch(&tList)
 	if (err != nil) {
 		t.Errorf("Launch ERROR: %v", err)
@@ -298,6 +301,7 @@ func TestClose(t *testing.T) {
 	for i := 0; i < numTasks; i++ {
 		<-taskListChannel
 	}
+	t.Logf("Done waiting for completing tasks")
 
 	// Wrap the response body in a CustomReadCloser so we can
 	// test if the response body gets closed
@@ -308,7 +312,9 @@ func TestClose(t *testing.T) {
 	}
 
 	// Close the task list
+	t.Logf("Closing task list")
 	tloc.Close(&tList)
+	t.Logf("Done closing task list")
 
 	for _, tsk := range(tList) {
 	    // Check if the context was canceled
@@ -350,6 +356,8 @@ func TestCleanup(t *testing.T) {
 
 	// Initialize the tloc
 	tloc := &TRSHTTPLocal{}
+
+	t.Logf("Initializing task list")
 	tloc.Init(svcName, createLogger())
 
 	// Create a test server and http requests
@@ -358,16 +366,21 @@ func TestCleanup(t *testing.T) {
 
 	req,_ := http.NewRequest("GET", srv.URL, nil)
 	tproto := HttpTask{Request: req, Timeout: 8*time.Second,}
+
+	t.Logf("Creating task list")
 	tList := tloc.CreateTaskList(&tproto, numTasks)
 
 	// Launch the task list
+	t.Logf("Launching task list")
 	_, err := tloc.Launch(&tList)
 	if (err != nil) {
 		t.Errorf("Launch ERROR: %v", err)
 	}
 
 	// Call Close() without calling Cleanup()
+	t.Logf("Cleaning up task list")
 	tloc.Cleanup()
+	t.Logf("Done cleaning up task list")
 
 	// TestClose() thoroughly tests the closeTask() function so we only need
 	// to test higher level things
