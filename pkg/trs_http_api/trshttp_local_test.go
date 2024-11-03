@@ -252,7 +252,7 @@ func stallForeverHandler(w http.ResponseWriter, req *http.Request) {
     select {}
 }
 
-func TestFull(t *testing.T) {
+func TestPCSUseCase(t *testing.T) {
 	numTasks := 5
 	numStallTasks := 5
 
@@ -268,7 +268,7 @@ func TestFull(t *testing.T) {
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
-	tproto := HttpTask{Request: req, Timeout: 8*time.Second,}
+	tproto := HttpTask{Request: req, Timeout: 8*time.Second, RetryPolicy: RetryPolicy{Retries: 5},}
 
 	t.Logf("Creating completing task list with %v tasks and URL %v", numStallTasks, srv.URL)
 	tList := tloc.CreateTaskList(&tproto, numTasks)
@@ -282,7 +282,7 @@ func TestFull(t *testing.T) {
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
-	stallProto := HttpTask{Request: stallReq,}
+	stallProto := HttpTask{Request: stallReq, Timeout: 999999999*time.Second, RetryPolicy: RetryPolicy{Retries: 5},}
 
 	t.Logf("Creating stalling task list with %v tasks and URL %v", numStallTasks, stallSrv.URL)
 	stallList := tloc.CreateTaskList(&stallProto, numStallTasks)
@@ -329,6 +329,11 @@ func TestFull(t *testing.T) {
 	t.Logf("Close the channel")
 	close(taskListChannel)
 
+	// Cancel the task list to kill the stalled tasks - the closed channel
+	// should NOT cause a panic
+	t.Logf("Close the channel")
+	tloc.Cancel(&tList)
+
 	// Close the task list
 	t.Logf("Closing task list")
 	tloc.Close(&tList)
@@ -368,64 +373,3 @@ func TestFull(t *testing.T) {
 		t.Errorf("Close() failed to remove all tasks from the task map.")
 	}
 }
-/*
-func TestCleanup(t *testing.T) {
-	numTasks := 5
-
-	// Initialize the tloc
-	tloc := &TRSHTTPLocal{}
-
-	t.Logf("Initializing task list")
-	tloc.Init(svcName, createLogger())
-
-	// Create a test server and http requests
-	srv := httptest.NewServer(http.HandlerFunc(launchHandler))
-	defer srv.Close()
-
-	req,_ := http.NewRequest("GET", srv.URL, nil)
-	tproto := HttpTask{Request: req, Timeout: 8*time.Second,}
-
-	t.Logf("Creating task list")
-	tList := tloc.CreateTaskList(&tproto, numTasks)
-
-	// Launch the task list
-	t.Logf("Launching task list")
-	_, err := tloc.Launch(&tList)
-	if (err != nil) {
-		t.Errorf("Launch ERROR: %v", err)
-	}
-
-	// Call Close() without calling Cleanup()
-	t.Logf("Cleaning up task list")
-	tloc.Cleanup()
-	t.Logf("Done cleaning up task list")
-
-	// TestClose() thoroughly tests the closeTask() function so we only need
-	// to test higher level things
-
-	// Check if the context was canceled
-	select {
-	case <-tloc.ctx.Done():
-		if tloc.ctx.Err() != context.Canceled {
-			t.Errorf("Expected context to be canceled, but got: %v", tloc.ctx.Err())
-		}
-	default:
-		t.Errorf("Expected context to be done, but it is still active")
-	}
-
-	// Client map should be nil
-	if (tloc.clientMap != nil) {
-		t.Errorf("Cleanup() failed to clear client map")
-	}
-
-	// Task map should be nil
-	if (tloc.taskMap != nil) {
-		t.Errorf("Cleanup() failed to clear task map")
-	}
-}
-
-// TODO:
-//
-// * Lifecycle of concurrent task lists in the same taskMap
-// * Calling Close() and Cleanup() on an already closed task list or empty task list
- */
