@@ -235,6 +235,7 @@ func (tloc *TRSHTTPLocal) Launch(taskList *[]HttpTask) (chan *HttpTask, error) {
 		return rchan, err
 	}
 
+	//Set all time stamps
 	taskListChannel := make(chan *HttpTask, len(*taskList))
 
 	for ii := 0; ii < len(*taskList); ii++ {
@@ -324,82 +325,58 @@ func (tloc *TRSHTTPLocal) Cancel(taskList *[]HttpTask) {
 	}
 }
 
-// Close out an individual task transaction and free up all associated
-// resources
-//
-// task:  Ptr to a recently launched task
-
-func (tloc *TRSHTTPLocal) closeTask(task *HttpTask) {
-	if (task.Ignore == false) {
-		// Cancel the context to signal termination to the context
-		// if it has not already terminated or timed out
-		task.contextCancel()
-
-		// Close the response body to release all resources associated
-		// with the response. It first terminates the http connection
-		// if its still up
-		if task.Request.Response != nil && task.Request.Response.Body != nil {
-			task.Request.Response.Body.Close()
-		}
-	}
-
-	// Close the channel and delete the task from the task map
-	// Note that ignored tasks were allocated a channel and thus
-	// need to have their channels closed too
-	tloc.taskMutex.Lock()
-	if tct, ok := tloc.taskMap[task.id]; ok {
-		// If coming in through Cleanup(), the channel may already be closed
-		select {
-		case <-tct.taskListChannel:
-			//Channel is already closed, do nothing
-		default:
-			//Channel is open, close it
-			close(tct.taskListChannel)
-		}
-
-		// Delete the task from the task map
-		delete(tloc.taskMap, task.id)
-	}
-	tloc.taskMutex.Unlock()
-}
-
-// Close out a task list transaction and free up all associated resources
+// Close out a task list transaction.  The frees up a small amount of resources
+// so it should not be skipped.
 //
 // taskList:  Ptr to a recently launched task list.
 
 func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 	for _, v := range *taskList {
-		tloc.closeTask(&v)
+		// The caller should close the response body, but we'll also do it
+		// here to prevent resource leaks if the caller neglects to do so
+		if (v.Ignore == false) {
+			if v.Request.Response != nil && v.Request.Response.Body != nil {
+				v.Request.Response.Body.Close()
+			}
+		}
+		tloc.taskMutex.Lock()
+		delete(tloc.taskMap, v.id)
+		tloc.taskMutex.Unlock()
+
 	}
 }
 
 // Clean up a local HTTP task system.
 
 func (tloc *TRSHTTPLocal) Cleanup() {
-	// Cancel the context
+	//Just call the cancel func.
 	tloc.ctxCancelFunc()
-
-	//clean up client map
-	tloc.clientMutex.Lock()
+	//clean up client map?
 	for k := range tloc.clientMap {
-		// Close connections
+		//cancel it first
 		if (tloc.clientMap[k].insecure != nil) {
 			tloc.clientMap[k].insecure.HTTPClient.CloseIdleConnections()
 		}
 		if (tloc.clientMap[k].secure != nil) {
 			tloc.clientMap[k].secure.HTTPClient.CloseIdleConnections()
 		}
-		// Delete it out of the client map
+		//delete it out of the map
+		tloc.clientMutex.Lock()
 		delete(tloc.clientMap, k)
+		tloc.clientMutex.Unlock()
 	}
-	tloc.clientMap = nil
-	tloc.clientMutex.Unlock()
 
 	//clean up task map
-	tloc.taskMutex.Lock()
 	for k := range tloc.taskMap {
-		tloc.closeTask(tloc.taskMap[k].task)
+		//cancel it first
+		tloc.taskMap[k].task.contextCancel()
+		//close the channel
+		close(tloc.taskMap[k].taskListChannel)
+		//delete it out of the map
+		tloc.taskMutex.Lock()
+		delete(tloc.taskMap, k)
+		tloc.taskMutex.Unlock()
+
 	}
-	tloc.taskMap = nil
-	tloc.taskMutex.Unlock()
+	// this really just a big red button to STOP ALL? b/c im not clearing any memory
 }

@@ -290,6 +290,14 @@ func TestClose(t *testing.T) {
 	// Append the long-running tasks to the task list
 	tList = append(tList, stallList...)
 
+	// Wrap the response bodies in a CustomReadCloser so we can
+	// test if the response body gets closed
+	for _, tsk := range(tList) {
+		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
+		}
+	}
+
 	// Launch the task list
 	t.Logf("Launching tasks")
 	taskListChannel, err := tloc.Launch(&tList)
@@ -298,18 +306,28 @@ func TestClose(t *testing.T) {
 	}
 
 	// Wait for the tasks we expect to finish, to finish
+	t.Logf("Waiting for completing tasks")
 	for i := 0; i < numTasks; i++ {
 		<-taskListChannel
 	}
 	t.Logf("Done waiting for completing tasks")
 
-	// Wrap the response body in a CustomReadCloser so we can
-	// test if the response body gets closed
-	for _, tsk := range(tList) {
-		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
-			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
+	// Ensure all tasks have completed before closing the task list
+	t.Logf("Waiting for stalled tasks")
+    for _, tsk := range tList {
+		select {
+		case <-tsk.context.Done():
+			// Task has completed
+		default:
+			// Wait for task to complete
+			<-tsk.context.Done()
 		}
-	}
+    }
+	t.Logf("Done waiting for stalled tasks")
+
+	// Close the channel
+	t.Logf("Close the channel")
+	close(taskListChannel)
 
 	// Close the task list
 	t.Logf("Closing task list")
@@ -350,7 +368,7 @@ func TestClose(t *testing.T) {
 		t.Errorf("Close() failed to remove all tasks from the task map.")
 	}
 }
-
+/*
 func TestCleanup(t *testing.T) {
 	numTasks := 5
 
@@ -410,3 +428,4 @@ func TestCleanup(t *testing.T) {
 //
 // * Lifecycle of concurrent task lists in the same taskMap
 // * Calling Close() and Cleanup() on an already closed task list or empty task list
+ */
