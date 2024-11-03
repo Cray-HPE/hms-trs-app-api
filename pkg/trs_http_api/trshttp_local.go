@@ -376,25 +376,30 @@ func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 // Clean up a local HTTP task system.
 
 func (tloc *TRSHTTPLocal) Cleanup() {
-	//Just call the cancel func.
+	// Cancel the context
 	tloc.ctxCancelFunc()
-	//clean up client map?
+
+	//clean up client map
+	tloc.clientMutex.Lock()
 	for k := range tloc.clientMap {
-		//cancel it first
+		// Close connections
 		if (tloc.clientMap[k].insecure != nil) {
 			tloc.clientMap[k].insecure.HTTPClient.CloseIdleConnections()
 		}
 		if (tloc.clientMap[k].secure != nil) {
 			tloc.clientMap[k].secure.HTTPClient.CloseIdleConnections()
 		}
-		//delete it out of the map
-		tloc.clientMutex.Lock()
+		// Delete it out of the client map
 		delete(tloc.clientMap, k)
-		tloc.clientMutex.Unlock()
 	}
+	tloc.clientMap = nil
+	tloc.clientMutex.Unlock()
 
 	//clean up task map
+	tloc.taskMutex.Lock()
 	for k := range tloc.taskMap {
 		tloc.closeTask(tloc.taskMap[k].task)
 	}
+	tloc.taskMap = nil
+	tloc.taskMutex.Unlock()
 }
