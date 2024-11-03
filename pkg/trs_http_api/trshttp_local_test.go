@@ -310,27 +310,13 @@ func TestPCSUseCase(t *testing.T) {
 	for i := 0; i < numTasks; i++ {
 		<-taskListChannel
 	}
-	t.Logf("Done waiting for completing tasks")
-
-	// Ensure all tasks have completed before closing the task list
-	t.Logf("Waiting for stalled tasks")
-    for _, tsk := range tList {
-		select {
-		case <-tsk.context.Done():
-			// Task has completed
-		default:
-			// Wait for task to complete
-			<-tsk.context.Done()
-		}
-    }
-	t.Logf("Done waiting for stalled tasks")
 
 	// Close the channel - Should not cause stalled tasks to panic when they are closed
-	t.Logf("Close the channel")
+	t.Logf("Closing channel")
 	close(taskListChannel)
 
 	// Cancel the task list to kill the stalled tasks
-	t.Logf("Close the channel")
+	t.Logf("Cancelling task list")
 	tloc.Cancel(&tList)
 
 	// Close the task list
