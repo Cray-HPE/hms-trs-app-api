@@ -252,7 +252,7 @@ func stallForeverHandler(w http.ResponseWriter, req *http.Request) {
     select {}
 }
 
-func TestClose(t *testing.T) {
+func TestFull(t *testing.T) {
 	numTasks := 5
 	numStallTasks := 5
 
@@ -270,7 +270,7 @@ func TestClose(t *testing.T) {
     }
 	tproto := HttpTask{Request: req, Timeout: 8*time.Second,}
 
-	t.Logf("Creating completing task list with %v tasks", numStallTasks)
+	t.Logf("Creating completing task list with %v tasks and URL %v", numStallTasks, srv.URL)
 	tList := tloc.CreateTaskList(&tproto, numTasks)
 
 	// Create a second test server to simulate long-running
@@ -284,7 +284,7 @@ func TestClose(t *testing.T) {
     }
 	stallProto := HttpTask{Request: stallReq,}
 
-	t.Logf("Creating stalling task list with %v tasks", numStallTasks)
+	t.Logf("Creating stalling task list with %v tasks and URL %v", numStallTasks, stallSrv.URL)
 	stallList := tloc.CreateTaskList(&stallProto, numStallTasks)
 
 	// Append the long-running tasks to the task list
