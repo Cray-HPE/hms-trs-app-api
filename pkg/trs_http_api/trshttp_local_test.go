@@ -325,19 +325,17 @@ func TestPCSUseCase(t *testing.T) {
     }
 	t.Logf("Done waiting for stalled tasks")
 
-	// Close the channel
+	// Close the channel - Should not cause stalled tasks to panic when they are closed
 	t.Logf("Close the channel")
 	close(taskListChannel)
 
-	// Cancel the task list to kill the stalled tasks - the closed channel
-	// should NOT cause a panic
+	// Cancel the task list to kill the stalled tasks
 	t.Logf("Close the channel")
 	tloc.Cancel(&tList)
 
 	// Close the task list
 	t.Logf("Closing task list")
 	tloc.Close(&tList)
-	t.Logf("Done closing task list")
 
 	for _, tsk := range(tList) {
 	    // Check if the context was canceled
@@ -350,7 +348,7 @@ func TestPCSUseCase(t *testing.T) {
 			t.Errorf("Expected context to be done, but it is still active")
 		}
 
-		// Check if the response body was closed
+		// Verify the response body was closed
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 			if !tsk.Request.Response.Body.(*CustomReadCloser).WasClosed() {
 				t.Errorf("Expected response body to be closed, but it was not")
@@ -358,18 +356,8 @@ func TestPCSUseCase(t *testing.T) {
 		}
 	}
 
-	// Check if the taskListChannel was closed
-	select {
-	case _, ok := <-taskListChannel:
-		if ok {
-			t.Errorf("CloseTask() failed to close taskListChannel.")
-		}
-	default:
-		t.Errorf("CloseTask() failed to close taskListChannel.")
-	}
-
 	// Task list should be empty
 	if (len(tloc.taskMap) != 0) {
-		t.Errorf("Close() failed to remove all tasks from the task map.")
+		t.Errorf("Expected task list map to be empty")
 	}
 }
