@@ -31,9 +31,25 @@ import (
 	"time"
 
 	base "github.com/Cray-HPE/hms-base/v2"
+	"github.com/sirupsen/logrus"
 )
 
 var svcName = "TestMe"
+
+// Create a logger with default log level of Error that can be overridden
+func createLogger(level ...logrus.Level) *logrus.Logger {
+	if len(level) == 0 {
+		level = append(level, logrus.ErrorLevel)
+	}
+
+	trsLogger := logrus.New()
+
+	trsLogger.SetFormatter(&logrus.TextFormatter{ FullTimestamp: true, })
+	trsLogger.SetLevel(level[0])
+	trsLogger.SetReportCaller(true)
+
+	return trsLogger
+}
 
 func TestInit(t *testing.T) {
 	tloc := &TRSHTTPLocal{}
@@ -242,7 +258,7 @@ func TestClose(t *testing.T) {
 
 	// Initialize the tloc
 	tloc := &TRSHTTPLocal{}
-	tloc.Init(svcName, nil)
+	tloc.Init(svcName, createLogger(logrus.TraceLevel))
 
 	// Create a test server and http requests for tasks that complete
 	srv := httptest.NewServer(http.HandlerFunc(launchHandler))
@@ -334,7 +350,7 @@ func TestCleanup(t *testing.T) {
 
 	// Initialize the tloc
 	tloc := &TRSHTTPLocal{}
-	tloc.Init(svcName, nil)
+	tloc.Init(svcName, createLogger())
 
 	// Create a test server and http requests
 	srv := httptest.NewServer(http.HandlerFunc(launchHandler))
