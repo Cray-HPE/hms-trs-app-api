@@ -288,38 +288,13 @@ func TestPCSUseCase(t *testing.T) {
 		t.Errorf("Launch ERROR: %v", err)
 	}
 
-	// Wait for the tasks we expect to finish, to finish
-	t.Logf("Waiting for completing tasks")
+	t.Logf("Waiting for normally completing tasks to complete")
 	for i := 0; i < numNoStallTasks; i++ {
 		<-taskListChannel
 	}
 
-	// Cancel the task list to kill the stalled tasks and then wait for them to complete
-	t.Logf("Cancelling task list")
-	tloc.Cancel(&tList)
-
-	t.Logf("Waiting for stalled tasks to now complete")
-	for i := 0; i < numStallTasks; i++ {
-		<-taskListChannel
-	}
-
-	// Wrap the response bodies in a CustomReadCloser so we can
-	// test if the response bodies get closed
-	for _, tsk := range(tList) {
-		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
-			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
-		}
-	}
-
-	t.Logf("Closing the task list channel")
-	close(taskListChannel)
-
-	t.Logf("Closing task list")
-	tloc.Close(&tList)
-
-	t.Logf("Checking if all contexts were canceled")
-	for _, tsk := range(tList) {
-	    // Check if the context was canceled
+	t.Logf("Checking normally completing tasks for canceled contexts")
+	for _, tsk := range(noStallList) {
 		select {
 		case <-tsk.context.Done():
 			if tsk.context.Err() != context.Canceled {
@@ -330,16 +305,44 @@ func TestPCSUseCase(t *testing.T) {
 		}
 	}
 
-	t.Logf("Checking completed tasks had their response bodies closed")
+	t.Logf("Checking normally completed tasks for closed response bodies")
 	for _, tsk := range(noStallList) {
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
 			if !tsk.Request.Response.Body.(*CustomReadCloser).WasClosed() {
 				t.Errorf("Expected response body to be closed, but it was not")
 			}
 		}
 	}
 
-	// Task list should be empty
+	// Cancel the entire task list, which will kill the stalled tasks
+	t.Logf("Cancelling task list")
+	tloc.Cancel(&tList)
+
+	t.Logf("Waiting for stalled tasks to complete after cancel")
+	for i := 0; i < numStallTasks; i++ {
+		<-taskListChannel
+	}
+
+	t.Logf("Checking stalled tasks for canceled contexts")
+	for _, tsk := range(stallList) {
+		select {
+		case <-tsk.context.Done():
+			if tsk.context.Err() != context.Canceled {
+				t.Errorf("Expected context to be canceled, but got: %v", tsk.context.Err())
+			}
+		default:
+			t.Errorf("Expected context to be done, but it is still active")
+		}
+	}
+
+	t.Logf("Closing the task list channel")
+	close(taskListChannel)
+
+	t.Logf("Closing task list")
+	tloc.Close(&tList)
+
+	t.Logf("Checking that the task list was closed")
 	if (len(tloc.taskMap) != 0) {
 		t.Errorf("Expected task list map to be empty")
 	}
