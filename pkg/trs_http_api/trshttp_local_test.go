@@ -291,14 +291,6 @@ func TestPCSUseCase(t *testing.T) {
 		t.Errorf("Launch ERROR: %v", err)
 	}
 
-	// Wrap the response bodies in a CustomReadCloser so we can
-	// test if the response body gets closed
-	for _, tsk := range(tList) {
-		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
-			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
-		}
-	}
-
 	// Wait for the tasks we expect to finish, to finish
 	t.Logf("Waiting for completing tasks")
 	for i := 0; i < numTasks; i++ {
@@ -313,6 +305,14 @@ func TestPCSUseCase(t *testing.T) {
 	t.Logf("Waiting for stalled tasks to now complete")
 	for i := 0; i < numStallTasks; i++ {
 		<-taskListChannel
+	}
+
+	// Wrap the response bodies in a CustomReadCloser so we can
+	// test if the response body gets closed
+	for _, tsk := range(tList) {
+		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
+		}
 	}
 
 	// Close the channel
