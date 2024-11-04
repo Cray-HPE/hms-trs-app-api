@@ -251,7 +251,8 @@ func (c *CustomReadCloser) WasClosed() bool {
 func TestPCSUseCase(t *testing.T) {
 	numNoStallTasks := 5
 	numStallTasks := 5
-	timeout := 2 * time.Second
+	httpTimeout := time.Duration(2) * time.Second	// 30 in PCS
+	httpRetries := 3
 
 	// Initialize the tloc
 	tloc := &TRSHTTPLocal{}
@@ -266,7 +267,10 @@ func TestPCSUseCase(t *testing.T) {
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
-	noStallProto := HttpTask{Request: noStallReq, Timeout: timeout, RetryPolicy: RetryPolicy{Retries: 5},}
+	noStallProto := HttpTask{
+			Request:		noStallReq,
+			Timeout:		httpTimeout,
+			RetryPolicy:	RetryPolicy{Retries: httpRetries},}
 
 	t.Logf("Creating completing task list with %v tasks and URL %v", numStallTasks, noStallSrv.URL)
 	noStallList := tloc.CreateTaskList(&noStallProto, numNoStallTasks)
@@ -276,7 +280,10 @@ func TestPCSUseCase(t *testing.T) {
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
-	stallProto := HttpTask{Request: stallReq, Timeout: timeout, RetryPolicy: RetryPolicy{Retries: 5},}
+	stallProto := HttpTask{
+			Request:		stallReq,
+			Timeout:		httpTimeout,
+			RetryPolicy:	RetryPolicy{Retries: httpRetries},}
 
 	t.Logf("Creating stalling task list with %v tasks and URL %v", numStallTasks, stallSrv.URL)
 	stallList := tloc.CreateTaskList(&stallProto, numStallTasks)
@@ -305,9 +312,8 @@ func TestPCSUseCase(t *testing.T) {
 	t.Logf("Closing the task list channel")
 	close(taskListChannel)
 
-	// Cancel the entire task list, which will kill the stalled tasks
-	//t.Logf("Cancelling task list")
-	//tloc.Cancel(&tList)
+	// Currently only testing completing and timing out tasks so no
+	// need to call tloc.Cancel()
 
 	// Set up custom read closer to test if response bodies get closed
 	for _, tsk := range(tList) {
@@ -360,8 +366,13 @@ func TestPCSUseCase(t *testing.T) {
 		t.Errorf("Expected %v timed out tasks, but got %v", numStallTasks, timedOutTasks)
 	}
 
-	/// Issue with cleanup of servers stalling unit test... call tloc.Cleanup
-	// which calls closeidleconnections
+	// For the tasks that had timeouts, their connections are in the active
+	// state and not idle.  They will not turn idle until the client times
+	// them out.  Lets wait for that to happen so we can shut down the servers
+	// cleanly.
+	time.Sleep(httpTimeout * time.Duration(httpRetries))
+
+	t.Logf("Cleaning up task system")
 	tloc.Cleanup()
 	t.Logf("Closing servers")
 	noStallSrv.CloseClientConnections()
