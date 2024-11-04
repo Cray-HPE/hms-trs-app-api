@@ -248,11 +248,6 @@ func (c *CustomReadCloser) WasClosed() bool {
 	return c.closed
 }
 
-// Simulate a long-running task by stalling indefinitely
-func stallForeverHandler(w http.ResponseWriter, req *http.Request) {
-    select {}
-}
-
 func TestPCSUseCase(t *testing.T) {
 	numTasks := 5
 	numStallTasks := 5
@@ -323,6 +318,9 @@ func TestPCSUseCase(t *testing.T) {
 		<-taskListChannel
 	}
 
+	// Cancel the stalled http connections so the server can shut down
+	stallCancel <- true
+
 	// Close the channel
 	t.Logf("Closing channel")
 	close(taskListChannel)
@@ -354,7 +352,4 @@ func TestPCSUseCase(t *testing.T) {
 	if (len(tloc.taskMap) != 0) {
 		t.Errorf("Expected task list map to be empty")
 	}
-
-	// Cancel the stalled http connections so the server can shut down
-	stallCancel <- true
 }
