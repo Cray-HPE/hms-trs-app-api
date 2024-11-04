@@ -264,7 +264,7 @@ func TestPCSUseCase(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(launchHandler))
 	defer srv.Close()
 
-	req, err := http.NewRequest("GET", srv.URL, nil)
+	req, err := http.NewRequest(http.MethodGet, srv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
@@ -275,14 +275,15 @@ func TestPCSUseCase(t *testing.T) {
 
 	// Create a second test server to simulate long-running
 	// tasks that never finish
-	stallSrv := httptest.NewServer(http.HandlerFunc(stallForeverHandler))
+	stallSrv := httptest.NewServer(http.HandlerFunc(stallHandler))
 	defer stallSrv.Close()
+	stallCancel = make(chan bool, 1)
 
 	stallReq, err := http.NewRequest("GET", stallSrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
-	stallProto := HttpTask{Request: stallReq, Timeout: 999999999*time.Second, RetryPolicy: RetryPolicy{Retries: 5},}
+	stallProto := HttpTask{Request: stallReq, Timeout: 8*time.Second, RetryPolicy: RetryPolicy{Retries: 5},}
 
 	t.Logf("Creating stalling task list with %v tasks and URL %v", numStallTasks, stallSrv.URL)
 	stallList := tloc.CreateTaskList(&stallProto, numStallTasks)
@@ -352,4 +353,7 @@ func TestPCSUseCase(t *testing.T) {
 	if (len(tloc.taskMap) != 0) {
 		t.Errorf("Expected task list map to be empty")
 	}
+
+	// Cancel the stalled http connections so the server can shut down
+	stallCancel <- true
 }
