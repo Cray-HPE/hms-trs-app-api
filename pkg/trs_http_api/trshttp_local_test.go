@@ -317,7 +317,10 @@ func TestPCSUseCase(t *testing.T) {
 		t.Errorf("Expected task list map to be empty")
 	}
 
-	t.Logf("Checking all tasks for closed response bodies")
+	// We never closed the normally completing tasks' response bodies because
+	// we wanted to test that TRS does it for the caller if the caller forgets.
+	// The timed out tasks will have no response bodies to check
+	t.Logf("Checking for closed response bodies")
 	for _, tsk := range(tList) {
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
@@ -329,20 +332,28 @@ func TestPCSUseCase(t *testing.T) {
 		}
 	}
 
-	t.Logf("Checking all tasks for canceled and timed out contexts")
+	t.Logf("Checking for correct number of canceled and timed out contexts")
+	canceledTasks := 0
+	timedOutTasks := 0
 	for _, tsk := range(tList) {
 		select {
 		case <-tsk.context.Done():
 			if tsk.context.Err() == context.Canceled {
-				t.Logf("Context was canceled")
+				canceledTasks++
 			} else if tsk.context.Err() == context.DeadlineExceeded {
-				t.Logf("Context was timed out")
+				timedOutTasks++
 			} else {
 				t.Errorf("Context was not canceled or timed out")
 			}
 		default:
 			t.Errorf("Expected context to be done, but it is still active")
 		}
+	}
+	if canceledTasks != numNoStallTasks {
+		t.Errorf("Expected %v canceled tasks, but got %v", numNoStallTasks, canceledTasks)
+	}
+	if timedOutTasks != numStallTasks {
+		t.Errorf("Expected %v timed out tasks, but got %v", numStallTasks, timedOutTasks)
 	}
 
 	t.Logf("Closing servers")
