@@ -144,17 +144,24 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		if (tct.task.RetryPolicy.BackoffTimeout > 0) {
 			boffMax = tct.task.RetryPolicy.BackoffTimeout
 		}
+
 		httpLogger := logrus.New()
 		httpLogger.SetLevel(logrus.ErrorLevel)
+
 		cpack = new(clientPack)
+
 		cpack.insecure = retryablehttp.NewClient()
-		tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true},}
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
 		cpack.insecure.HTTPClient.Transport = tr
 		cpack.insecure.Logger = httpLogger
 		cpack.insecure.RetryMax = rtMax
 		cpack.insecure.RetryWaitMax = boffMax
+	
 		if (tloc.CACertPool != nil) {
 			tloc.Logger.Tracef("Creating secure client")
+
 			cpack.secure = retryablehttp.NewClient()
 			tlsConfig := &tls.Config{RootCAs: tloc.CACertPool,}
 			tlsConfig.BuildNameToCertificate()
