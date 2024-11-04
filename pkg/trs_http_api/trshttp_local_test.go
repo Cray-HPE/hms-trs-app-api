@@ -258,7 +258,6 @@ func TestPCSUseCase(t *testing.T) {
 
 	// Create a test server and http requests for tasks that complete
 	srv := httptest.NewServer(http.HandlerFunc(launchHandler))
-	defer srv.Close()
 
 	req, err := http.NewRequest(http.MethodGet, srv.URL, nil)
 	if err != nil {
@@ -324,6 +323,7 @@ func TestPCSUseCase(t *testing.T) {
 	t.Logf("Closing task list")
 	tloc.Close(&tList)
 
+	t.Logf("Checking context canceled and response body closed")
 	for _, tsk := range(tList) {
 	    // Check if the context was canceled
 		select {
@@ -347,6 +347,9 @@ func TestPCSUseCase(t *testing.T) {
 	if (len(tloc.taskMap) != 0) {
 		t.Errorf("Expected task list map to be empty")
 	}
+
+	t.Logf("Closing servers")
 	stallSrv.CloseClientConnections()	// needed due to stalled connections
 	stallSrv.Close()
+	srv.Close()
 }
