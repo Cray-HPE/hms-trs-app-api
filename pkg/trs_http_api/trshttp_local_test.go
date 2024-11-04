@@ -332,8 +332,6 @@ func TestPCSUseCase(t *testing.T) {
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 			if !tsk.Request.Response.Body.(*CustomReadCloser).WasClosed() {
 				t.Errorf("Expected response body to be closed, but it was not")
-			} else {
-				t.Log("Response body was closed")
 			}
 		}
 	}
@@ -364,11 +362,10 @@ func TestPCSUseCase(t *testing.T) {
 
 	/// Issue with cleanup of servers stalling unit test... call tloc.Cleanup
 	// which calls closeidleconnections
+	tloc.Cleanup()
 	t.Logf("Closing servers")
 	noStallSrv.CloseClientConnections()
-	time.Sleep(2 * time.Second)
 	noStallSrv.Close()
 	stallSrv.CloseClientConnections()	// needed due to stalled connections
-	time.Sleep(2 * time.Second)
 	stallSrv.Close()
 }
