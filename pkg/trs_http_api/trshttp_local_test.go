@@ -309,6 +309,13 @@ func TestPCSUseCase(t *testing.T) {
 	//t.Logf("Cancelling task list")
 	//tloc.Cancel(&tList)
 
+	// Set up custom read closer to test if response bodies get closed
+	for _, tsk := range(tList) {
+		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
+		}
+	}
+
 	t.Logf("Closing task list")
 	tloc.Close(&tList)
 
@@ -323,7 +330,6 @@ func TestPCSUseCase(t *testing.T) {
 	t.Logf("Checking for closed response bodies")
 	for _, tsk := range(tList) {
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
-			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
 			if !tsk.Request.Response.Body.(*CustomReadCloser).WasClosed() {
 				t.Errorf("Expected response body to be closed, but it was not")
 			} else {
