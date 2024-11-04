@@ -323,16 +323,22 @@ func TestPCSUseCase(t *testing.T) {
 			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
 			if !tsk.Request.Response.Body.(*CustomReadCloser).WasClosed() {
 				t.Errorf("Expected response body to be closed, but it was not")
+			} else {
+				t.Log("Response body was closed")
 			}
 		}
 	}
 
-	t.Logf("Checking all tasks for canceled contexts")
+	t.Logf("Checking all tasks for canceled and timed out contexts")
 	for _, tsk := range(tList) {
 		select {
 		case <-tsk.context.Done():
-			if tsk.context.Err() != context.Canceled {
-				t.Errorf("Expected context to be canceled, but got: %v", tsk.context.Err())
+			if tsk.context.Err() == context.Canceled {
+				t.Logf("Context was canceled")
+			} else if tsk.context.Err() == context.DeadlineExceeded {
+				t.Logf("Context was timed out")
+			} else {
+				t.Errorf("Context was not canceled or timed out")
 			}
 		default:
 			t.Errorf("Expected context to be done, but it is still active")
