@@ -282,7 +282,7 @@ func TestPCSUseCase(t *testing.T) {
 	stallList := tloc.CreateTaskList(&stallProto, numStallTasks)
 
 	// Launch both sets of tasks
-	t.Logf("Launching tasks")
+	t.Logf("Launching all tasks")
 	tList := append(noStallList, stallList...)
 	taskListChannel, err := tloc.Launch(&tList)
 	if (err != nil) {
@@ -294,17 +294,7 @@ func TestPCSUseCase(t *testing.T) {
 		<-taskListChannel
 	}
 
-	t.Logf("Checking normally completed tasks for closed response bodies")
-	for _, tsk := range(noStallList) {
-		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
-			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
-			if !tsk.Request.Response.Body.(*CustomReadCloser).WasClosed() {
-				t.Errorf("Expected response body to be closed, but it was not")
-			}
-		}
-	}
-
-	t.Logf("Waiting for stalled tasks to complete after cancel")
+	t.Logf("Waiting for stalled tasks to time out")
 	for i := 0; i < numStallTasks; i++ {
 		<-taskListChannel
 	}
@@ -312,6 +302,16 @@ func TestPCSUseCase(t *testing.T) {
 	// Cancel the entire task list, which will kill the stalled tasks
 	//t.Logf("Cancelling task list")
 	//tloc.Cancel(&tList)
+
+	t.Logf("Checking all tasks for closed response bodies")
+	for _, tsk := range(tList) {
+		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
+			if !tsk.Request.Response.Body.(*CustomReadCloser).WasClosed() {
+				t.Errorf("Expected response body to be closed, but it was not")
+			}
+		}
+	}
 
 	t.Logf("Checking all tasks for canceled contexts")
 	for _, tsk := range(tList) {
