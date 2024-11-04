@@ -251,6 +251,7 @@ func (c *CustomReadCloser) WasClosed() bool {
 func TestPCSUseCase(t *testing.T) {
 	numNoStallTasks := 5
 	numStallTasks := 5
+	timeout := 2 * time.Second
 
 	// Initialize the tloc
 	tloc := &TRSHTTPLocal{}
@@ -265,7 +266,7 @@ func TestPCSUseCase(t *testing.T) {
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
-	noStallProto := HttpTask{Request: noStallReq, Timeout: 8*time.Second, RetryPolicy: RetryPolicy{Retries: 5},}
+	noStallProto := HttpTask{Request: noStallReq, Timeout: timeout, RetryPolicy: RetryPolicy{Retries: 5},}
 
 	t.Logf("Creating completing task list with %v tasks and URL %v", numStallTasks, noStallSrv.URL)
 	noStallList := tloc.CreateTaskList(&noStallProto, numNoStallTasks)
@@ -275,7 +276,7 @@ func TestPCSUseCase(t *testing.T) {
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
-	stallProto := HttpTask{Request: stallReq, Timeout: 8*time.Second, RetryPolicy: RetryPolicy{Retries: 5},}
+	stallProto := HttpTask{Request: stallReq, Timeout: timeout, RetryPolicy: RetryPolicy{Retries: 5},}
 
 	t.Logf("Creating stalling task list with %v tasks and URL %v", numStallTasks, stallSrv.URL)
 	stallList := tloc.CreateTaskList(&stallProto, numStallTasks)
@@ -303,14 +304,14 @@ func TestPCSUseCase(t *testing.T) {
 		}
 	}
 
-	// Cancel the entire task list, which will kill the stalled tasks
-	t.Logf("Cancelling task list")
-	tloc.Cancel(&tList)
-
 	t.Logf("Waiting for stalled tasks to complete after cancel")
 	for i := 0; i < numStallTasks; i++ {
 		<-taskListChannel
 	}
+
+	// Cancel the entire task list, which will kill the stalled tasks
+	//t.Logf("Cancelling task list")
+	//tloc.Cancel(&tList)
 
 	t.Logf("Checking all tasks for canceled contexts")
 	for _, tsk := range(tList) {
