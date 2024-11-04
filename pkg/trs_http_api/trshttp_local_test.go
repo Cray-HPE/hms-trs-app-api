@@ -272,8 +272,6 @@ func TestPCSUseCase(t *testing.T) {
 	// Create a second test server to simulate long-running
 	// tasks that never finish
 	stallSrv := httptest.NewServer(http.HandlerFunc(stallHandler))
-	defer stallSrv.Close()
-	defer stallSrv.CloseClientConnections()	// needed due to stalled connections
 
 	stallReq, err := http.NewRequest("GET", stallSrv.URL, nil)
 	if err != nil {
@@ -349,4 +347,6 @@ func TestPCSUseCase(t *testing.T) {
 	if (len(tloc.taskMap) != 0) {
 		t.Errorf("Expected task list map to be empty")
 	}
+	stallSrv.CloseClientConnections()	// needed due to stalled connections
+	stallSrv.Close()
 }
