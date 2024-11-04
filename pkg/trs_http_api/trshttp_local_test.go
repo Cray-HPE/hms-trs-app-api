@@ -284,19 +284,19 @@ func TestPCSUseCase(t *testing.T) {
 	// Append the long-running tasks to the task list
 	tList = append(tList, stallList...)
 
+	// Launch the task list
+	t.Logf("Launching tasks")
+	taskListChannel, err := tloc.Launch(&tList)
+	if (err != nil) {
+		t.Errorf("Launch ERROR: %v", err)
+	}
+
 	// Wrap the response bodies in a CustomReadCloser so we can
 	// test if the response body gets closed
 	for _, tsk := range(tList) {
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
 		}
-	}
-
-	// Launch the task list
-	t.Logf("Launching tasks")
-	taskListChannel, err := tloc.Launch(&tList)
-	if (err != nil) {
-		t.Errorf("Launch ERROR: %v", err)
 	}
 
 	// Wait for the tasks we expect to finish, to finish
