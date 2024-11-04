@@ -214,12 +214,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		tloc.Logger.Tracef("Response: %d", tct.task.Request.Response.StatusCode)
 	}
 
-	// Guard against a closed channel when we try to send the task to it
-	select {
-    case tct.taskListChannel <- tct.task:
-    default:
-        tloc.Logger.Warn("taskListChannel is closed or full, cannot send task")
-    }
+	tct.taskListChannel <- tct.task:
 }
 
 // Launch an array of tasks.  This is non-blocking.  Use Check() to get

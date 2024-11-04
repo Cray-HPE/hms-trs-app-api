@@ -311,13 +311,19 @@ func TestPCSUseCase(t *testing.T) {
 		<-taskListChannel
 	}
 
-	// Close the channel - Should not cause stalled tasks to panic when they are closed
-	t.Logf("Closing channel")
-	close(taskListChannel)
-
 	// Cancel the task list to kill the stalled tasks
 	t.Logf("Cancelling task list")
 	tloc.Cancel(&tList)
+
+	// Wait for the stalled tasks to finish
+	t.Logf("Waiting for completing tasks")
+	for i := 0; i < numStallTasks; i++ {
+		<-taskListChannel
+	}
+
+	// Close the channel
+	t.Logf("Closing channel")
+	close(taskListChannel)
 
 	// Close the task list
 	t.Logf("Closing task list")
