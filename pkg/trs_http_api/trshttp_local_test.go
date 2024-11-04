@@ -249,29 +249,28 @@ func (c *CustomReadCloser) WasClosed() bool {
 }
 
 func TestPCSUseCase(t *testing.T) {
-	numTasks := 5
+	numNoStallTasks := 5
 	numStallTasks := 5
 
 	// Initialize the tloc
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger(logrus.TraceLevel))
 
-	// Create a test server and http requests for tasks that complete
-	srv := httptest.NewServer(http.HandlerFunc(launchHandler))
+	// Create http servers.  One for tasks that complete, and one for tasks that stall
+	noStallSrv := httptest.NewServer(http.HandlerFunc(launchHandler))
+	stallSrv := httptest.NewServer(http.HandlerFunc(stallHandler))
 
-	req, err := http.NewRequest(http.MethodGet, srv.URL, nil)
+	// Create http request proto for tasks that complete
+	noStallReq, err := http.NewRequest(http.MethodGet, noStallSrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
-	tproto := HttpTask{Request: req, Timeout: 8*time.Second, RetryPolicy: RetryPolicy{Retries: 5},}
+	noStallProto := HttpTask{Request: noStallReq, Timeout: 8*time.Second, RetryPolicy: RetryPolicy{Retries: 5},}
 
-	t.Logf("Creating completing task list with %v tasks and URL %v", numStallTasks, srv.URL)
-	tList := tloc.CreateTaskList(&tproto, numTasks)
+	t.Logf("Creating completing task list with %v tasks and URL %v", numStallTasks, noStallSrv.URL)
+	noStallList := tloc.CreateTaskList(&noStallProto, numNoStallTasks)
 
-	// Create a second test server to simulate long-running
-	// tasks that never finish
-	stallSrv := httptest.NewServer(http.HandlerFunc(stallHandler))
-
+	// Create http request proto for tasks that stall
 	stallReq, err := http.NewRequest("GET", stallSrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
@@ -281,11 +280,9 @@ func TestPCSUseCase(t *testing.T) {
 	t.Logf("Creating stalling task list with %v tasks and URL %v", numStallTasks, stallSrv.URL)
 	stallList := tloc.CreateTaskList(&stallProto, numStallTasks)
 
-	// Append the long-running tasks to the task list
-	tList = append(tList, stallList...)
-
-	// Launch the task list
+	// Launch both sets of tasks
 	t.Logf("Launching tasks")
+	tList := append(noStallList, stallList...)
 	taskListChannel, err := tloc.Launch(&tList)
 	if (err != nil) {
 		t.Errorf("Launch ERROR: %v", err)
@@ -293,37 +290,34 @@ func TestPCSUseCase(t *testing.T) {
 
 	// Wait for the tasks we expect to finish, to finish
 	t.Logf("Waiting for completing tasks")
-	for i := 0; i < numTasks; i++ {
+	for i := 0; i < numNoStallTasks; i++ {
 		<-taskListChannel
 	}
 
-	// Cancel the task list to kill the stalled tasks
+	// Cancel the task list to kill the stalled tasks and then wait for them to complete
 	t.Logf("Cancelling task list")
 	tloc.Cancel(&tList)
 
-	// Wait for the stalled tasks to finish
 	t.Logf("Waiting for stalled tasks to now complete")
 	for i := 0; i < numStallTasks; i++ {
 		<-taskListChannel
 	}
 
 	// Wrap the response bodies in a CustomReadCloser so we can
-	// test if the response body gets closed
+	// test if the response bodies get closed
 	for _, tsk := range(tList) {
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
 		}
 	}
 
-	// Close the channel
-	t.Logf("Closing channel")
+	t.Logf("Closing the task list channel")
 	close(taskListChannel)
 
-	// Close the task list
 	t.Logf("Closing task list")
 	tloc.Close(&tList)
 
-	t.Logf("Checking context canceled and response body closed")
+	t.Logf("Checking if all contexts were canceled")
 	for _, tsk := range(tList) {
 	    // Check if the context was canceled
 		select {
@@ -334,8 +328,10 @@ func TestPCSUseCase(t *testing.T) {
 		default:
 			t.Errorf("Expected context to be done, but it is still active")
 		}
+	}
 
-		// Verify the response body was closed
+	t.Logf("Checking completed tasks had their response bodies closed")
+	for _, tsk := range(noStallList) {
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 			if !tsk.Request.Response.Body.(*CustomReadCloser).WasClosed() {
 				t.Errorf("Expected response body to be closed, but it was not")
@@ -349,7 +345,8 @@ func TestPCSUseCase(t *testing.T) {
 	}
 
 	t.Logf("Closing servers")
+	noStallSrv.CloseClientConnections()
+	noStallSrv.Close()
 	stallSrv.CloseClientConnections()	// needed due to stalled connections
 	stallSrv.Close()
-	srv.Close()
 }
