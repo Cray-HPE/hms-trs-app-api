@@ -299,9 +299,20 @@ func TestPCSUseCase(t *testing.T) {
 		<-taskListChannel
 	}
 
+	t.Logf("Closing the task list channel")
+	close(taskListChannel)
+
 	// Cancel the entire task list, which will kill the stalled tasks
 	//t.Logf("Cancelling task list")
 	//tloc.Cancel(&tList)
+
+	t.Logf("Closing task list")
+	tloc.Close(&tList)
+
+	t.Logf("Checking that the task list was closed")
+	if (len(tloc.taskMap) != 0) {
+		t.Errorf("Expected task list map to be empty")
+	}
 
 	t.Logf("Checking all tasks for closed response bodies")
 	for _, tsk := range(tList) {
@@ -323,17 +334,6 @@ func TestPCSUseCase(t *testing.T) {
 		default:
 			t.Errorf("Expected context to be done, but it is still active")
 		}
-	}
-
-	t.Logf("Closing the task list channel")
-	close(taskListChannel)
-
-	t.Logf("Closing task list")
-	tloc.Close(&tList)
-
-	t.Logf("Checking that the task list was closed")
-	if (len(tloc.taskMap) != 0) {
-		t.Errorf("Expected task list map to be empty")
 	}
 
 	t.Logf("Closing servers")
