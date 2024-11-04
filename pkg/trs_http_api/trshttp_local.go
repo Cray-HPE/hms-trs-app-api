@@ -131,6 +131,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	var cpack *clientPack
 	tloc.clientMutex.Lock()
 	if _, ok := tloc.clientMap[tct.task.RetryPolicy]; !ok {
+		tloc.Logger.Tracef("Creating new client for %v", tct.task.RetryPolicy)
 		//MAKE NEW CLIENT!!!
 		//Calculate backoff params.  If caller didn't specify them, we get
 		//1 try and a 1 second wait.  Not good.  We'll use default minimums
@@ -153,6 +154,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		cpack.insecure.RetryMax = rtMax
 		cpack.insecure.RetryWaitMax = boffMax
 		if (tloc.CACertPool != nil) {
+			tloc.Logger.Tracef("Creating secure client")
 			cpack.secure = retryablehttp.NewClient()
 			tlsConfig := &tls.Config{RootCAs: tloc.CACertPool,}
 			tlsConfig.BuildNameToCertificate()
@@ -195,8 +197,10 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	// Execute the request
 	var tmpError error
 	if (tct.task.forceInsecure || tloc.CACertPool == nil || cpack.secure == nil) {
+		tloc.Logger.Tracef("Making insecure request")
 		tct.task.Request.Response, tmpError = cpack.insecure.Do(req)
 	} else {
+		tloc.Logger.Tracef("Making secure request")
 		tct.task.Request.Response, tmpError = cpack.secure.Do(req)
 
 		//If the error is a TLS error, fall back to insecure and log it.
@@ -332,13 +336,11 @@ func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 	for _, v := range *taskList {
 		// The caller should close the response body, but we'll also do it
 		// here to prevent resource leaks if the caller neglects to do so
-		/*
 		if (v.Ignore == false) {
 			if v.Request.Response != nil && v.Request.Response.Body != nil {
 				v.Request.Response.Body.Close()
 			}
 		}
-			*/
 		tloc.taskMutex.Lock()
 		delete(tloc.taskMap, v.id)
 		tloc.taskMutex.Unlock()

@@ -362,6 +362,8 @@ func TestPCSUseCase(t *testing.T) {
 		t.Errorf("Expected %v timed out tasks, but got %v", numStallTasks, timedOutTasks)
 	}
 
+	/// Issue with cleanup of servers stalling unit test... call tloc.Cleanup
+	// which calls closeidleconnections
 	t.Logf("Closing servers")
 	noStallSrv.CloseClientConnections()
 	time.Sleep(2 * time.Second)
