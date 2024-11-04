@@ -289,6 +289,9 @@ func TestPCSUseCase(t *testing.T) {
 		t.Errorf("Launch ERROR: %v", err)
 	}
 
+	// Give tasks a chance to start so test output looks pretty
+	time.Sleep(100 * time.Millisecond)
+
 	t.Logf("Waiting for normally completing tasks to complete")
 	for i := 0; i < numNoStallTasks; i++ {
 		<-taskListChannel
