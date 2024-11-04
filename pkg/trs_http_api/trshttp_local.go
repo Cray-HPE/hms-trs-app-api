@@ -329,11 +329,14 @@ func (tloc *TRSHTTPLocal) Cancel(taskList *[]HttpTask) {
 // taskList:  Ptr to a recently launched task list.
 
 func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
+	tloc.Logger.Tracef("Close called")
 	for _, v := range *taskList {
 		// The caller should close the response body, but we'll also do it
 		// here to prevent resource leaks if the caller neglects to do so
 		if (v.Ignore == false) {
+			tloc.Logger.Tracef("not false")
 			if v.Request.Response != nil && v.Request.Response.Body != nil {
+				tloc.Logger.Tracef("closing a response body")
 				v.Request.Response.Body.Close()
 			}
 		}
