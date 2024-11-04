@@ -37,6 +37,7 @@ import (
 var svcName = "TestMe"
 
 // Create a logger with default log level of Error that can be overridden
+// if debugging of a test is necessary.
 func createLogger(level ...logrus.Level) *logrus.Logger {
 	if len(level) == 0 {
 		level = append(level, logrus.ErrorLevel)
@@ -54,7 +55,7 @@ func createLogger(level ...logrus.Level) *logrus.Logger {
 func TestInit(t *testing.T) {
 	tloc := &TRSHTTPLocal{}
 
-	tloc.Init(svcName,nil)
+	tloc.Init(svcName, createLogger(logrus.TraceLevel))
 	if (tloc.taskMap == nil) {
 		t.Errorf("Init() failed to create task map")
 	}
@@ -68,7 +69,7 @@ func TestInit(t *testing.T) {
 
 func TestCreateTaskList(t *testing.T) {
 	tloc := &TRSHTTPLocal{}
-	tloc.Init(svcName,nil)
+	tloc.Init(svcName, createLogger(logrus.TraceLevel))
 	req,_ := http.NewRequest("GET","http://www.example.com",nil)
 	tproto := HttpTask{Request: req,}
 	base.SetHTTPUserAgent(req,tloc.svcName)
@@ -136,7 +137,7 @@ func stallHandler(w http.ResponseWriter, req *http.Request) {
 
 func TestLaunch(t *testing.T) {
 	tloc := &TRSHTTPLocal{}
-	tloc.Init(svcName,nil)
+	tloc.Init(svcName, createLogger(logrus.TraceLevel))
 
 	srv := httptest.NewServer(http.HandlerFunc(launchHandler))
 	defer srv.Close()
@@ -190,7 +191,7 @@ func TestLaunch(t *testing.T) {
 
 func TestLaunchTimeout(t *testing.T) {
 	tloc := &TRSHTTPLocal{}
-	tloc.Init(svcName,nil)
+	tloc.Init(svcName, createLogger(logrus.TraceLevel))
 	srv := httptest.NewServer(http.HandlerFunc(stallHandler))
 	defer srv.Close()
 
@@ -317,7 +318,7 @@ func TestPCSUseCase(t *testing.T) {
 	tloc.Cancel(&tList)
 
 	// Wait for the stalled tasks to finish
-	t.Logf("Waiting for completing tasks")
+	t.Logf("Waiting for stalled tasks to now complete")
 	for i := 0; i < numStallTasks; i++ {
 		<-taskListChannel
 	}
