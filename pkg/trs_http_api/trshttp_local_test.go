@@ -293,18 +293,6 @@ func TestPCSUseCase(t *testing.T) {
 		<-taskListChannel
 	}
 
-	t.Logf("Checking normally completing tasks for canceled contexts")
-	for _, tsk := range(noStallList) {
-		select {
-		case <-tsk.context.Done():
-			if tsk.context.Err() != context.Canceled {
-				t.Errorf("Expected context to be canceled, but got: %v", tsk.context.Err())
-			}
-		default:
-			t.Errorf("Expected context to be done, but it is still active")
-		}
-	}
-
 	t.Logf("Checking normally completed tasks for closed response bodies")
 	for _, tsk := range(noStallList) {
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
@@ -324,8 +312,8 @@ func TestPCSUseCase(t *testing.T) {
 		<-taskListChannel
 	}
 
-	t.Logf("Checking stalled tasks for canceled contexts")
-	for _, tsk := range(stallList) {
+	t.Logf("Checking all tasks for canceled contexts")
+	for _, tsk := range(tList) {
 		select {
 		case <-tsk.context.Done():
 			if tsk.context.Err() != context.Canceled {
