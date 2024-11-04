@@ -273,7 +273,7 @@ func TestPCSUseCase(t *testing.T) {
 	// tasks that never finish
 	stallSrv := httptest.NewServer(http.HandlerFunc(stallHandler))
 	defer stallSrv.Close()
-	stallCancel = make(chan bool, 1)
+	defer stallSrv.CloseClientConnections()	// needed due to stalled connections
 
 	stallReq, err := http.NewRequest("GET", stallSrv.URL, nil)
 	if err != nil {
@@ -317,9 +317,6 @@ func TestPCSUseCase(t *testing.T) {
 	for i := 0; i < numStallTasks; i++ {
 		<-taskListChannel
 	}
-
-	// Cancel the stalled http connections so the server can shut down
-	stallCancel <- true
 
 	// Close the channel
 	t.Logf("Closing channel")
