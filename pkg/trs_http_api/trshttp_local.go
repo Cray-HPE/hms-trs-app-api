@@ -171,52 +171,55 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	if ok, err := tct.task.Validate(); !ok {
 		tloc.Logger.Errorf("Failed validation of request: %+v, err: %s", tct.task, err)
 		tct.task.Err = &err
+		tct.taskListChannel <- tct.task
+		return
 	}
 
 	tloc.Logger.Tracef("setting up context for request")
 
 	//setup timeouts and context for request
 	tct.task.context, tct.task.contextCancel = context.WithTimeout(tloc.ctx, tct.task.Timeout)
+	defer tct.task.contextCancel()
+
 	base.SetHTTPUserAgent(tct.task.Request,tloc.svcName)
 	req, err := retryablehttp.FromRequest(tct.task.Request)
-	req = req.WithContext(tct.task.context)
 	if err != nil {
 		tloc.Logger.Error(err)
-		tct.task.Request.Response = nil
 		tct.task.Err = &err
-	}
-
-	if (tct.task.Err != nil) && (*tct.task.Err != nil) {
-		SendDelayedError(tct, tloc.Logger)
-		return
-	} else {
-		var tmpError error
-
-		if (tct.task.forceInsecure || (tloc.CACertPool == nil) ||
-		   (cpack.secure == nil)) {
-			tct.task.Request.Response, tmpError = cpack.insecure.Do(req)
-		} else {
-			tct.task.Request.Response, tmpError = cpack.secure.Do(req)
-
-			//If the error is a TLS error, fall back to insecure and log it.
-			if (tmpError != nil) {
-				tloc.Logger.Warnf("TLS request failed, retrying without validation: %v",
-					tmpError)
-				tct.task.Request.Response, tmpError = cpack.insecure.Do(req)
-			}
-		}
-
-		tct.task.Err = &tmpError
-		if (*tct.task.Err) != nil {
-			tloc.Logger.Tracef("Err: %s", (*tct.task.Err).Error())
-		}
-		if tct.task.Request.Response != nil {
-			tloc.Logger.Tracef("Response: %d", tct.task.Request.Response.StatusCode)
-		}
 		tct.taskListChannel <- tct.task
+		return
 	}
 
-	return
+	req = req.WithContext(tct.task.context)
+
+	// Execute the request
+	var tmpError error
+	if (tct.task.forceInsecure || tloc.CACertPool == nil || cpack.secure == nil) {
+		tct.task.Request.Response, tmpError = cpack.insecure.Do(req)
+	} else {
+		tct.task.Request.Response, tmpError = cpack.secure.Do(req)
+
+		//If the error is a TLS error, fall back to insecure and log it.
+		if (tmpError != nil) {
+			tloc.Logger.Warnf("TLS request failed, retrying without validation: %v", tmpError)
+			tct.task.Request.Response, tmpError = cpack.insecure.Do(req)
+		}
+	}
+
+	tct.task.Err = &tmpError
+	if (*tct.task.Err) != nil {
+		tloc.Logger.Tracef("Err: %s", (*tct.task.Err).Error())
+	}
+	if tct.task.Request.Response != nil {
+		tloc.Logger.Tracef("Response: %d", tct.task.Request.Response.StatusCode)
+	}
+
+	// Guard against a closed channel when we try to send the task to it
+	select {
+    case tct.taskListChannel <- tct.task:
+    default:
+        tloc.Logger.Warn("taskListChannel is closed or full, cannot send task")
+    }
 }
 
 // Launch an array of tasks.  This is non-blocking.  Use Check() to get
