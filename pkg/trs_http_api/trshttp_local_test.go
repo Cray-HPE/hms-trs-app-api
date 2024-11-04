@@ -337,7 +337,9 @@ func TestPCSUseCase(t *testing.T) {
 
 	t.Logf("Closing servers")
 	noStallSrv.CloseClientConnections()
+	time.Sleep(100 * time.Millisecond)
 	noStallSrv.Close()
 	stallSrv.CloseClientConnections()	// needed due to stalled connections
+	time.Sleep(100 * time.Millisecond)
 	stallSrv.Close()
 }
