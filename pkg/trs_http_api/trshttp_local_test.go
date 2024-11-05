@@ -280,6 +280,8 @@ func TestPCSUseCase(t *testing.T) {
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
+	stallReq.Header.Set("Accept", "*/*")
+	stallReq.Header.Set("Connection", "close")
 	stallProto := HttpTask{
 			Request:		stallReq,
 			Timeout:		httpTimeout,
