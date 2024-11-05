@@ -1,17 +1,17 @@
 // MIT License
-// 
+//
 // (C) Copyright [2020-2021,2024] Hewlett Packard Enterprise Development LP
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
 // to deal in the Software without restriction, including without limitation
 // the rights to use, copy, modify, merge, publish, distribute, sublicense,
 // and/or sell copies of the Software, and to permit persons to whom the
 // Software is furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included
 // in all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
@@ -19,7 +19,6 @@
 // OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
-
 
 package trs_http_api
 
@@ -29,12 +28,13 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net/http"
+	"time"
+
+	base "github.com/Cray-HPE/hms-base/v2"
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/sirupsen/logrus"
-	"net/http"
-	"time"
-	"github.com/Cray-HPE/hms-base/v2"
 )
 
 const (
@@ -131,6 +131,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	var cpack *clientPack
 	tloc.clientMutex.Lock()
 	if _, ok := tloc.clientMap[tct.task.RetryPolicy]; !ok {
+		tloc.Logger.Tracef("Creating new client for %v", tct.task.RetryPolicy)
 		//MAKE NEW CLIENT!!!
 		//Calculate backoff params.  If caller didn't specify them, we get
 		//1 try and a 1 second wait.  Not good.  We'll use default minimums
@@ -143,16 +144,24 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		if (tct.task.RetryPolicy.BackoffTimeout > 0) {
 			boffMax = tct.task.RetryPolicy.BackoffTimeout
 		}
+
 		httpLogger := logrus.New()
 		httpLogger.SetLevel(logrus.ErrorLevel)
+
 		cpack = new(clientPack)
+
 		cpack.insecure = retryablehttp.NewClient()
-		tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true},}
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
 		cpack.insecure.HTTPClient.Transport = tr
 		cpack.insecure.Logger = httpLogger
 		cpack.insecure.RetryMax = rtMax
 		cpack.insecure.RetryWaitMax = boffMax
+	
 		if (tloc.CACertPool != nil) {
+			tloc.Logger.Tracef("Creating secure client")
+
 			cpack.secure = retryablehttp.NewClient()
 			tlsConfig := &tls.Config{RootCAs: tloc.CACertPool,}
 			tlsConfig.BuildNameToCertificate()
@@ -171,52 +180,50 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	if ok, err := tct.task.Validate(); !ok {
 		tloc.Logger.Errorf("Failed validation of request: %+v, err: %s", tct.task, err)
 		tct.task.Err = &err
+		tct.taskListChannel <- tct.task
+		return
 	}
 
 	tloc.Logger.Tracef("setting up context for request")
 
 	//setup timeouts and context for request
 	tct.task.context, tct.task.contextCancel = context.WithTimeout(tloc.ctx, tct.task.Timeout)
+	defer tct.task.contextCancel()
+
 	base.SetHTTPUserAgent(tct.task.Request,tloc.svcName)
 	req, err := retryablehttp.FromRequest(tct.task.Request)
-	req = req.WithContext(tct.task.context)
 	if err != nil {
 		tloc.Logger.Error(err)
-		tct.task.Request.Response = nil
 		tct.task.Err = &err
-	}
-
-	if (tct.task.Err != nil) && (*tct.task.Err != nil) {
-		SendDelayedError(tct, tloc.Logger)
-		return
-	} else {
-		var tmpError error
-
-		if (tct.task.forceInsecure || (tloc.CACertPool == nil) ||
-		   (cpack.secure == nil)) {
-			tct.task.Request.Response, tmpError = cpack.insecure.Do(req)
-		} else {
-			tct.task.Request.Response, tmpError = cpack.secure.Do(req)
-
-			//If the error is a TLS error, fall back to insecure and log it.
-			if (tmpError != nil) {
-				tloc.Logger.Warnf("TLS request failed, retrying without validation: %v",
-					tmpError)
-				tct.task.Request.Response, tmpError = cpack.insecure.Do(req)
-			}
-		}
-
-		tct.task.Err = &tmpError
-		if (*tct.task.Err) != nil {
-			tloc.Logger.Tracef("Err: %s", (*tct.task.Err).Error())
-		}
-		if tct.task.Request.Response != nil {
-			tloc.Logger.Tracef("Response: %d", tct.task.Request.Response.StatusCode)
-		}
 		tct.taskListChannel <- tct.task
+		return
 	}
 
-	return
+	req = req.WithContext(tct.task.context)
+
+	// Execute the request
+	var tmpError error
+	if (tct.task.forceInsecure || tloc.CACertPool == nil || cpack.secure == nil) {
+		tct.task.Request.Response, tmpError = cpack.insecure.Do(req)
+	} else {
+		tct.task.Request.Response, tmpError = cpack.secure.Do(req)
+
+		//If the error is a TLS error, fall back to insecure and log it.
+		if (tmpError != nil) {
+			tloc.Logger.Warnf("TLS request failed, retrying without validation: %v", tmpError)
+			tct.task.Request.Response, tmpError = cpack.insecure.Do(req)
+		}
+	}
+
+	tct.task.Err = &tmpError
+	if (*tct.task.Err) != nil {
+		tloc.Logger.Tracef("Err: %s", (*tct.task.Err).Error())
+	}
+	if tct.task.Request.Response != nil {
+		tloc.Logger.Tracef("Response: %d", tct.task.Request.Response.StatusCode)
+	}
+
+	tct.taskListChannel <- tct.task
 }
 
 // Launch an array of tasks.  This is non-blocking.  Use Check() to get
@@ -332,6 +339,8 @@ func (tloc *TRSHTTPLocal) Cancel(taskList *[]HttpTask) {
 
 func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 	for _, v := range *taskList {
+		// The caller should close the response body, but we'll also do it
+		// here to prevent resource leaks if the caller neglects to do so
 		if (v.Ignore == false) {
 			if v.Request.Response != nil && v.Request.Response.Body != nil {
 				v.Request.Response.Body.Close()

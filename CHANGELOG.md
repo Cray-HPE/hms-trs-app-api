@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.2] - 2024-11-08
+
+### Fixed
+
+- Run unit tests in verbose mode so failures are more easily analyzed
+- Added additional tracing for debug purposes
+- ExecuteTask(): Reworked for easier readability and maintainability
+- ExecuteTask(): Return immediately when errors are encountered
+- ExecuteTask(): Cancel contexts immediatly after successful responses
+- Enable TRS logging from inside unit tests to aid in debugging
+- Created TestPCSUseCase() unit test for full testing of PCS use case
+
 ## [2.1.1] - 2024-10-31
 
 ### Fixed
