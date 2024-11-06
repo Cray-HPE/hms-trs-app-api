@@ -283,7 +283,6 @@ func TestPCSUseCase(t *testing.T) {
         t.Fatalf("Failed to create request: %v", err)
     }
 	stallReq.Header.Set("Accept", "*/*")
-	//stallReq.Header.Set("Connection", "close")
 	stallProto := HttpTask{
 			Request:		stallReq,
 			Timeout:		httpTimeout,
@@ -375,6 +374,8 @@ func TestPCSUseCase(t *testing.T) {
 	// them out.  Lets wait for that to happen so we can shut down the servers
 	// cleanly.
 	//time.Sleep(300 * time.Second)
+	stallCancel <- true
+	time.Sleep(1 * time.Second)
 
 	t.Logf("Cleaning up task system")
 	tloc.Cleanup()

@@ -153,7 +153,6 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		cpack.insecure = retryablehttp.NewClient()
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			DisableKeepAlives: true,
 		}
 		cpack.insecure.HTTPClient.Transport = tr
 		cpack.insecure.Logger = httpLogger
