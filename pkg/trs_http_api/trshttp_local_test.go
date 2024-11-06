@@ -126,10 +126,12 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 var stallCancel chan bool
+var stallLogger *testing.T
 
 func stallHandler(w http.ResponseWriter, req *http.Request) {
-	//<-stallCancel
-	time.Sleep(30 * time.Second)
+	stallLogger.Logger.Printf("Stalling...")
+	<-stallCancel
+	stallLogger.Logger.Printf("Done stalling...")
 	w.Header().Set("Content-Type","application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"Message":"OK"}`))
@@ -194,6 +196,7 @@ func TestLaunchTimeout(t *testing.T) {
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger(logrus.TraceLevel))
 	srv := httptest.NewServer(http.HandlerFunc(stallHandler))
+	stallLogger = t
 	defer srv.Close()
 
 	req,_ := http.NewRequest("GET",srv.URL,nil)
@@ -262,6 +265,7 @@ func TestPCSUseCase(t *testing.T) {
 	// Create http servers.  One for tasks that complete, and one for tasks that stall
 	noStallSrv := httptest.NewServer(http.HandlerFunc(launchHandler))
 	stallSrv := httptest.NewServer(http.HandlerFunc(stallHandler))
+	stallLogger = t
 
 	// Create an http request for tasks that complete
 	noStallReq, err := http.NewRequest(http.MethodGet, noStallSrv.URL, nil)
@@ -375,7 +379,7 @@ func TestPCSUseCase(t *testing.T) {
 	// them out.  Lets wait for that to happen so we can shut down the servers
 	// cleanly.
 	//time.Sleep(300 * time.Second)
-	//stallCancel <- true
+	stallCancel <- true
 	time.Sleep(1 * time.Second)
 
 	t.Logf("Cleaning up task system")
