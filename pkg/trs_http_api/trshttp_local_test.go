@@ -129,9 +129,9 @@ var stallCancel chan bool
 var stallLogger *testing.T
 
 func stallHandler(w http.ResponseWriter, req *http.Request) {
-	stallLogger.Logger.Printf("Stalling...")
+	stallLogger.Logf("Stalling...")
 	<-stallCancel
-	stallLogger.Logger.Printf("Done stalling...")
+	stallLogger.Logf("Done stalling...")
 	w.Header().Set("Content-Type","application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"Message":"OK"}`))
