@@ -262,11 +262,13 @@ func TestPCSUseCase(t *testing.T) {
 	noStallSrv := httptest.NewServer(http.HandlerFunc(launchHandler))
 	stallSrv := httptest.NewServer(http.HandlerFunc(stallHandler))
 
-	// Create http request proto for tasks that complete
+	// Create an http request for tasks that complete
 	noStallReq, err := http.NewRequest(http.MethodGet, noStallSrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
+	noStallReq.Header.Set("Accept", "*/*")
+
 	noStallProto := HttpTask{
 			Request:		noStallReq,
 			Timeout:		httpTimeout,
@@ -275,13 +277,13 @@ func TestPCSUseCase(t *testing.T) {
 	t.Logf("Creating completing task list with %v tasks and URL %v", numStallTasks, noStallSrv.URL)
 	noStallList := tloc.CreateTaskList(&noStallProto, numNoStallTasks)
 
-	// Create http request proto for tasks that stall
+	// Create an http request for tasks that stall
 	stallReq, err := http.NewRequest("GET", stallSrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
 	stallReq.Header.Set("Accept", "*/*")
-	stallReq.Header.Set("Connection", "close")
+	//stallReq.Header.Set("Connection", "close")
 	stallProto := HttpTask{
 			Request:		stallReq,
 			Timeout:		httpTimeout,
