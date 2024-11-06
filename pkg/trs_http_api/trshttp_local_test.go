@@ -372,7 +372,7 @@ func TestPCSUseCase(t *testing.T) {
 	// state and not idle.  They will not turn idle until the client times
 	// them out.  Lets wait for that to happen so we can shut down the servers
 	// cleanly.
-	time.Sleep(300 * time.Second)
+	//time.Sleep(300 * time.Second)
 
 	t.Logf("Cleaning up task system")
 	tloc.Cleanup()
