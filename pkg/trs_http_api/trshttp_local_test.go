@@ -114,27 +114,36 @@ func hasUserAgentHeader(r *http.Request) bool {
     return true
 }
 
+var handlerLogger *testing.T
+
 func launchHandler(w http.ResponseWriter, req *http.Request) {
+	handlerLogger.Logf("launchHandler running...")
+
 	if (!hasUserAgentHeader(req)) {
 		w.Write([]byte(`{"Message":"No User-Agent Header"}`))
 		w.WriteHeader(http.StatusInternalServerError)
+		handlerLogger.Logf("launchHandler returning no User-Agent header...")
 		return
 	}
 	w.Header().Set("Content-Type","application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"Message":"OK"}`))
+
+	handlerLogger.Logf("launchHandler returning Message Ok...")
 }
 
 var stallCancel chan bool
-var stallLogger *testing.T
 
 func stallHandler(w http.ResponseWriter, req *http.Request) {
-	stallLogger.Logf("Stalling...")
+	handlerLogger.Logf("stallHandler running...")
+
 	<-stallCancel
-	stallLogger.Logf("Done stalling...")
+
 	w.Header().Set("Content-Type","application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"Message":"OK"}`))
+
+	handlerLogger.Logf("launchHandler returning Message Ok...")
 }
 
 
@@ -265,7 +274,7 @@ func TestPCSUseCase(t *testing.T) {
 	// Create http servers.  One for tasks that complete, and one for tasks that stall
 	noStallSrv := httptest.NewServer(http.HandlerFunc(launchHandler))
 	stallSrv := httptest.NewServer(http.HandlerFunc(stallHandler))
-	stallLogger = t
+	handlerLogger = t
 
 	// Create an http request for tasks that complete
 	noStallReq, err := http.NewRequest(http.MethodGet, noStallSrv.URL, nil)
@@ -374,19 +383,16 @@ func TestPCSUseCase(t *testing.T) {
 		t.Errorf("Expected %v timed out tasks, but got %v", numStallTasks, timedOutTasks)
 	}
 
-	// For the tasks that had timeouts, their connections are in the active
-	// state and not idle.  They will not turn idle until the client times
-	// them out.  Lets wait for that to happen so we can shut down the servers
-	// cleanly.
-	//time.Sleep(300 * time.Second)
-	stallCancel <- true
-	time.Sleep(1 * time.Second)
-
 	t.Logf("Cleaning up task system")
 	tloc.Cleanup()
+
+	// Free the stalled server handlers so we can cleanly close the servers
 	t.Logf("Closing servers")
-	noStallSrv.CloseClientConnections()
+
+	stallCancel <- true
+
+	time.Sleep(2 * time.Second)	// Give them time to exit
+
 	noStallSrv.Close()
-	stallSrv.CloseClientConnections()	// needed due to stalled connections
 	stallSrv.Close()
 }
