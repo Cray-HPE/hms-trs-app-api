@@ -128,7 +128,8 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 var stallCancel chan bool
 
 func stallHandler(w http.ResponseWriter, req *http.Request) {
-	<-stallCancel
+	//<-stallCancel
+	time.Sleep(30 * time.Second)
 	w.Header().Set("Content-Type","application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"Message":"OK"}`))
@@ -374,7 +375,7 @@ func TestPCSUseCase(t *testing.T) {
 	// them out.  Lets wait for that to happen so we can shut down the servers
 	// cleanly.
 	//time.Sleep(300 * time.Second)
-	stallCancel <- true
+	//stallCancel <- true
 	time.Sleep(1 * time.Second)
 
 	t.Logf("Cleaning up task system")

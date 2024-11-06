@@ -159,12 +159,12 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		cpack.insecure.RetryMax = rtMax
 		cpack.insecure.RetryWaitMax = boffMax
 		cpack.insecure.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {	
-			tloc.Logger.Tracef("In CheckRetry")
+			tloc.Logger.Tracef("CheckRetry")
 			if ctx.Err() != nil {
-				tloc.Logger.Tracef("Context error: %v", ctx.Err())
+				tloc.Logger.Tracef("CheckRetry: context error: %v", ctx.Err())
 				return false, ctx.Err()
 			}
-			tloc.Logger.Tracef("Response: %v", resp)
+			tloc.Logger.Tracef("CheckRetry: Response: %v", resp)
 			return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
 		}
 	
