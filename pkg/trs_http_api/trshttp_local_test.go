@@ -143,7 +143,7 @@ func stallHandler(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"Message":"OK"}`))
 
-	handlerLogger.Logf("launchHandler returning Message Ok...")
+	handlerLogger.Logf("stallHandler returning Message Ok...")
 }
 
 
@@ -390,12 +390,12 @@ func TestPCSUseCase(t *testing.T) {
 	t.Logf("Cleaning up task system")
 	tloc.Cleanup()
 
-	// Free the stalled server handlers so we can cleanly close the servers
+	// Cancel the stalled server handlers so we can close the servers
 	t.Logf("Closing servers")
-
-	stallCancel <- true
-
-	time.Sleep(2 * time.Second)	// Give them time to exit
+	for i := 0; i < numStallTasks; i++ {
+		stallCancel <- true
+	}
+	close(stallCancel)
 
 	noStallSrv.Close()
 	stallSrv.Close()
