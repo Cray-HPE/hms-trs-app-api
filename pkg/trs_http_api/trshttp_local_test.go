@@ -154,6 +154,8 @@ func TestLaunch(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(launchHandler))
 	defer srv.Close()
 
+	handlerLogger = t
+
 	req,_ := http.NewRequest("GET",srv.URL,nil)
 	tproto := HttpTask{Request: req, Timeout: 8*time.Second,}
 	tList := tloc.CreateTaskList(&tproto,5)
@@ -205,8 +207,9 @@ func TestLaunchTimeout(t *testing.T) {
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger(logrus.TraceLevel))
 	srv := httptest.NewServer(http.HandlerFunc(stallHandler))
-	stallLogger = t
 	defer srv.Close()
+
+	handlerLogger = t
 
 	req,_ := http.NewRequest("GET",srv.URL,nil)
 	tproto := HttpTask{Request: req, Timeout: 3*time.Second, RetryPolicy: RetryPolicy{Retries: 1, BackoffTimeout: 1 * time.Second,},}
@@ -274,6 +277,7 @@ func TestPCSUseCase(t *testing.T) {
 	// Create http servers.  One for tasks that complete, and one for tasks that stall
 	noStallSrv := httptest.NewServer(http.HandlerFunc(launchHandler))
 	stallSrv := httptest.NewServer(http.HandlerFunc(stallHandler))
+
 	handlerLogger = t
 
 	// Create an http request for tasks that complete
