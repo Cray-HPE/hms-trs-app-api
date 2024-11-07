@@ -292,14 +292,18 @@ func printOpenConnections(t *testing.T, debug bool, expListen, expEstab, expClos
 
 	if (listenCount != expListen) {
 		t.Errorf("Expected %v LISTEN connections, but got %v: %s", expListen, listenCount, output)
-	} else if ((estabCount * 2) != expEstab) {
+	}
+	if (estabCount != (expEstab * 2)) {
 		// Each connection has a local and remote entry
 		t.Errorf("Expected %v ESTABLISHED connections, but got %v: %s", expEstab, estabCount, output)
-	} else if (closeWaitCount != expCloseWait) {
+	}
+	if (closeWaitCount != expCloseWait) {
 		t.Errorf("Expected %v CLOSE_WAIT connections, but got %v: %s", expCloseWait, closeWaitCount, output)
-	} else if (otherCount != 0) {
+	}
+	if (otherCount != 0) {
 		t.Errorf("Expected no other connections, but got %v: %s", otherCount, output)
-	} else if (debug) {
+	}
+	if (debug) {
 		t.Logf("DEBUG: Connections: %s", output)
 	}
 }
