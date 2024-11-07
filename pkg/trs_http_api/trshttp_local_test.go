@@ -351,6 +351,7 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 			t.Logf("\nOther Connections:\n")
 			t.Logf("Other: %v", debugOutput["other"])
 		}
+	}
 }
 
 // CustomReadCloser wraps an io.ReadCloser and tracks if it was closed.
