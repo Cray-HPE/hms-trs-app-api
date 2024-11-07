@@ -131,7 +131,6 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	var cpack *clientPack
 	tloc.clientMutex.Lock()
 	if _, ok := tloc.clientMap[tct.task.RetryPolicy]; !ok {
-		tloc.Logger.Tracef("Creating new client for %v", tct.task.RetryPolicy)
 		//MAKE NEW CLIENT!!!
 		//Calculate backoff params.  If caller didn't specify them, we get
 		//1 try and a 1 second wait.  Not good.  We'll use default minimums
@@ -159,19 +158,19 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		cpack.insecure.Logger = httpLogger
 		cpack.insecure.RetryMax = rtMax
 		cpack.insecure.RetryWaitMax = boffMax
-		cpack.insecure.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {	
-			tloc.Logger.Tracef("CheckRetry")
-			if ctx.Err() != nil {
-				tloc.Logger.Tracef("CheckRetry: context error: %v", ctx.Err())
-				return false, ctx.Err()
-			}
-			tloc.Logger.Tracef("CheckRetry: Response: %v", resp)
-			return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
-		}
+		//cpack.insecure.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {	
+		//	tloc.Logger.Tracef("CheckRetry")
+		//	if ctx.Err() != nil {
+		//		tloc.Logger.Tracef("CheckRetry: context error: %v", ctx.Err())
+		//		return false, ctx.Err()
+		//	}
+		//	tloc.Logger.Tracef("CheckRetry: Response: %v", resp)
+		//	return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+		//}
+		tloc.Logger.Tracef("Created insecure client for %v: %v",
+						   tct.task.RetryPolicy, cpack.insecure)
 	
 		if (tloc.CACertPool != nil) {
-			tloc.Logger.Tracef("Creating secure client")
-
 			cpack.secure = retryablehttp.NewClient()
 			tlsConfig := &tls.Config{RootCAs: tloc.CACertPool,}
 			tlsConfig.BuildNameToCertificate()
@@ -180,6 +179,9 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 			cpack.secure.Logger = httpLogger
 			cpack.secure.RetryMax = rtMax
 			cpack.secure.RetryWaitMax = boffMax
+
+			tloc.Logger.Tracef("Created secure client for %v: %v",
+							   tct.task.RetryPolicy, cpack.secure)
 		}
 		tloc.clientMap[tct.task.RetryPolicy] = cpack
 	} else {

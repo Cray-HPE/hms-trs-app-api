@@ -257,7 +257,9 @@ func TestLaunchTimeout(t *testing.T) {
 func printOpenConnections(t *testing.T) {
     pid := os.Getpid()
 
-    cmd := exec.Command("lsof", "-i", "-a", "-p", fmt.Sprint(pid))
+    cmd := exec.Command(
+		"lsof", "-i", "-a", "-p", fmt.Sprint(pid),
+		"|", "grep", "-v", "LISTEN")
 
     output, err := cmd.CombinedOutput()
     if err != nil {
@@ -341,7 +343,7 @@ func TestPCSUseCase(t *testing.T) {
 	printOpenConnections(t)
 
 	// Give tasks a chance to start so test output looks pretty
-	time.Sleep(100 * time.Millisecond)
+	//time.Sleep(100 * time.Millisecond)
 
 	t.Logf("Waiting for normally completing tasks to complete")
 	for i := 0; i < numNoStallTasks; i++ {
