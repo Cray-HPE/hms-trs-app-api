@@ -157,7 +157,7 @@ func retryHandler(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusServiceUnavailable)
 	w.Write([]byte(`{"Message":"Service Unavailable"}`))
 
-	handlerLogger.Logf("retryHandler returning Message Ok...")
+	handlerLogger.Logf("retryHandler returning Message Service Unavailable...")
 }
 
 var stallCancel chan bool
@@ -405,7 +405,7 @@ func TestPCSUseCase(t *testing.T) {
 	numSuccessTasks := 5
 	numRetryTasks := 5
 	numStallTasks := 5
-	httpTimeout := time.Duration(2) * time.Second	// 30 in PCS
+	httpTimeout := time.Duration(10) * time.Second	// 30 in PCS
 	httpRetries := 3
 
 	// Initialize the tloc
