@@ -151,6 +151,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		cpack = new(clientPack)
 
 		cpack.insecure = retryablehttp.NewClient()
+		// TODO: THIS IS ZEROING ALL THE DEFAULTS
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}

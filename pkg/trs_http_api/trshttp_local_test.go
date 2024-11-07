@@ -24,9 +24,12 @@ package trs_http_api
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -248,6 +251,21 @@ func TestLaunchTimeout(t *testing.T) {
 	}
 }
 
+// Helper function to print the list of open http connections
+func printOpenConnections(t *testing.T) {
+    pid := os.Getpid()
+
+    cmd := exec.Command("lsof", "-i", "-a", "-p", fmt.Sprint(pid))
+
+    output, err := cmd.CombinedOutput()
+    if err != nil {
+        t.Logf("error running lsof: %v", err)
+		return
+    }
+
+    t.Logf("Open connections: %v", output)
+}
+
 // CustomReadCloser wraps an io.ReadCloser and tracks if it was closed.
 // This is used to test if response bodies are being closed properly.
 type CustomReadCloser struct {
@@ -309,13 +327,16 @@ func TestPCSUseCase(t *testing.T) {
 	t.Logf("Creating stalling task list with %v tasks and URL %v", numStallTasks, stallSrv.URL)
 	stallList := tloc.CreateTaskList(&stallProto, numStallTasks)
 
-	// Launch both sets of tasks
+	// Launch both sets of tasks in a single list
 	t.Logf("Launching all tasks")
 	tList := append(noStallList, stallList...)
 	taskListChannel, err := tloc.Launch(&tList)
 	if (err != nil) {
 		t.Errorf("Launch ERROR: %v", err)
 	}
+
+	// Should be 10 connections
+	printOpenConnections(t)
 
 	// Give tasks a chance to start so test output looks pretty
 	time.Sleep(100 * time.Millisecond)
@@ -325,10 +346,16 @@ func TestPCSUseCase(t *testing.T) {
 		<-taskListChannel
 	}
 
+	// Should be 5 connections
+	printOpenConnections(t)
+
 	t.Logf("Waiting for stalled tasks to time out")
 	for i := 0; i < numStallTasks; i++ {
 		<-taskListChannel
 	}
+
+	// Should be 0 connections
+	printOpenConnections(t)
 
 	t.Logf("Closing the task list channel")
 	close(taskListChannel)
@@ -352,7 +379,7 @@ func TestPCSUseCase(t *testing.T) {
 	}
 
 	// We never closed the normally completing tasks' response bodies because
-	// we wanted to test that TRS does it for the caller if the caller forgets.
+	// we want to test that TRS does it for the caller if the caller forgets.
 	// The timed out tasks will have no response bodies to check
 	t.Logf("Checking for closed response bodies")
 	for _, tsk := range(tList) {
