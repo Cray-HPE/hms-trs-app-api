@@ -387,7 +387,7 @@ func TestPCSUseCase(t *testing.T) {
 	}
 
 	// Wait for all connections to be established so output looks nice
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	// All connections should be in ESTABLISHED
 	t.Logf("Testing open connections after Launch")
