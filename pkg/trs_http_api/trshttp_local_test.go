@@ -401,26 +401,33 @@ func (c *CustomReadCloser) WasClosed() bool {
 	return c.closed
 }
 
+// TestPCSUseCase tests the PCS use case of the TRS HTTP API.  It launches
+// a mix of tasks that make http requests that complete successfully,
+// requests that retry multiple times and fail to get good responses, and
+// requests that waiting for a server response and thus hit their task
+// timout which cancels their contexts.
+
 func TestPCSUseCase(t *testing.T) {
 	numSuccessTasks := 5
 	numRetryTasks := 5
 	numStallTasks := 5
-	httpTimeout := time.Duration(10) * time.Second	// 30 in PCS
+	httpTimeout := time.Duration(30) * time.Second	// 30 in PCS
 	httpRetries := 3
 
-	// Initialize the tloc
+	// Initialize the task system
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger(logrus.TraceLevel))
 
-	// Create http servers.  One for tasks that complete, and one for tasks that stall
+	// Copy logger into global namespace for the http servers
+	handlerLogger = t
+
+	// Create http servers.  One for eash request response we want to test
 	successSrv := httptest.NewServer(http.HandlerFunc(launchHandler))
 	retraySrv := httptest.NewServer(http.HandlerFunc(retryHandler))
 	stallSrv := httptest.NewServer(http.HandlerFunc(stallHandler))
 
-	// Coty logger into global namespace so handlers can use it
-	handlerLogger = t
-
 	// Create an http request for tasks that complete successfully
+
 	successReq, err := http.NewRequest(http.MethodGet, successSrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
@@ -432,10 +439,11 @@ func TestPCSUseCase(t *testing.T) {
 			Timeout:		httpTimeout,
 			RetryPolicy:	RetryPolicy{Retries: httpRetries},}
 
-	t.Logf("Creating completing task list with %v tasks and URL %v", numStallTasks, successSrv.URL)
+	t.Logf("Creating success task list with %v tasks and URL %v", numStallTasks, successSrv.URL)
 	successList := tloc.CreateTaskList(&successProto, numSuccessTasks)
 
 	// Create an http request for tasks that retry muliple times and fail
+
 	retryReq, err := http.NewRequest(http.MethodGet, retraySrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
@@ -447,10 +455,11 @@ func TestPCSUseCase(t *testing.T) {
 			Timeout:		httpTimeout,
 			RetryPolicy:	RetryPolicy{Retries: httpRetries},}
 
-	t.Logf("Creating completing task list with %v tasks and URL %v", numStallTasks, retraySrv.URL)
+	t.Logf("Creating retry task list with %v tasks and URL %v", numStallTasks, retraySrv.URL)
 	retryList := tloc.CreateTaskList(&retryProto, numRetryTasks)
 
 	// Create an http request for tasks that stall
+
 	stallReq, err := http.NewRequest("GET", stallSrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
@@ -464,10 +473,12 @@ func TestPCSUseCase(t *testing.T) {
 	t.Logf("Creating stalling task list with %v tasks and URL %v", numStallTasks, stallSrv.URL)
 	stallList := tloc.CreateTaskList(&stallProto, numStallTasks)
 
-	// Launch both sets of tasks in a single list
-	t.Logf("Launching all tasks")
+	// Launch all three sets of tasks using a single list
+
 	tList := append(successList, retryList...)
 	tList = append(tList, stallList...)
+
+	t.Logf("Launching all tasks")
 	taskListChannel, err := tloc.Launch(&tList)
 	if (err != nil) {
 		t.Errorf("Launch ERROR: %v", err)
@@ -486,7 +497,7 @@ func TestPCSUseCase(t *testing.T) {
 	}
 
 	// The only remaining connections should be for the stalled tasks
-	// and they should still be in ESTABLISHED
+	// which should still be in ESTABLISHED
 	t.Logf("Testing open connections after normally completing tasks completed")
 	testOpenConnections(t, true, numStallTasks)
 
@@ -512,7 +523,7 @@ func TestPCSUseCase(t *testing.T) {
 		}
 	}
 
-	t.Logf("Closing task list")
+	t.Logf("Closing the task list")
 	tloc.Close(&tList)
 
 	t.Logf("Checking that the task list was closed")
@@ -520,9 +531,8 @@ func TestPCSUseCase(t *testing.T) {
 		t.Errorf("Expected task list map to be empty")
 	}
 
-	// We never closed the normally completing tasks' response bodies because
-	// we want to test that TRS does it for the caller if the caller forgets.
-	// The timed out tasks will have no response bodies to check
+	// We never closed any tasks' response bodies because we want to test
+	// that TRS does it for the caller if the caller forgets.
 	t.Logf("Checking for closed response bodies")
 	for _, tsk := range(tList) {
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
