@@ -263,7 +263,7 @@ func printOpenConnections(t *testing.T) {
 		return
     }
 
-    t.Logf("Open connections: %v", output)
+    t.Logf("Open connections: %s", output)
 }
 
 // CustomReadCloser wraps an io.ReadCloser and tracks if it was closed.
