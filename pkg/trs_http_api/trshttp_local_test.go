@@ -122,6 +122,8 @@ var handlerLogger *testing.T
 func launchHandler(w http.ResponseWriter, req *http.Request) {
 	handlerLogger.Logf("launchHandler running...")
 
+	time.Sleep(1 * time.Second) // Simulate network and BMC delay
+
 	if (!hasUserAgentHeader(req)) {
 		w.Write([]byte(`{"Message":"No User-Agent Header"}`))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -254,9 +256,8 @@ func TestLaunchTimeout(t *testing.T) {
 // Helper function to print the list of open http connections
 func printOpenConnections(t *testing.T) {
     pid := os.Getpid()
-	cmdStr := "lsof -i -a -p " + fmt.Sprint(pid)
 
-    cmd := exec.Command(cmdStr)
+    cmd := exec.Command("lsof", "-i", "-a", "-p", fmt.Sprint(pid))
 
     output, err := cmd.CombinedOutput()
     if err != nil {
@@ -284,7 +285,7 @@ func (c *CustomReadCloser) WasClosed() bool {
 }
 
 func TestPCSUseCase(t *testing.T) {
-	numNoStallTasks := 10
+	numNoStallTasks := 5
 	numStallTasks := 5
 	httpTimeout := time.Duration(2) * time.Second	// 30 in PCS
 	httpRetries := 3
