@@ -32,6 +32,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -263,7 +264,7 @@ func TestLaunchTimeout(t *testing.T) {
 }
 
 // Helper function to print the list of open http connections
-func testOpenConnections(t *testing.T, debug bool, expListen, expEstab, expCloseWait int) {
+func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 	pid := os.Getpid()
 	cmd := exec.Command( "lsof", "-i", "-a", "-p", fmt.Sprint(pid))
 
@@ -273,10 +274,8 @@ func testOpenConnections(t *testing.T, debug bool, expListen, expEstab, expClose
 		return
 	}
 
-	// Counter for lines containing "BAR"
-	listenCount := 0
+	srvrPorts := map[string]bool{}
 	estabCount := 0
-	closeWaitCount := 0
 	otherCount := 0
 
 	// Use a scanner to read output line-by-line
@@ -284,30 +283,42 @@ func testOpenConnections(t *testing.T, debug bool, expListen, expEstab, expClose
 	for scanner.Scan() {
 		line := scanner.Text()
 	
-		// Only print lines containing "BAR" and count them
 		if strings.Contains(line, "COMMAND") {
-			// Skip the header line
+			// Skip the header line of lsof output
 			continue
 		} else if strings.Contains(line, "LISTEN") {
-			listenCount++
+			// This is a server, grab the port.  LISTEN always comes first in output
+			re := regexp.MustCompile(`localhost:(\d+)\s+\(LISTEN\)`)
+			match := re.FindStringSubmatch(line)
+			if len(match) > 1 {
+				srvrPorts[match[1]] = true
+				t.Logf("Server listening on port %v", match[1])	// TODO REMOVE LATER
+			} else {
+				t.Errorf("Failed to find port in LISTEN line: %v", line)
+				return
+			}
 		} else if strings.Contains(line, "ESTABLISHED") {
-			estabCount++
-		} else if strings.Contains(line, "CLOSE_WAIT") {
-			closeWaitCount++
+			re := regexp.MustCompile(`localhost:(\d+)->localhost:\d+`)
+			match := re.FindStringSubmatch(line)
+			if len(match) > 1 {
+				port := match[1]
+				if _, exists := srvrPorts[port]; exists {
+					// Ignore connections to servers
+				} else {
+					estabCount++
+				}
+			} else {
+				t.Errorf("Failed to find port in ESTABLISHED line: %v", line)
+				return
+			}
 		} else {
 			otherCount++
 		}
 	}
 
-	if (listenCount != expListen) {
-		t.Errorf("Expected %v LISTEN connections, but got %v:\n%s", expListen, listenCount, output)
-	}
-	if (estabCount != (expEstab * 2)) {
+	if (estabCount != estabExp) {
 		// Each connection has a local and remote entry
-		t.Errorf("Expected %v ESTABLISHED connections, but got %v:\n%s", expEstab, estabCount, output)
-	}
-	if (closeWaitCount != expCloseWait) {
-		t.Errorf("Expected %v CLOSE_WAIT connections, but got %v:\n%s", expCloseWait, closeWaitCount, output)
+		t.Errorf("Expected %v ESTABLISHED connections, but got %v:\n%s", estabExp, estabCount, output)
 	}
 	if (otherCount != 0) {
 		t.Errorf("Expected no other connections, but got %v:\n%s", otherCount, output)
@@ -391,7 +402,7 @@ func TestPCSUseCase(t *testing.T) {
 
 	// All connections should be in ESTABLISHED
 	t.Logf("Testing open connections after Launch")
-	testOpenConnections(t, true, 2, (numNoStallTasks + numStallTasks), 0)
+	testOpenConnections(t, true, (numNoStallTasks + numStallTasks))
 
 	t.Logf("Waiting for normally completing tasks to complete")
 	for i := 0; i < numNoStallTasks; i++ {
@@ -401,16 +412,16 @@ func TestPCSUseCase(t *testing.T) {
 	// The only remaining connections should be for the stalled tasks
 	// and they should still be in ESTABLISHED
 	t.Logf("Testing open connections after normally completing tasks completed")
-	testOpenConnections(t, true, 2, numStallTasks, 0)
+	testOpenConnections(t, true, numStallTasks)
 
 	t.Logf("Waiting for stalled tasks to time out")
 	for i := 0; i < numStallTasks; i++ {
 		<-taskListChannel
 	}
 
-	// The connections for the timed out tasks should now be in CLOSE_WAIT
-	t.Logf("Testing open connections stalled tasks completed")
-	testOpenConnections(t, true, 2, 0, numStallTasks)
+	// All connections should now be closed
+	t.Logf("Testing open connections after stalled tasks completed")
+	testOpenConnections(t, true, 0)
 
 	t.Logf("Closing the task list channel")
 	close(taskListChannel)
@@ -444,12 +455,6 @@ func TestPCSUseCase(t *testing.T) {
 			}
 		}
 	}
-
-	// After calling Close, all connections should now be closed since their
-	// response bodies were closed
-	t.Logf("Testing open connections after Close")
-time.Sleep(6 * time.Second) // Wait for connections to close
-	testOpenConnections(t, true, 2, 0, 0)
 
 	t.Logf("Checking for correct number of canceled and timed out contexts")
 	canceledTasks := 0
