@@ -254,8 +254,9 @@ func TestLaunchTimeout(t *testing.T) {
 // Helper function to print the list of open http connections
 func printOpenConnections(t *testing.T) {
     pid := os.Getpid()
+	cmdStr := "lsof -i -a -p " + fmt.Sprint(pid)
 
-    cmd := exec.Command("lsof", "-i", "-a", "-p", fmt.Sprint(pid))
+    cmd := exec.Command(cmdStr)
 
     output, err := cmd.CombinedOutput()
     if err != nil {
@@ -283,7 +284,7 @@ func (c *CustomReadCloser) WasClosed() bool {
 }
 
 func TestPCSUseCase(t *testing.T) {
-	numNoStallTasks := 5
+	numNoStallTasks := 10
 	numStallTasks := 5
 	httpTimeout := time.Duration(2) * time.Second	// 30 in PCS
 	httpRetries := 3
