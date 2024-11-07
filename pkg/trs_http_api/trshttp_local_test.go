@@ -263,7 +263,7 @@ func TestLaunchTimeout(t *testing.T) {
 	}
 }
 
-// Helper function to print the list of open http connections
+// Test connection states using lsof
 func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 	pid := os.Getpid()
 	cmd := exec.Command( "lsof", "-i", "-a", "-p", fmt.Sprint(pid))
@@ -275,7 +275,7 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 	}
 
 	srvrPorts := map[string]bool{}
-	debugOutput := map[string]string{}
+	debugOutput := map[string][]string{}
 	estabCount := 0
 	otherCount := 0
 
@@ -286,12 +286,12 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 	
 		if strings.Contains(line, "COMMAND") {
 			// Skip the header line of lsof output
-			debugOutput["header"] += line
+			debugOutput["header"] = append(debugOutput["header"], line)
 			continue
 		} else if strings.Contains(line, "LISTEN") {
 			// This is a server, grab the port so we can filter on it later
 			// LISTEN lines always comes first in lsof output
-			debugOutput["server"] += line
+			debugOutput["server"] = append(debugOutput["server"], line)
 
 			re := regexp.MustCompile(`localhost:(\d+)\s+\(LISTEN\)`)
 
@@ -311,14 +311,14 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 				port := match[1]
 				if _, exists := srvrPorts[port]; exists {
 					// Ignore connections to servers
-					debugOutput["server"] += line
+					debugOutput["server"] = append(debugOutput["server"], line)
 				} else {
 					// This is a client connection
-					debugOutput["client"] += line
+					debugOutput["client"] = append(debugOutput["client"], line)
 					estabCount++
 				}
 			} else {
-				debugOutput["other"] += line
+				debugOutput["other"] = append(debugOutput["other"], line)
 				t.Errorf("Failed to find port in ESTABLISHED line: %v", line)
 			}
 		} else {
@@ -336,20 +336,34 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 
 	if debug {
 		if len(debugOutput["header"]) > 0 {
-			t.Logf("\nServer Connections:\n")
-			t.Logf("Header: %v", debugOutput["header"])
+			t.Logf("")
+			for _,v := range(debugOutput["header"]) {
+				t.Log(v)
+			}
 		}
 		if len(debugOutput["client"]) > 0 {
-			t.Logf("\nClient Connections:\n")
-			t.Logf("Client: %v", debugOutput["client"])
+			t.Logf("Client Connections:")
+			t.Logf("")
+			for _,v := range(debugOutput["client"]) {
+				t.Log(v)
+			}
+			t.Logf("")
 		}
 		if len(debugOutput["server"]) > 0 {
-			t.Logf("\nServer Connections:\n")
-			t.Logf("Server: %v", debugOutput["server"])
+			t.Logf("Server Connections:")
+			t.Logf("")
+			for _,v := range(debugOutput["server"]) {
+				t.Log(v)
+			}
+			t.Logf("")
 		}
 		if len(debugOutput["other"]) > 0 {
-			t.Logf("\nOther Connections:\n")
-			t.Logf("Other: %v", debugOutput["other"])
+			t.Logf("Other Connections:")
+			t.Logf("")
+			for _,v := range(debugOutput["other"]) {
+				t.Log(v)
+			}
+			t.Logf("")
 		}
 	}
 }
