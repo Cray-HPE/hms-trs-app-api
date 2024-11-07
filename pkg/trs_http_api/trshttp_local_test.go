@@ -144,6 +144,22 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 	handlerLogger.Logf("launchHandler returning Message Ok...")
 }
 
+func retryHandler(w http.ResponseWriter, req *http.Request) {
+	// Wait for all connections to be established so output looks nice
+	time.Sleep(100 * time.Millisecond)
+
+	handlerLogger.Logf("retryHandler running...")
+
+	time.Sleep(1 * time.Second) // Simulate network and BMC delay
+
+	w.Header().Set("Content-Type","application/json")
+	w.Header().Set("Retry-After","1")
+	w.WriteHeader(http.StatusServiceUnavailable)
+	w.Write([]byte(`{"Message":"Service Unavailable"}`))
+
+	handlerLogger.Logf("retryHandler returning Message Ok...")
+}
+
 var stallCancel chan bool
 
 func stallHandler(w http.ResponseWriter, req *http.Request) {
@@ -386,7 +402,8 @@ func (c *CustomReadCloser) WasClosed() bool {
 }
 
 func TestPCSUseCase(t *testing.T) {
-	numNoStallTasks := 5
+	numSuccessTasks := 5
+	numRetryTasks := 5
 	numStallTasks := 5
 	httpTimeout := time.Duration(2) * time.Second	// 30 in PCS
 	httpRetries := 3
@@ -396,25 +413,42 @@ func TestPCSUseCase(t *testing.T) {
 	tloc.Init(svcName, createLogger(logrus.TraceLevel))
 
 	// Create http servers.  One for tasks that complete, and one for tasks that stall
-	noStallSrv := httptest.NewServer(http.HandlerFunc(launchHandler))
+	successSrv := httptest.NewServer(http.HandlerFunc(launchHandler))
+	retraySrv := httptest.NewServer(http.HandlerFunc(retryHandler))
 	stallSrv := httptest.NewServer(http.HandlerFunc(stallHandler))
 
+	// Coty logger into global namespace so handlers can use it
 	handlerLogger = t
 
-	// Create an http request for tasks that complete
-	noStallReq, err := http.NewRequest(http.MethodGet, noStallSrv.URL, nil)
+	// Create an http request for tasks that complete successfully
+	successReq, err := http.NewRequest(http.MethodGet, successSrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
-	noStallReq.Header.Set("Accept", "*/*")
+	successReq.Header.Set("Accept", "*/*")
 
-	noStallProto := HttpTask{
-			Request:		noStallReq,
+	successProto := HttpTask{
+			Request:		successReq,
 			Timeout:		httpTimeout,
 			RetryPolicy:	RetryPolicy{Retries: httpRetries},}
 
-	t.Logf("Creating completing task list with %v tasks and URL %v", numStallTasks, noStallSrv.URL)
-	noStallList := tloc.CreateTaskList(&noStallProto, numNoStallTasks)
+	t.Logf("Creating completing task list with %v tasks and URL %v", numStallTasks, successSrv.URL)
+	successList := tloc.CreateTaskList(&successProto, numSuccessTasks)
+
+	// Create an http request for tasks that retry muliple times and fail
+	retryReq, err := http.NewRequest(http.MethodGet, retraySrv.URL, nil)
+	if err != nil {
+        t.Fatalf("Failed to create request: %v", err)
+    }
+	retryReq.Header.Set("Accept", "*/*")
+
+	retryProto := HttpTask{
+			Request:		retryReq,
+			Timeout:		httpTimeout,
+			RetryPolicy:	RetryPolicy{Retries: httpRetries},}
+
+	t.Logf("Creating completing task list with %v tasks and URL %v", numStallTasks, retraySrv.URL)
+	retryList := tloc.CreateTaskList(&retryProto, numRetryTasks)
 
 	// Create an http request for tasks that stall
 	stallReq, err := http.NewRequest("GET", stallSrv.URL, nil)
@@ -432,7 +466,8 @@ func TestPCSUseCase(t *testing.T) {
 
 	// Launch both sets of tasks in a single list
 	t.Logf("Launching all tasks")
-	tList := append(noStallList, stallList...)
+	tList := append(successList, retryList...)
+	tList = append(tList, stallList...)
 	taskListChannel, err := tloc.Launch(&tList)
 	if (err != nil) {
 		t.Errorf("Launch ERROR: %v", err)
@@ -443,10 +478,10 @@ func TestPCSUseCase(t *testing.T) {
 
 	// All connections should be in ESTABLISHED
 	t.Logf("Testing open connections after Launch")
-	testOpenConnections(t, true, (numNoStallTasks + numStallTasks))
+	testOpenConnections(t, true, (numSuccessTasks + numRetryTasks + numStallTasks))
 
 	t.Logf("Waiting for normally completing tasks to complete")
-	for i := 0; i < numNoStallTasks; i++ {
+	for i := 0; i < (numSuccessTasks + numRetryTasks); i++ {
 		<-taskListChannel
 	}
 
@@ -514,8 +549,8 @@ func TestPCSUseCase(t *testing.T) {
 			t.Errorf("Expected context to be done, but it is still active")
 		}
 	}
-	if canceledTasks != numNoStallTasks {
-		t.Errorf("Expected %v canceled tasks, but got %v", numNoStallTasks, canceledTasks)
+	if canceledTasks != (numSuccessTasks + numRetryTasks) {
+		t.Errorf("Expected %v canceled tasks, but got %v", numSuccessTasks + numRetryTasks, canceledTasks)
 	}
 	if timedOutTasks != numStallTasks {
 		t.Errorf("Expected %v timed out tasks, but got %v", numStallTasks, timedOutTasks)
@@ -531,6 +566,7 @@ func TestPCSUseCase(t *testing.T) {
 	}
 	close(stallCancel)
 
-	noStallSrv.Close()
+	successSrv.Close()
+	retraySrv.Close()
 	stallSrv.Close()
 }
