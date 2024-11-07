@@ -307,7 +307,7 @@ func printOpenConnections(t *testing.T, debug bool, expListen, expEstab, expClos
 		t.Errorf("Expected no other connections, but got %v: %s", otherCount, output)
 	}
 	if (debug) {
-		t.Logf("DEBUG: Connections: %s", output)
+		t.Logf("DEBUG Connections:\n%s", output)
 	}
 }
 

@@ -167,8 +167,8 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		//	tloc.Logger.Tracef("CheckRetry: Response: %v", resp)
 		//	return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
 		//}
-		tloc.Logger.Tracef("Created insecure client for %v: %v",
-						   tct.task.RetryPolicy, cpack.insecure)
+		tloc.Logger.Tracef("Created insecure client for %v with Transport %v",
+						   tct.task.RetryPolicy, cpack.insecure.HTTPClient.Transport)
 	
 		if (tloc.CACertPool != nil) {
 			cpack.secure = retryablehttp.NewClient()
@@ -180,8 +180,8 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 			cpack.secure.RetryMax = rtMax
 			cpack.secure.RetryWaitMax = boffMax
 
-			tloc.Logger.Tracef("Created secure client for %v: %v",
-							   tct.task.RetryPolicy, cpack.secure)
+			tloc.Logger.Tracef("Created secure client for %v with Transport %v",
+							   tct.task.RetryPolicy, cpack.secure.HTTPClient.Transport)
 		}
 		tloc.clientMap[tct.task.RetryPolicy] = cpack
 	} else {
