@@ -353,14 +353,12 @@ func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 	for _, v := range *taskList {
 		// The caller should close the response body, but we'll also do it
 		// here to prevent resource leaks if the caller neglects to do so
-		/*
 		if (v.Ignore == false) {
 			if v.Request.Response != nil && v.Request.Response.Body != nil {
 				v.Request.Response.Body.Close()
 				v.Request.Response.Body = nil
 			}
 		}
-			*/
 		tloc.taskMutex.Lock()
 		delete(tloc.taskMap, v.id)
 		tloc.taskMutex.Unlock()
