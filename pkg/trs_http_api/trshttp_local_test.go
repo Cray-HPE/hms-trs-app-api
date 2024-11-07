@@ -257,9 +257,8 @@ func TestLaunchTimeout(t *testing.T) {
 func printOpenConnections(t *testing.T) {
     pid := os.Getpid()
 
-    cmd := exec.Command(
-		"lsof", "-i", "-a", "-p", fmt.Sprint(pid),
-		"|", "grep", "-v", "LISTEN")
+    cmd := exec.Command( "lsof", "-i", "-a", "-p", fmt.Sprint(pid))
+//		"|", "grep", "-v", "LISTEN")
 
     output, err := cmd.CombinedOutput()
     if err != nil {
