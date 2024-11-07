@@ -328,7 +328,6 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 	}
 
 	if (estabCount != estabExp) {
-		// Each connection has a local and remote entry
 		t.Errorf("Expected %v ESTABLISHED connections, but got %v:\n%s", estabExp, estabCount, output)
 	}
 	if (otherCount != 0) {
