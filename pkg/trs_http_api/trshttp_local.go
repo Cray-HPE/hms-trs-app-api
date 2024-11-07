@@ -155,7 +155,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 		cpack.insecure.HTTPClient.Transport = tr
-		cpack.insecure.HTTPClient.Timeout = 1 * time.Second
+		cpack.insecure.HTTPClient.Timeout = 2 * time.Second
 		cpack.insecure.Logger = httpLogger
 		cpack.insecure.RetryMax = rtMax
 		cpack.insecure.RetryWaitMax = boffMax
