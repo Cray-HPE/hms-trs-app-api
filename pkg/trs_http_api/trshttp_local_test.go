@@ -298,11 +298,10 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 			match := re.FindStringSubmatch(line)
 			if len(match) > 1 {
 				srvrPorts[match[1]] = true
-				t.Logf("Server listening on port %v", match[1])	// TODO REMOVE LATER
 			} else {
 				t.Errorf("Failed to find port in LISTEN line: %v", line)
 			}
-		} else if strings.Contains(line, "ESTABLISHED") {
+		} else {
 			// Distinguish client connections from server connections
 			re := regexp.MustCompile(`localhost:(\d+)->localhost:\d+`)
 
@@ -315,14 +314,16 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 				} else {
 					// This is a client connection
 					debugOutput["client"] = append(debugOutput["client"], line)
-					estabCount++
+					if strings.Contains(line, "ESTABLISHED") {
+						estabCount++
+					} else {
+						otherCount++
+					}
 				}
 			} else {
 				debugOutput["other"] = append(debugOutput["other"], line)
-				t.Errorf("Failed to find port in ESTABLISHED line: %v", line)
+				t.Errorf("Failed to parse line: %v", line)
 			}
-		} else {
-			otherCount++
 		}
 	}
 
@@ -340,9 +341,10 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 			for _,v := range(debugOutput["header"]) {
 				t.Log(v)
 			}
+			t.Logf("")
 		}
 		if len(debugOutput["client"]) > 0 {
-			t.Logf("Client Connections:")
+			t.Logf("Client Connections: (%v)", len(debugOutput["client"]))
 			t.Logf("")
 			for _,v := range(debugOutput["client"]) {
 				t.Log(v)
@@ -350,7 +352,7 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 			t.Logf("")
 		}
 		if len(debugOutput["server"]) > 0 {
-			t.Logf("Server Connections:")
+			t.Logf("Server Connections: (%v)", len(debugOutput["server"]))
 			t.Logf("")
 			for _,v := range(debugOutput["server"]) {
 				t.Log(v)
@@ -358,7 +360,7 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 			t.Logf("")
 		}
 		if len(debugOutput["other"]) > 0 {
-			t.Logf("Other Connections:")
+			t.Logf("Other Output: (%v)", len(debugOutput["other"]))
 			t.Logf("")
 			for _,v := range(debugOutput["other"]) {
 				t.Log(v)
