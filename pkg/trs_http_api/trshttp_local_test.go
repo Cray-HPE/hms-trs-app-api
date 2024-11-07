@@ -279,7 +279,10 @@ func printOpenConnections(t *testing.T, debug bool, expListen, expEstab, expClos
 		line := scanner.Text()
 	
 		// Only print lines containing "BAR" and count them
-		if strings.Contains(line, "LISTEN") {
+		if strings.Contains(line, "COMMAND") {
+			// Skip the header line
+			continue
+		} else if strings.Contains(line, "LISTEN") {
 			listenCount++
 		} else if strings.Contains(line, "ESTABLISHED") {
 			estabCount++
