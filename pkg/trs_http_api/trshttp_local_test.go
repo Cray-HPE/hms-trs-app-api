@@ -123,6 +123,9 @@ func hasUserAgentHeader(r *http.Request) bool {
 var handlerLogger *testing.T
 
 func launchHandler(w http.ResponseWriter, req *http.Request) {
+	// Wait for all connections to be established so output looks nice
+	time.Sleep(100 * time.Millisecond)
+
 	handlerLogger.Logf("launchHandler running...")
 
 	time.Sleep(1 * time.Second) // Simulate network and BMC delay
@@ -143,6 +146,9 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 var stallCancel chan bool
 
 func stallHandler(w http.ResponseWriter, req *http.Request) {
+	// Wait for all connections to be established so output looks nice
+	time.Sleep(100 * time.Millisecond)
+
 	handlerLogger.Logf("stallHandler running...")
 
 	<-stallCancel
@@ -380,7 +386,7 @@ func TestPCSUseCase(t *testing.T) {
 		t.Errorf("Launch ERROR: %v", err)
 	}
 
-	// Wait for the connections to be established so output looks nice
+	// Wait for all connections to be established so output looks nice
 	time.Sleep(100 * time.Millisecond)
 
 	// All connections should be in ESTABLISHED
