@@ -23,6 +23,8 @@
 package trs_http_api
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -30,6 +32,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -254,19 +257,51 @@ func TestLaunchTimeout(t *testing.T) {
 }
 
 // Helper function to print the list of open http connections
-func printOpenConnections(t *testing.T) {
-    pid := os.Getpid()
+func printOpenConnections(t *testing.T, debug bool, expListen, expEstab, expCloseWait int) {
+	pid := os.Getpid()
+	cmd := exec.Command( "lsof", "-i", "-a", "-p", fmt.Sprint(pid))
 
-    cmd := exec.Command( "lsof", "-i", "-a", "-p", fmt.Sprint(pid))
-//		"|", "grep", "-v", "LISTEN")
-
-    output, err := cmd.CombinedOutput()
-    if err != nil {
-        t.Logf("error running lsof: %v", err)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Logf("error running lsof: %v", err)
 		return
-    }
+	}
 
-    t.Logf("Open connections: %s", output)
+	// Counter for lines containing "BAR"
+	listenCount := 0
+	estabCount := 0
+	closeWaitCount := 0
+	otherCount := 0
+
+	// Use a scanner to read output line-by-line
+	scanner := bufio.NewScanner(bytes.NewReader(output))
+	for scanner.Scan() {
+		line := scanner.Text()
+	
+		// Only print lines containing "BAR" and count them
+		if strings.Contains(line, "LISTEN") {
+			listenCount++
+		} else if strings.Contains(line, "ESTABLISHED") {
+			estabCount++
+		} else if strings.Contains(line, "CLOSE_WAIT") {
+			closeWaitCount++
+		} else {
+			otherCount++
+		}
+	}
+
+	if (listenCount != expListen) {
+		t.Errorf("Expected %v LISTEN connections, but got %v: %s", expListen, listenCount, output)
+	} else if ((estabCount * 2) != expEstab) {
+		// Each connection has a local and remote entry
+		t.Errorf("Expected %v ESTABLISHED connections, but got %v: %s", expEstab, estabCount, output)
+	} else if (closeWaitCount != expCloseWait) {
+		t.Errorf("Expected %v CLOSE_WAIT connections, but got %v: %s", expCloseWait, closeWaitCount, output)
+	} else if (otherCount != 0) {
+		t.Errorf("Expected no other connections, but got %v: %s", otherCount, output)
+	} else if (debug) {
+		t.Logf("DEBUG: Connections: %s", output)
+	}
 }
 
 // CustomReadCloser wraps an io.ReadCloser and tracks if it was closed.
@@ -339,7 +374,7 @@ func TestPCSUseCase(t *testing.T) {
 	}
 
 	// Should be 10 connections
-	printOpenConnections(t)
+	printOpenConnections(t, true, 2, (numNoStallTasks + numStallTasks), 0)
 
 	// Give tasks a chance to start so test output looks pretty
 	//time.Sleep(100 * time.Millisecond)
@@ -350,7 +385,7 @@ func TestPCSUseCase(t *testing.T) {
 	}
 
 	// Should be 5 connections
-	printOpenConnections(t)
+	printOpenConnections(t, true, 2, numStallTasks, 0)
 
 	t.Logf("Waiting for stalled tasks to time out")
 	for i := 0; i < numStallTasks; i++ {
@@ -358,7 +393,7 @@ func TestPCSUseCase(t *testing.T) {
 	}
 
 	// Should be 0 connections
-	printOpenConnections(t)
+	printOpenConnections(t, true, 2, 0, numStallTasks)
 
 	t.Logf("Closing the task list channel")
 	close(taskListChannel)
