@@ -275,6 +275,7 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 	}
 
 	srvrPorts := map[string]bool{}
+	debugOutput := map[string]string{}
 	estabCount := 0
 	otherCount := 0
 
@@ -285,31 +286,40 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 	
 		if strings.Contains(line, "COMMAND") {
 			// Skip the header line of lsof output
+			debugOutput["header"] += line
 			continue
 		} else if strings.Contains(line, "LISTEN") {
-			// This is a server, grab the port.  LISTEN always comes first in output
+			// This is a server, grab the port so we can filter on it later
+			// LISTEN lines always comes first in lsof output
+			debugOutput["server"] += line
+
 			re := regexp.MustCompile(`localhost:(\d+)\s+\(LISTEN\)`)
+
 			match := re.FindStringSubmatch(line)
 			if len(match) > 1 {
 				srvrPorts[match[1]] = true
 				t.Logf("Server listening on port %v", match[1])	// TODO REMOVE LATER
 			} else {
 				t.Errorf("Failed to find port in LISTEN line: %v", line)
-				return
 			}
 		} else if strings.Contains(line, "ESTABLISHED") {
+			// Distinguish client connections from server connections
 			re := regexp.MustCompile(`localhost:(\d+)->localhost:\d+`)
+
 			match := re.FindStringSubmatch(line)
 			if len(match) > 1 {
 				port := match[1]
 				if _, exists := srvrPorts[port]; exists {
 					// Ignore connections to servers
+					debugOutput["server"] += line
 				} else {
+					// This is a client connection
+					debugOutput["client"] += line
 					estabCount++
 				}
 			} else {
+				debugOutput["other"] += line
 				t.Errorf("Failed to find port in ESTABLISHED line: %v", line)
-				return
 			}
 		} else {
 			otherCount++
@@ -323,9 +333,24 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 	if (otherCount != 0) {
 		t.Errorf("Expected no other connections, but got %v:\n%s", otherCount, output)
 	}
-	if (debug) {
-		t.Logf("DEBUG Connections:\n%s", output)
-	}
+
+	if debug {
+		if len(debugOutput["header"]) > 0 {
+			t.Logf("\nServer Connections:\n")
+			t.Logf("Header: %v", debugOutput["header"])
+		}
+		if len(debugOutput["client"]) > 0 {
+			t.Logf("\nClient Connections:\n")
+			t.Logf("Client: %v", debugOutput["client"])
+		}
+		if len(debugOutput["server"]) > 0 {
+			t.Logf("\nServer Connections:\n")
+			t.Logf("Server: %v", debugOutput["server"])
+		}
+		if len(debugOutput["other"]) > 0 {
+			t.Logf("\nOther Connections:\n")
+			t.Logf("Other: %v", debugOutput["other"])
+		}
 }
 
 // CustomReadCloser wraps an io.ReadCloser and tracks if it was closed.
