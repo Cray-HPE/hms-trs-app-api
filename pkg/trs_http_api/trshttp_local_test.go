@@ -380,6 +380,9 @@ func TestPCSUseCase(t *testing.T) {
 		t.Errorf("Launch ERROR: %v", err)
 	}
 
+	// Wait for the connections to be established so output looks nice
+	time.Sleep(100 * time.Millisecond)
+
 	// All connections should be in ESTABLISHED
 	t.Logf("Testing open connections after Launch")
 	testOpenConnections(t, true, 2, (numNoStallTasks + numStallTasks), 0)
