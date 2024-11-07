@@ -448,6 +448,7 @@ func TestPCSUseCase(t *testing.T) {
 	// After calling Close, all connections should now be closed since their
 	// response bodies were closed
 	t.Logf("Testing open connections after Close")
+time.Sleep(6 * time.Second) // Wait for connections to close
 	testOpenConnections(t, true, 2, 0, 0)
 
 	t.Logf("Checking for correct number of canceled and timed out contexts")
