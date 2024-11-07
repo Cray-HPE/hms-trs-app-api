@@ -257,7 +257,7 @@ func TestLaunchTimeout(t *testing.T) {
 }
 
 // Helper function to print the list of open http connections
-func printOpenConnections(t *testing.T, debug bool, expListen, expEstab, expCloseWait int) {
+func testOpenConnections(t *testing.T, debug bool, expListen, expEstab, expCloseWait int) {
 	pid := os.Getpid()
 	cmd := exec.Command( "lsof", "-i", "-a", "-p", fmt.Sprint(pid))
 
@@ -294,17 +294,17 @@ func printOpenConnections(t *testing.T, debug bool, expListen, expEstab, expClos
 	}
 
 	if (listenCount != expListen) {
-		t.Errorf("Expected %v LISTEN connections, but got %v: %s", expListen, listenCount, output)
+		t.Errorf("Expected %v LISTEN connections, but got %v:\n%s", expListen, listenCount, output)
 	}
 	if (estabCount != (expEstab * 2)) {
 		// Each connection has a local and remote entry
-		t.Errorf("Expected %v ESTABLISHED connections, but got %v: %s", expEstab, estabCount, output)
+		t.Errorf("Expected %v ESTABLISHED connections, but got %v:\n%s", expEstab, estabCount, output)
 	}
 	if (closeWaitCount != expCloseWait) {
-		t.Errorf("Expected %v CLOSE_WAIT connections, but got %v: %s", expCloseWait, closeWaitCount, output)
+		t.Errorf("Expected %v CLOSE_WAIT connections, but got %v:\n%s", expCloseWait, closeWaitCount, output)
 	}
 	if (otherCount != 0) {
-		t.Errorf("Expected no other connections, but got %v: %s", otherCount, output)
+		t.Errorf("Expected no other connections, but got %v:\n%s", otherCount, output)
 	}
 	if (debug) {
 		t.Logf("DEBUG Connections:\n%s", output)
@@ -380,27 +380,28 @@ func TestPCSUseCase(t *testing.T) {
 		t.Errorf("Launch ERROR: %v", err)
 	}
 
-	// Should be 10 connections
-	printOpenConnections(t, true, 2, (numNoStallTasks + numStallTasks), 0)
-
-	// Give tasks a chance to start so test output looks pretty
-	//time.Sleep(100 * time.Millisecond)
+	// All connections should be in ESTABLISHED
+	t.Logf("Testing open connections after Launch")
+	testOpenConnections(t, true, 2, (numNoStallTasks + numStallTasks), 0)
 
 	t.Logf("Waiting for normally completing tasks to complete")
 	for i := 0; i < numNoStallTasks; i++ {
 		<-taskListChannel
 	}
 
-	// Should be 5 connections
-	printOpenConnections(t, true, 2, numStallTasks, 0)
+	// The only remaining connections should be for the stalled tasks
+	// and they should still be in ESTABLISHED
+	t.Logf("Testing open connections after normally completing tasks completed")
+	testOpenConnections(t, true, 2, numStallTasks, 0)
 
 	t.Logf("Waiting for stalled tasks to time out")
 	for i := 0; i < numStallTasks; i++ {
 		<-taskListChannel
 	}
 
-	// Should be 0 connections
-	printOpenConnections(t, true, 2, 0, numStallTasks)
+	// The connections for the timed out tasks should now be in CLOSE_WAIT
+	t.Logf("Testing open connections stalled tasks completed")
+	testOpenConnections(t, true, 2, 0, numStallTasks)
 
 	t.Logf("Closing the task list channel")
 	close(taskListChannel)
@@ -434,6 +435,11 @@ func TestPCSUseCase(t *testing.T) {
 			}
 		}
 	}
+
+	// After calling Close, all connections should now be closed since their
+	// response bodies were closed
+	t.Logf("Testing open connections after Close")
+	testOpenConnections(t, true, 2, 0, 0)
 
 	t.Logf("Checking for correct number of canceled and timed out contexts")
 	canceledTasks := 0
