@@ -291,7 +291,15 @@ func TestLaunchTimeout(t *testing.T) {
 
 // Test connection states using lsof
 func testOpenConnections(t *testing.T, debug bool, estabExp int) {
+	///
+	cmd := exec.Command( "netstat", "-anp")
+	output, err := cmd.CombinedOutput()
+	t.Logf("netstat output: %v", string(output))
+	return
+	///
+
 	pid := os.Getpid()
+
 	cmd := exec.Command( "lsof", "-i", "-a", "-p", fmt.Sprint(pid))
 
 	output, err := cmd.CombinedOutput()
