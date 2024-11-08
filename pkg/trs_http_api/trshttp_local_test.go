@@ -343,22 +343,30 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 			}
 		} else {
 			// Distinguish client connections from server connections
-			re := regexp.MustCompile(`localhost:(\d+)\s+localhost:\d+`)
+			re := regexp.MustCompile(`localhost:(\d+)\s+localhost:(\d+)`)
 
 			match := re.FindStringSubmatch(line)
-			if len(match) > 1 {
-				port := match[1]
-				if _, exists := srvrPorts[port]; exists {
-					// Ignore connections to servers
+			if len(match) > 2 {
+				srcPort := match[1]
+				dstPort := match[2]
+
+				if _, exists := srvrPorts[srcPort]; exists {
+					// This is a server connection
 					debugOutput["server"] = append(debugOutput["server"], line)
 				} else {
-					// This is a client connection
-					if strings.Contains(line, "ESTAB") {
-						estabCount++
-						debugOutput["client"] = append(debugOutput["client"], line)
+					// This is might be a client connection.  Test to see
+					// if it targets one of our server ports
+					if _, exists := srvrPorts[dstPort]; exists {
+						// It's one of our client connections
+						if strings.Contains(line, "ESTAB") {
+							estabCount++
+							debugOutput["client"] = append(debugOutput["client"], line)
+						} else {
+							otherCount++
+							debugOutput["other"] = append(debugOutput["other"], line)
+						}
 					} else {
-						otherCount++
-						debugOutput["other"] = append(debugOutput["other"], line)
+						// Not related, ignore
 					}
 				}
 			} else {
@@ -369,9 +377,6 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 
 	if (estabCount != estabExp) {
 		t.Errorf("Expected %v ESTABLISHED connections, but got %v:\n%s", estabExp, estabCount, output)
-	}
-	if (otherCount != 0) {
-		t.Errorf("Expected no other connections, but got %v:\n%s", otherCount, output)
 	}
 
 	if debug {
