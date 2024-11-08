@@ -247,7 +247,7 @@ func TestLaunchTimeout(t *testing.T) {
 	handlerLogger = t
 
 	req,_ := http.NewRequest("GET",srv.URL,nil)
-	tproto := HttpTask{Request: req, Timeout: 9*time.Second, RetryPolicy: RetryPolicy{Retries: 1, BackoffTimeout: 3 * time.Second,},}
+	tproto := HttpTask{Request: req, Timeout: 3*time.Second, RetryPolicy: RetryPolicy{Retries: 1, BackoffTimeout: 3 * time.Second,},}
 	tList := tloc.CreateTaskList(&tproto,1)
 	stallCancel = make(chan bool, 1)
 
@@ -282,6 +282,8 @@ func TestLaunchTimeout(t *testing.T) {
 		t.Errorf("Got %d errors from Launch",nErr)
 	}
 	// Clean up and exit
+	<-tch	// release the retried handler
+	close(tch)
 	tloc.Close(&tList)
 	tloc.Cleanup()
 }
