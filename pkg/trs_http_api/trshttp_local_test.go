@@ -300,7 +300,7 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 	//output, _ = netstatCmd.CombinedOutput()
 	//t.Logf("netstat output: %v", string(output))
 
-	netstatCmd = exec.Command( "ss", "--tcp", "--resolve", "--processes")
+	netstatCmd = exec.Command( "ss", "--tcp", "--resolve", "--processes", "--all")
 	output, _ = netstatCmd.CombinedOutput()
 	t.Logf("netstat output: %v", string(output))
 
