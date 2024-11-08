@@ -288,7 +288,7 @@ func TestLaunchTimeout(t *testing.T) {
 }
 
 // Test connection states using lsof
-func testOpenConnections(t *testing.T, debug bool, estabExp int) {
+func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
 	///
 	//netstatCmd = exec.Command( "ss", "--tcp", "--resolve", "--processes", "--all")
 	//output, _ = netstatCmd.CombinedOutput()
@@ -311,8 +311,6 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 
 	srvrPorts := map[string]bool{}
 	debugOutput := map[string][]string{}
-	estabCount := 0
-	otherCount := 0
 
 	// Use a scanner to read output line-by-line
 	scanner := bufio.NewScanner(bytes.NewReader(output))
@@ -331,7 +329,7 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 			}
 
 			// Grab the port so we can filter on it later
-			debugOutput["server"] = append(debugOutput["server"], line)
+			debugOutput["serverListen"] = append(debugOutput["serverListen"], line)
 
 			re := regexp.MustCompile(`localhost:(\d+)`)
 
@@ -352,18 +350,16 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 
 				if _, exists := srvrPorts[srcPort]; exists {
 					// This is a server connection
-					debugOutput["server"] = append(debugOutput["server"], line)
+					debugOutput["serverOther"] = append(debugOutput["serverOther"], line)
 				} else {
 					// This is might be a client connection.  Test to see
 					// if it targets one of our server ports
 					if _, exists := srvrPorts[dstPort]; exists {
 						// It's one of our client connections
 						if strings.Contains(line, "ESTAB") {
-							estabCount++
-							debugOutput["client"] = append(debugOutput["client"], line)
+							debugOutput["clientEstab"] = append(debugOutput["clientEstab"], line)
 						} else {
-							otherCount++
-							debugOutput["other"] = append(debugOutput["other"], line)
+							debugOutput["clientOther"] = append(debugOutput["clientOther"], line)
 						}
 					} else {
 						// Not related, ignore
@@ -375,8 +371,9 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 		}
 	}
 
-	if (estabCount != estabExp) {
-		t.Errorf("Expected %v ESTABLISHED connections, but got %v:\n%s", estabExp, estabCount, output)
+	if (len(debugOutput["clientEstab"]) != clientEstabExp) {
+		t.Errorf("Expected %v ESTABLISHED connections, but got %v:\n%s",
+				 clientEstabExp, len(debugOutput["clientEstab"]), output)
 	}
 
 	if debug {
@@ -387,26 +384,34 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 			}
 			t.Logf("")
 		}
-		if len(debugOutput["client"]) > 0 {
-			t.Logf("Client Connections: (%v)", len(debugOutput["client"]))
+		if len(debugOutput["clientEstab"]) > 0 {
+			t.Logf("Client ESTAB Connections: (%v)", len(debugOutput["clientEstab"]))
 			t.Logf("")
-			for _,v := range(debugOutput["client"]) {
+			for _,v := range(debugOutput["clientEstab"]) {
 				t.Log(v)
 			}
 			t.Logf("")
 		}
-		if len(debugOutput["other"]) > 0 {
-			t.Logf("Other Client Output: (%v)", len(debugOutput["other"]))
+		if len(debugOutput["clientOther"]) > 0 {
+			t.Logf("Client Other Connections: (%v)", len(debugOutput["clientOther"]))
 			t.Logf("")
-			for _,v := range(debugOutput["other"]) {
+			for _,v := range(debugOutput["clientOther"]) {
 				t.Log(v)
 			}
 			t.Logf("")
 		}
-		if len(debugOutput["server"]) > 0 {
-			t.Logf("Server Connections: (%v)", len(debugOutput["server"]))
+		if len(debugOutput["serverListen"]) > 0 {
+			t.Logf("Server LISTEN Connections: (%v)", len(debugOutput["serverListen"]))
 			t.Logf("")
-			for _,v := range(debugOutput["server"]) {
+			for _,v := range(debugOutput["serverListen"]) {
+				t.Log(v)
+			}
+			t.Logf("")
+		}
+		if len(debugOutput["serverOther"]) > 0 {
+			t.Logf("Server Other Connections: (%v)", len(debugOutput["serverOther"]))
+			t.Logf("")
+			for _,v := range(debugOutput["serverOther"]) {
 				t.Log(v)
 			}
 			t.Logf("")
