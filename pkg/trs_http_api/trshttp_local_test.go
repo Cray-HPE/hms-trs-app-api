@@ -232,6 +232,10 @@ func TestLaunch(t *testing.T) {
 	if (nErr != 0) {
 		t.Errorf("Got %d errors from Launch",nErr)
 	}
+
+	// Clean up and exit
+	tloc.Close(&tList)
+	tloc.Cleanup()
 }
 
 func TestLaunchTimeout(t *testing.T) {
@@ -277,6 +281,10 @@ func TestLaunchTimeout(t *testing.T) {
 	if (nErr != 0) {
 		t.Errorf("Got %d errors from Launch",nErr)
 	}
+
+	// Clean up and exit
+	tloc.Close(&tList)
+	tloc.Cleanup()
 }
 
 // Test connection states using lsof
