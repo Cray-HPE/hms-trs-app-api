@@ -287,25 +287,15 @@ func TestLaunchTimeout(t *testing.T) {
 	//tloc.Cleanup()
 }
 
-// Test connection states using lsof
+// Test connection states using 'ss' utility
 func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
-	///
-	//netstatCmd = exec.Command( "ss", "--tcp", "--resolve", "--processes", "--all")
-	//output, _ = netstatCmd.CombinedOutput()
-	//t.Logf("ss output: %v", string(output))
-
-	//netstatCmd = exec.Command( "ss", "-h")
-	//output, _ = netstatCmd.CombinedOutput()
-	//t.Logf("netstat output: %v", string(output))
-	///
-
 	//pid := os.Getpid()
 	//cmd := exec.Command( "lsof", "-i", "-a", "-p", fmt.Sprint(pid))
 	cmd := exec.Command( "ss", "--tcp", "--resolve", "--processes", "--all")
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Logf("error running lsof: %v", err)
+		t.Logf("error running ss utility: %v", err)
 		return
 	}
 
@@ -547,6 +537,9 @@ func TestPCSUseCase(t *testing.T) {
 	for i := 0; i < numStallTasks; i++ {
 		<-taskListChannel
 	}
+
+	// Wait for all connections to be established so output looks nice
+	time.Sleep(100 * time.Millisecond)
 
 	// All connections should now be closed
 	t.Logf("Testing open connections after stalled tasks completed")
