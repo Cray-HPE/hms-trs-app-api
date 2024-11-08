@@ -528,9 +528,6 @@ func TestPCSUseCase(t *testing.T) {
 		<-taskListChannel
 	}
 
-	// Wait for all of those connections to switch to final state so output looks nice
-	time.Sleep(100 * time.Millisecond)
-
 	// The only remaining connections should be for the stalled tasks
 	// which should still be in ESTABLISHED
 	t.Logf("Testing open connections after normally completing tasks completed")
@@ -541,6 +538,8 @@ func TestPCSUseCase(t *testing.T) {
 		<-taskListChannel
 	}
 
+	// Wait for all connections to be established so output looks nice
+	time.Sleep(200 * time.Millisecond)
 	// All connections should now be closed
 	t.Logf("Testing open connections after stalled tasks completed")
 	testOpenConnections(t, true, 0)
