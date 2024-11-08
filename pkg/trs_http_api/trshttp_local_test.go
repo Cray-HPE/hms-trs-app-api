@@ -295,6 +295,10 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 	netstatCmd := exec.Command( "netstat", "-anp")
 	output, _ := netstatCmd.CombinedOutput()
 	t.Logf("netstat output: %v", string(output))
+
+	netstatCmd = exec.Command( "netstat", "--help")
+	output, _ = netstatCmd.CombinedOutput()
+	t.Logf("netstat output: %v", string(output))
 	return
 	///
 
