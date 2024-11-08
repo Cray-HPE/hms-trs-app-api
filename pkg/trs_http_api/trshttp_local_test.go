@@ -292,7 +292,7 @@ func TestLaunchTimeout(t *testing.T) {
 // Test connection states using lsof
 func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 	///
-	netstatCmd := exec.Command( "netstat", "--tct", "-all", "--programs", "--verbose" "--wide", "--symbolic", "--extend")
+	netstatCmd := exec.Command( "netstat", "--tct", "-all", "--programs", "--verbose", "--wide", "--symbolic", "--extend")
 	output, _ := netstatCmd.CombinedOutput()
 	t.Logf("netstat output: %v", string(output))
 
