@@ -26,11 +26,9 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -292,25 +290,18 @@ func TestLaunchTimeout(t *testing.T) {
 // Test connection states using lsof
 func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 	///
-	netstatCmd := exec.Command( "netstat", "--tcp", "-all", "--programs", "--verbose", "--wide", "--symbolic", "--extend")
-	output, _ := netstatCmd.CombinedOutput()
-	t.Logf("netstat output: %v", string(output))
-
-	//netstatCmd = exec.Command( "netstat", "--help")
+	//netstatCmd = exec.Command( "ss", "--tcp", "--resolve", "--processes", "--all")
 	//output, _ = netstatCmd.CombinedOutput()
-	//t.Logf("netstat output: %v", string(output))
-
-	netstatCmd = exec.Command( "ss", "--tcp", "--resolve", "--processes", "--all")
-	output, _ = netstatCmd.CombinedOutput()
-	t.Logf("ss output: %v", string(output))
+	//t.Logf("ss output: %v", string(output))
 
 	//netstatCmd = exec.Command( "ss", "-h")
 	//output, _ = netstatCmd.CombinedOutput()
 	//t.Logf("netstat output: %v", string(output))
 	///
 
-	pid := os.Getpid()
-	cmd := exec.Command( "lsof", "-i", "-a", "-p", fmt.Sprint(pid))
+	//pid := os.Getpid()
+	//cmd := exec.Command( "lsof", "-i", "-a", "-p", fmt.Sprint(pid))
+	cmd := exec.Command( "ss", "--tcp", "--resolve", "--processes", "--all")
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -328,16 +319,21 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 	for scanner.Scan() {
 		line := scanner.Text()
 	
-		if strings.Contains(line, "COMMAND") {
-			// Skip the header line of lsof output
+		if strings.Contains(line, "Recv-Q") {
+			// Header line
 			debugOutput["header"] = append(debugOutput["header"], line)
 			continue
 		} else if strings.Contains(line, "LISTEN") {
-			// This is a server, grab the port so we can filter on it later
-			// LISTEN lines always comes first in lsof output
+			// This is a server. LISTEN lines always comes first in the output.
+			// Ignore anything that isn't our test process
+			if !strings.Contains(line, "trs_http_api") {
+				continue
+			}
+
+			// Grab the port so we can filter on it later
 			debugOutput["server"] = append(debugOutput["server"], line)
 
-			re := regexp.MustCompile(`localhost:(\d+)\s+\(LISTEN\)`)
+			re := regexp.MustCompile(`localhost:(\d+)`)
 
 			match := re.FindStringSubmatch(line)
 			if len(match) > 1 {
@@ -347,7 +343,7 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 			}
 		} else {
 			// Distinguish client connections from server connections
-			re := regexp.MustCompile(`localhost:(\d+)->localhost:\d+`)
+			re := regexp.MustCompile(`localhost:(\d+)\s+localhost:\d+`)
 
 			match := re.FindStringSubmatch(line)
 			if len(match) > 1 {
