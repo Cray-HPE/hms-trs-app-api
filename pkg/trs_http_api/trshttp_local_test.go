@@ -302,12 +302,11 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 
 	netstatCmd = exec.Command( "ss", "--tcp", "--resolve", "--processes", "--all")
 	output, _ = netstatCmd.CombinedOutput()
-	t.Logf("netstat output: %v", string(output))
+	t.Logf("ss output: %v", string(output))
 
 	//netstatCmd = exec.Command( "ss", "-h")
 	//output, _ = netstatCmd.CombinedOutput()
 	//t.Logf("netstat output: %v", string(output))
-	return
 	///
 
 	pid := os.Getpid()
