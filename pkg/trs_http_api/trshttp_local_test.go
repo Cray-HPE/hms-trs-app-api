@@ -539,7 +539,7 @@ func TestPCSUseCase(t *testing.T) {
 	}
 
 	// Wait for all connections to be established so output looks nice
-	time.Sleep(90 * time.Second)
+	time.Sleep(60 * time.Second)
 	// All connections should now be closed
 	t.Logf("Testing open connections after stalled tasks completed")
 	testOpenConnections(t, true, 0)
