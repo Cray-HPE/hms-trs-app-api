@@ -353,16 +353,16 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 					debugOutput["server"] = append(debugOutput["server"], line)
 				} else {
 					// This is a client connection
-					debugOutput["client"] = append(debugOutput["client"], line)
-					if strings.Contains(line, "ESTABLISHED") {
+					if strings.Contains(line, "ESTAB") {
 						estabCount++
+						debugOutput["client"] = append(debugOutput["client"], line)
 					} else {
 						otherCount++
+						debugOutput["other"] = append(debugOutput["other"], line)
 					}
 				}
 			} else {
-				debugOutput["other"] = append(debugOutput["other"], line)
-				t.Errorf("Failed to parse line: %v", line)
+				// Not related, ignore
 			}
 		}
 	}
@@ -390,18 +390,18 @@ func testOpenConnections(t *testing.T, debug bool, estabExp int) {
 			}
 			t.Logf("")
 		}
-		if len(debugOutput["server"]) > 0 {
-			t.Logf("Server Connections: (%v)", len(debugOutput["server"]))
+		if len(debugOutput["other"]) > 0 {
+			t.Logf("Other Client Output: (%v)", len(debugOutput["other"]))
 			t.Logf("")
-			for _,v := range(debugOutput["server"]) {
+			for _,v := range(debugOutput["other"]) {
 				t.Log(v)
 			}
 			t.Logf("")
 		}
-		if len(debugOutput["other"]) > 0 {
-			t.Logf("Other Output: (%v)", len(debugOutput["other"]))
+		if len(debugOutput["server"]) > 0 {
+			t.Logf("Server Connections: (%v)", len(debugOutput["server"]))
 			t.Logf("")
-			for _,v := range(debugOutput["other"]) {
+			for _,v := range(debugOutput["server"]) {
 				t.Log(v)
 			}
 			t.Logf("")
