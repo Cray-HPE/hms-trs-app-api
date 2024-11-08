@@ -31,6 +31,7 @@ import (
 	"net/http/httptest"
 	"os/exec"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -385,6 +386,8 @@ func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
 			t.Logf("")
 		}
 		if len(debugOutput["clientEstab"]) > 0 {
+			sort.Strings(debugOutput["clientEstab"])
+
 			t.Logf("Client ESTAB Connections: (%v)", len(debugOutput["clientEstab"]))
 			t.Logf("")
 			for _,v := range(debugOutput["clientEstab"]) {
@@ -393,6 +396,8 @@ func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
 			t.Logf("")
 		}
 		if len(debugOutput["clientOther"]) > 0 {
+			sort.Strings(debugOutput["clientOther"])
+
 			t.Logf("Client Other Connections: (%v)", len(debugOutput["clientOther"]))
 			t.Logf("")
 			for _,v := range(debugOutput["clientOther"]) {
@@ -401,6 +406,8 @@ func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
 			t.Logf("")
 		}
 		if len(debugOutput["serverListen"]) > 0 {
+			sort.Strings(debugOutput["serverListen"])
+
 			t.Logf("Server LISTEN Connections: (%v)", len(debugOutput["serverListen"]))
 			t.Logf("")
 			for _,v := range(debugOutput["serverListen"]) {
@@ -409,6 +416,8 @@ func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
 			t.Logf("")
 		}
 		if len(debugOutput["serverOther"]) > 0 {
+			sort.Strings(debugOutput["serverOther"])
+
 			t.Logf("Server Other Connections: (%v)", len(debugOutput["serverOther"]))
 			t.Logf("")
 			for _,v := range(debugOutput["serverOther"]) {
