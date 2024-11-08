@@ -151,20 +151,20 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 
 		cpack.insecure = retryablehttp.NewClient()
 		// TODO: THIS IS ZEROING ALL THE DEFAULTS
-		tr := &http.Transport{
-			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
-		}
 		//tr := &http.Transport{
 		//	TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
-		//	TLSHandshakeTimeout:   10 * time.Second, // Timeout for TLS handshakes
-		//	MaxIdleConns:          16000,            // Total max idle connections across all servers (4 per server)
-		//	MaxIdleConnsPerHost:   4,                // Up to 4 idle connections per unique server
-		//	IdleConnTimeout:       90 * time.Second, // Close idle connections after 90 seconds
-		//	ExpectContinueTimeout: 1 * time.Second,  // Wait time for `Expect: 100-continue` response
-		//	ResponseHeaderTimeout: 5 * time.Second,  // Timeout for reading response headers
 		//}
+		tr := &http.Transport{
+			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+			TLSHandshakeTimeout:   10 * time.Second, // Timeout for TLS handshakes
+			MaxIdleConns:          16000,            // Total max idle connections across all servers (4 per server)
+			MaxIdleConnsPerHost:   4,                // Up to 4 idle connections per unique server
+			IdleConnTimeout:       90 * time.Second, // Close idle connections after 90 seconds
+			ExpectContinueTimeout: 1 * time.Second,  // Wait time for `Expect: 100-continue` response
+			ResponseHeaderTimeout: 5 * time.Second,  // Timeout for reading response headers
+		}
 		cpack.insecure.HTTPClient.Transport = tr
-		//cpack.insecure.HTTPClient.Timeout = tct.task.Timeout / 3
+		cpack.insecure.HTTPClient.Timeout = tct.task.Timeout / 3
 		cpack.insecure.Logger = httpLogger
 		cpack.insecure.RetryMax = rtMax
 		cpack.insecure.RetryWaitMax = boffMax
