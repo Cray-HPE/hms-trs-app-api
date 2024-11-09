@@ -126,67 +126,96 @@ func (tloc *TRSHTTPLocal) CreateTaskList(source *HttpTask, numTasks int) []HttpT
 	return createHTTPTaskArray(source, numTasks)
 }
 
+// Create and configure a new client transport for use with HTTP clients.
+
+func configureClient(client *retryablehttp.Client, task *HttpTask, CACertPool *x509.CertPool) {
+	// Configure the httpretryable client retry count
+	if (task.RetryPolicy.Retries > 0) {
+		client.RetryMax = task.RetryPolicy.Retries
+	} else {
+		client.RetryMax = DFLT_RETRY_MAX
+	}
+
+	// Configure the httpretryable client backoff timeout
+	if (task.RetryPolicy.BackoffTimeout > 0) {
+		client.RetryWaitMax = task.RetryPolicy.BackoffTimeout
+	} else {
+		client.RetryWaitMax = DFLT_BACKOFF_MAX * time.Second
+	}
+
+	// HTTPClient timeout should be 90% of the task's context timeout
+	client.HTTPClient.Timeout = task.Timeout * 9 / 10
+
+	// Configure TLS for the client transport
+	var tr *http.Transport
+	if CACertPool == nil {
+		tr = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true,},}
+	} else {
+		tlsConfig := &tls.Config{RootCAs: CACertPool,}
+		tlsConfig.BuildNameToCertificate()
+		tr = &http.Transport{TLSClientConfig: tlsConfig,}
+	}
+
+	// If we're not configuring the HTTP.Transport, we're done
+	if ! task.HttpTxPolicy.Enabled {
+		client.HTTPClient.Transport = tr
+		return
+	}
+
+	// Configure the http.Transport
+	tr.MaxIdleConns        = task.HttpTxPolicy.MaxIdleConns
+	tr.MaxIdleConnsPerHost = task.HttpTxPolicy.MaxIdleConnsPerHost
+	tr.IdleConnTimeout     = task.HttpTxPolicy.IdleConnTimeout
+	tr.ResponseHeaderTimeout = task.HttpTxPolicy.ResponseHeaderTimeout
+
+	// maxIdleConns logic
+
+	tr.MaxIdleConns        = 16000 // Total max idle connections across BMCs (4 per server)
+	tr.MaxIdleConnsPerHost = 4     // Up to 4 idle connections per BMC
+
+	// Timeout logic ....
+	// idle cons = 1.5 times task.Timeout
+	// Response timeout = ? times task.Timeout
+	// TLS handshake timeout = ? times task.Timeout
+	// Does this need to be fully configurable for each use case of TRS?
+
+	tr.IdleConnTimeout       = 90 * time.Second // Close idle connections after 90 seconds
+	tr.ResponseHeaderTimeout =  5 * time.Second // Timeout for reading response headers
+	tr.TLSHandshakeTimeout   = 10 * time.Second // Timeout for TLS handshakes
+
+	client.HTTPClient.Transport = tr
+}
+
 func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	//Find a client or make one!
 	var cpack *clientPack
 	tloc.clientMutex.Lock()
-	if _, ok := tloc.clientMap[tct.task.RetryPolicy]; !ok {
-		//MAKE NEW CLIENT!!!
-		//Calculate backoff params.  If caller didn't specify them, we get
-		//1 try and a 1 second wait.  Not good.  We'll use default minimums
-		//for both if caller doesn't.
-		rtMax := DFLT_RETRY_MAX
-		boffMax := DFLT_BACKOFF_MAX * time.Second
-		if (tct.task.RetryPolicy.Retries > 0) {
-			rtMax = tct.task.RetryPolicy.Retries
-		}
-		if (tct.task.RetryPolicy.BackoffTimeout > 0) {
-			boffMax = tct.task.RetryPolicy.BackoffTimeout
-		}
-
+	if _, ok := tloc.clientMap[tct.task.RetryPolicy][tct.task.HttpTxPolicy]; !ok {
 		httpLogger := logrus.New()
 		httpLogger.SetLevel(logrus.ErrorLevel)
 
 		cpack = new(clientPack)
 
 		cpack.insecure = retryablehttp.NewClient()
-		// TODO: THIS IS ZEROING ALL THE DEFAULTS
-		//tr := &http.Transport{
-		//	TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
-		//}
-		tr := &http.Transport{
-			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
-			TLSHandshakeTimeout:   10 * time.Second, // Timeout for TLS handshakes
-			MaxIdleConns:          16000,            // Total max idle connections across all servers (4 per server)
-			MaxIdleConnsPerHost:   4,                // Up to 4 idle connections per unique server
-			IdleConnTimeout:       90 * time.Second, // Close idle connections after 90 seconds
-			ExpectContinueTimeout: 1 * time.Second,  // Wait time for `Expect: 100-continue` response
-			ResponseHeaderTimeout: 5 * time.Second,  // Timeout for reading response headers
-		}
-		cpack.insecure.HTTPClient.Transport = tr
-		cpack.insecure.HTTPClient.Timeout = tct.task.Timeout / 3
 		cpack.insecure.Logger = httpLogger
-		cpack.insecure.RetryMax = rtMax
-		cpack.insecure.RetryWaitMax = boffMax
-		tloc.Logger.Tracef("Created insecure client for %v with Transport %v",
-						   tct.task.RetryPolicy, cpack.insecure.HTTPClient.Transport)
+
+		configureClient(cpack.insecure, tct.task, nil)
+
+		tloc.Logger.Tracef("Created insecure client with RetryPolicy %v and HttpTxPolicy %v",
+						   tct.task.RetryPolicy, tct.task.HttpTxPolicy)
 	
 		if (tloc.CACertPool != nil) {
 			cpack.secure = retryablehttp.NewClient()
-			tlsConfig := &tls.Config{RootCAs: tloc.CACertPool,}
-			tlsConfig.BuildNameToCertificate()
-			trs := &http.Transport{TLSClientConfig: tlsConfig,}
-			cpack.secure.HTTPClient.Transport = trs
 			cpack.secure.Logger = httpLogger
-			cpack.secure.RetryMax = rtMax
-			cpack.secure.RetryWaitMax = boffMax
 
-			tloc.Logger.Tracef("Created secure client for %v with Transport %v",
-							   tct.task.RetryPolicy, cpack.secure.HTTPClient.Transport)
+			configureClient(cpack.secure, tct.task, tloc.CACertPool)
+
+			tloc.Logger.Tracef("Created secure client with RetryPolicy %v and HttpTxPolicy %v",
+							   tct.task.RetryPolicy, tct.task.HttpTxPolicy)
 		}
-		tloc.clientMap[tct.task.RetryPolicy] = cpack
+		tloc.clientMap[tct.task.RetryPolicy][tct.task.HttpTxPolicy] = cpack
 	} else {
-		cpack = tloc.clientMap[tct.task.RetryPolicy]
+		cpack = tloc.clientMap[tct.task.RetryPolicy][tct.task.HttpTxPolicy]
 	}
 	tloc.clientMutex.Unlock()
 
@@ -374,14 +403,20 @@ func (tloc *TRSHTTPLocal) Cleanup() {
 	tloc.ctxCancelFunc()
 	//clean up client map?
 	for k := range tloc.clientMap {
-		//cancel it first
-		if (tloc.clientMap[k].insecure != nil) {
-			tloc.clientMap[k].insecure.HTTPClient.CloseIdleConnections()
+		for kk := range tloc.clientMap[k] {
+			//cancel it first
+			if (tloc.clientMap[k][kk].insecure != nil) {
+				tloc.clientMap[k][kk].insecure.HTTPClient.CloseIdleConnections()
+			}
+			if (tloc.clientMap[k][kk].secure != nil) {
+				tloc.clientMap[k][kk].secure.HTTPClient.CloseIdleConnections()
+			}
+			//delete the inner key
+			tloc.clientMutex.Lock()
+			delete(tloc.clientMap[k], kk)
+			tloc.clientMutex.Unlock()
 		}
-		if (tloc.clientMap[k].secure != nil) {
-			tloc.clientMap[k].secure.HTTPClient.CloseIdleConnections()
-		}
-		//delete it out of the map
+		//delete the outer key
 		tloc.clientMutex.Lock()
 		delete(tloc.clientMap, k)
 		tloc.clientMutex.Unlock()

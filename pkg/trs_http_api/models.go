@@ -27,12 +27,13 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"github.com/google/uuid"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type SerializedRequest struct {
@@ -77,6 +78,14 @@ type RetryPolicy struct {
 	BackoffTimeout time.Duration
 }
 
+type HttpTxPolicy struct {
+	Enabled					bool	// Enable or disable the policy
+	MaxIdleConns			int
+	MaxIdleConnsPerHost		int
+	IdleConnTimeout			time.Duration
+	ResponseHeaderTimeout	time.Duration
+}
+
 type HttpTask struct {
 	id            uuid.UUID // message id, likely monotonically increasing
 	ServiceName   string    //name of the service
@@ -85,6 +94,7 @@ type HttpTask struct {
 	Err           *error
 	Timeout       time.Duration
 	RetryPolicy   RetryPolicy
+	HttpTxPolicy  HttpTxPolicy
 	Ignore        bool
 	context       context.Context
 	contextCancel context.CancelFunc
