@@ -69,7 +69,7 @@ func (tloc *TRSHTTPLocal) Init(serviceName string, logger *logrus.Logger) error 
 	}
 	if tloc.clientMap == nil {
 		tloc.clientMutex.Lock()
-		tloc.clientMap = make(map[RetryPolicy]*clientPack)
+		tloc.clientMap = make(map[RetryPolicy]map[HttpTxPolicy]*clientPack)
 		tloc.clientMutex.Unlock()
 	}
 	tloc.svcName = serviceName
