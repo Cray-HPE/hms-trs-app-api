@@ -552,24 +552,24 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	// Because we're testing idle connections we need to configure them to
 	// not close idle connections immediately
 	//successSrv := httptest.NewUnstartedServer(http.HandlerFunc(launchHandler))
-	retrySrv   := httptest.NewUnstartedServer(http.HandlerFunc(retryHandler))
-	stallSrv   := httptest.NewUnstartedServer(http.HandlerFunc(stallHandler))
+	//retrySrv   := httptest.NewUnstartedServer(http.HandlerFunc(retryHandler))
+	//stallSrv   := httptest.NewUnstartedServer(http.HandlerFunc(stallHandler))
 
 	//successSrv.Config.IdleTimeout = 300 * time.Second // 5 minutes
-	retrySrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
-	stallSrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
+	//retrySrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
+	//stallSrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
 
 	//successSrv.Config.ReadTimeout = 0
-	retrySrv.Config.ReadTimeout   = 0
-	stallSrv.Config.ReadTimeout   = 0
+	//retrySrv.Config.ReadTimeout   = 0
+	//stallSrv.Config.ReadTimeout   = 0
 
 	//successSrv.Config.WriteTimeout = 0
-	retrySrv.Config.WriteTimeout   = 0
-	stallSrv.Config.WriteTimeout   = 0
+	//retrySrv.Config.WriteTimeout   = 0
+	//stallSrv.Config.WriteTimeout   = 0
 
 	//successSrv.Start()
-	retrySrv.Start()
-	stallSrv.Start()
+	//retrySrv.Start()
+	//stallSrv.Start()
 
 	successSrv := &http.Server{
         Addr: "localhost:36411",
@@ -644,7 +644,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 
 	tList := append(successList, retryList...)
 	tList = append(tList, stallList...)
-	*/
+*/
 tList := successList
 
 	t.Logf("Launching all tasks")
@@ -670,7 +670,7 @@ tList := successList
 	t.Logf("Testing open connections after normally completing tasks completed")
 	testOpenConnections(t, true, numStallTasks)
 
-	/*
+/*
 	t.Logf("Waiting for stalled tasks to time out")
 	for i := 0; i < numStallTasks; i++ {
 		<-taskListChannel
@@ -685,7 +685,7 @@ tList := successList
 	// All connections should now be closed
 	t.Logf("Testing open connections after stalled tasks completed")
 	testOpenConnections(t, true, 0)
-	*/
+*/
 
 	t.Logf("Closing the task list channel")
 	close(taskListChannel)
