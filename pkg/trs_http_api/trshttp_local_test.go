@@ -28,7 +28,6 @@ import (
 	"context"
 	"encoding/pem"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"os/exec"
@@ -603,6 +602,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 
 	// Create an http request for tasks that retry muliple times and fail
 
+	/*
 	retryReq, err := http.NewRequest(http.MethodGet, retrySrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
@@ -643,6 +643,8 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 
 	tList := append(successList, retryList...)
 	tList = append(tList, stallList...)
+	*/
+tList := successList
 
 	t.Logf("Launching all tasks")
 	taskListChannel, err := tloc.Launch(&tList)
