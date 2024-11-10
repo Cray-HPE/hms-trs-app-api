@@ -578,7 +578,8 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 
 	// Create an http request for tasks that complete successfully
 
-	successReq, err := http.NewRequest(http.MethodGet, successSrv.URL, nil)
+	//successReq, err := http.NewRequest(http.MethodGet, successSrv.URL, nil)
+	successReq, err := http.NewRequest(http.MethodGet, "http://localhost:8080", nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
@@ -589,7 +590,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 			Timeout: httpTimeout,
 			CPolicy: cPolicy, }
 
-	t.Logf("Creating success task list with %v tasks and URL %v", numStallTasks, successSrv.URL)
+	//t.Logf("Creating success task list with %v tasks and URL %v", numStallTasks, successSrv.URL)
 	successList := tloc.CreateTaskList(&successProto, numSuccessTasks)
 
 	// Create an http request for tasks that retry muliple times and fail
