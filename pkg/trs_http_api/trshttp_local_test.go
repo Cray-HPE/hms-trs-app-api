@@ -28,12 +28,15 @@ import (
 	"context"
 	"encoding/pem"
 	"io"
+	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os/exec"
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -569,7 +572,8 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	//retrySrv.Config.WriteTimeout   = 0
 	//stallSrv.Config.WriteTimeout   = 0
 
-	successSrv.Config.ConnState =  = func(conn net.Conn, state http.ConnState) {
+	var connTimes sync.Map
+	successSrv.Config.ConnState = func(conn net.Conn, state http.ConnState) {
         //log.Printf("SERVER: Connection %v changed state to %v", conn.RemoteAddr(), state)
         // Log the time and state change for each connection
 		now := time.Now().Format(time.RFC3339)
