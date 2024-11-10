@@ -179,14 +179,18 @@ func stallHandler(w http.ResponseWriter, req *http.Request) {
 
 
 func TestLaunch(t *testing.T) {
-	testLaunch(t, false)
+	testLaunch(t, false, false)
 }
 
 func TestSecureLaunch(t *testing.T) {
-	testLaunch(t, true)
+	testLaunch(t, true, false)
 }
 
-func testLaunch(t *testing.T, testSecureLaunch bool) {
+func TestSecureLaunchFailure(t *testing.T) {
+	testLaunch(t, true, true)
+}
+
+func testLaunch(t *testing.T, testSecureLaunch bool, testSecureLaunchFailure bool) {
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger(logrus.TraceLevel))
 
@@ -194,15 +198,17 @@ func testLaunch(t *testing.T, testSecureLaunch bool) {
 	if (testSecureLaunch == true) {
 		srv = httptest.NewTLSServer(http.HandlerFunc(launchHandler))
 
-		secInfo := TRSHTTPLocalSecurity{CACertBundleData:
+		if (testSecureLaunchFailure == false) {
+			secInfo := TRSHTTPLocalSecurity{CACertBundleData:
 				string(pem.EncodeToMemory(
 					&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw},
 				)),}
 
-		err := tloc.SetSecurity(secInfo)
-		if err != nil {
-			t.Errorf("Error setting security info: %v", err)
-			return
+			err := tloc.SetSecurity(secInfo)
+			if err != nil {
+				t.Errorf("Error setting security info: %v", err)
+				return
+			}
 		}
 	} else {
 		srv = httptest.NewServer(http.HandlerFunc(launchHandler))
@@ -217,7 +223,12 @@ func testLaunch(t *testing.T, testSecureLaunch bool) {
 
 	tch,err := tloc.Launch(&tList)
 	if (err != nil) {
-		t.Errorf("Launch ERROR: %v",err)
+		if (testSecureLaunchFailure == false) {
+			t.Errorf("Launch ERROR: %v",err)
+		} else {
+			// This should fail, so its a success
+			return
+		}
 	}
 
 	nDone := 0

@@ -227,8 +227,6 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		return
 	}
 
-	tloc.Logger.Tracef("setting up context for request")
-
 	//setup timeouts and context for request
 	tct.task.context, tct.task.contextCancel = context.WithTimeout(tloc.ctx, tct.task.Timeout)
 	defer tct.task.contextCancel()
@@ -236,7 +234,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	base.SetHTTPUserAgent(tct.task.Request,tloc.svcName)
 	req, err := retryablehttp.FromRequest(tct.task.Request)
 	if err != nil {
-		tloc.Logger.Error(err)
+		tloc.Logger.Errorf("Failed wrapping request with retryablehttp: %v", err)
 		tct.task.Err = &err
 		tct.taskListChannel <- tct.task
 		return
@@ -262,7 +260,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 
 	tct.task.Err = &tmpError
 	if (*tct.task.Err) != nil {
-		tloc.Logger.Tracef("Err: %s", (*tct.task.Err).Error())
+		tloc.Logger.Tracef("Request failed: %s", (*tct.task.Err).Error())
 	}
 	if tct.task.Request.Response != nil {
 		tloc.Logger.Tracef("Response: %d", tct.task.Request.Response.StatusCode)
