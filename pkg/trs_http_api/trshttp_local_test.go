@@ -547,25 +547,33 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	// Create http servers.  One for eash request response we want to test
 	// Because we're testing idle connections we need to configure them to
 	// not close idle connections immediately
-	successSrv := httptest.NewUnstartedServer(http.HandlerFunc(launchHandler))
+	//successSrv := httptest.NewUnstartedServer(http.HandlerFunc(launchHandler))
 	retrySrv   := httptest.NewUnstartedServer(http.HandlerFunc(retryHandler))
 	stallSrv   := httptest.NewUnstartedServer(http.HandlerFunc(stallHandler))
 
-	successSrv.Config.IdleTimeout = 300 * time.Second // 5 minutes
+	//successSrv.Config.IdleTimeout = 300 * time.Second // 5 minutes
 	retrySrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
 	stallSrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
 
-	successSrv.Config.ReadTimeout = 0
+	//successSrv.Config.ReadTimeout = 0
 	retrySrv.Config.ReadTimeout   = 0
 	stallSrv.Config.ReadTimeout   = 0
 
-	successSrv.Config.WriteTimeout = 0
+	//successSrv.Config.WriteTimeout = 0
 	retrySrv.Config.WriteTimeout   = 0
 	stallSrv.Config.WriteTimeout   = 0
 
-	successSrv.Start()
+	//successSrv.Start()
 	retrySrv.Start()
 	stallSrv.Start()
+
+	successSrv := &http.Server{
+        Addr: ":8080",
+        Handler: launchHandler
+        IdleTimeout: 300 * time.Second,
+        ReadTimeout: 0,
+        WriteTimeout: 0,
+    }
 
 	// Create an http request for tasks that complete successfully
 
