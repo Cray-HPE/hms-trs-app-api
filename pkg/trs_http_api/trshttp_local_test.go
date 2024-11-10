@@ -574,7 +574,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
         ReadTimeout: 0,
         WriteTimeout: 0,
     }
-	successSrv.ListenAndServe()
+	go successSrv.ListenAndServe()
 
 	// Create an http request for tasks that complete successfully
 
