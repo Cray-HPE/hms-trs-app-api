@@ -568,7 +568,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	stallSrv.Start()
 
 	successSrv := &http.Server{
-        Addr: ":8080",
+        Addr: ":36411",
 		Handler: http.HandlerFunc(launchHandler),
         IdleTimeout: 300 * time.Second,
         ReadTimeout: 0,
@@ -579,7 +579,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	// Create an http request for tasks that complete successfully
 
 	//successReq, err := http.NewRequest(http.MethodGet, successSrv.URL, nil)
-	successReq, err := http.NewRequest(http.MethodGet, "http://localhost:8080", nil)
+	successReq, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:36411", nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
