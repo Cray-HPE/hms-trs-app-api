@@ -569,11 +569,12 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 
 	successSrv := &http.Server{
         Addr: ":8080",
-        Handler: launchHandler
+		Handler: http.HandlerFunc(launchHandler),
         IdleTimeout: 300 * time.Second,
         ReadTimeout: 0,
         WriteTimeout: 0,
     }
+	successSrv.ListenAndServe()
 
 	// Create an http request for tasks that complete successfully
 
