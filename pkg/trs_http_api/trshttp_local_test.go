@@ -247,7 +247,15 @@ return
 	handlerLogger = t
 
 	req,_ := http.NewRequest("GET",srv.URL,nil)
-	tproto := HttpTask{Request: req, Timeout: 3*time.Second, RetryPolicy: RetryPolicy{Retries: 1, BackoffTimeout: 3 * time.Second,},}
+	tproto := HttpTask{
+			Request: req,
+			Timeout: 3*time.Second,
+			CPolicy: ClientPolicy{
+				retry: RetryPolicy{
+						Retries: 1,
+						BackoffTimeout: 3 * time.Second}
+				},
+			}
 	tList := tloc.CreateTaskList(&tproto,1)
 	stallCancel = make(chan bool, 1)
 
@@ -307,7 +315,7 @@ func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
 	scanner := bufio.NewScanner(bytes.NewReader(output))
 	for scanner.Scan() {
 		line := scanner.Text()
-	
+
 		if strings.Contains(line, "Recv-Q") {
 			// Header line
 			debugOutput["header"] = append(debugOutput["header"], line)
@@ -468,9 +476,9 @@ func TestPCSUseCase(t *testing.T) {
 	successReq.Header.Set("Accept", "*/*")
 
 	successProto := HttpTask{
-			Request:		successReq,
-			Timeout:		httpTimeout,
-			RetryPolicy:	RetryPolicy{Retries: httpRetries},}
+			Request: successReq,
+			Timeout: httpTimeout,
+			CPolicy: ClientPolicy{ retry: RetryPolicy{Retries: httpRetries}}, }
 
 	t.Logf("Creating success task list with %v tasks and URL %v", numStallTasks, successSrv.URL)
 	successList := tloc.CreateTaskList(&successProto, numSuccessTasks)
@@ -484,9 +492,9 @@ func TestPCSUseCase(t *testing.T) {
 	retryReq.Header.Set("Accept", "*/*")
 
 	retryProto := HttpTask{
-			Request:		retryReq,
-			Timeout:		httpTimeout,
-			RetryPolicy:	RetryPolicy{Retries: httpRetries},}
+			Request: retryReq,
+			Timeout: httpTimeout,
+			CPolicy: ClientPolicy{retry: RetryPolicy{Retries: httpRetries}}, }
 
 	t.Logf("Creating retry task list with %v tasks and URL %v", numStallTasks, retraySrv.URL)
 	retryList := tloc.CreateTaskList(&retryProto, numRetryTasks)
@@ -499,9 +507,9 @@ func TestPCSUseCase(t *testing.T) {
     }
 	stallReq.Header.Set("Accept", "*/*")
 	stallProto := HttpTask{
-			Request:		stallReq,
-			Timeout:		httpTimeout,
-			RetryPolicy:	RetryPolicy{Retries: httpRetries},}
+			Request: stallReq,
+			Timeout: httpTimeout,
+			CPolicy: ClientPolicy{retry: RetryPolicy{Retries: httpRetries}}, }
 
 	t.Logf("Creating stalling task list with %v tasks and URL %v", numStallTasks, stallSrv.URL)
 	stallList := tloc.CreateTaskList(&stallProto, numStallTasks)

@@ -1,6 +1,6 @@
 // MIT License
 //
-// (C) Copyright [2021] Hewlett Packard Enterprise Development LP
+// (C) Copyright [2021,2024] Hewlett Packard Enterprise Development LP
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -62,7 +62,7 @@ type HttpKafkaTx struct {
 	Request     SerializedRequest `json:",omitempty"`
 	TimeStamp   string            `json:",omitempty"` // Time the request time.Now().String()
 	Timeout     time.Duration     `json:",omitempty"`
-	RetryPolicy RetryPolicy
+	CPolicy     RetryPolicy
 	ServiceName string
 	Ignore      bool
 }
@@ -86,6 +86,11 @@ type HttpTxPolicy struct {
 	ResponseHeaderTimeout	time.Duration
 }
 
+type ClientPolicy struct {
+	retry    RetryPolicy
+	tx       HttpTxPolicy
+}
+
 type HttpTask struct {
 	id            uuid.UUID // message id, likely monotonically increasing
 	ServiceName   string    //name of the service
@@ -93,8 +98,7 @@ type HttpTask struct {
 	TimeStamp     string // Time the request was created/sent RFC3339Nano
 	Err           *error
 	Timeout       time.Duration
-	RetryPolicy   RetryPolicy
-	HttpTxPolicy  HttpTxPolicy
+	CPolicy       ClientPolicy
 	Ignore        bool
 	context       context.Context
 	contextCancel context.CancelFunc
@@ -153,7 +157,7 @@ func (ht HttpTask) ToHttpKafkaTx() (tx HttpKafkaTx) {
 	//Fill the data
 	tx.ID = ht.id
 	tx.Timeout = ht.Timeout
-	tx.RetryPolicy = ht.RetryPolicy
+	tx.CPolicy = ht.CPolicy
 	tx.TimeStamp = ht.TimeStamp
 	tx.Request = ToSerializedRequest(*ht.Request)
 	tx.ServiceName = ht.ServiceName
@@ -166,7 +170,7 @@ func (tx HttpKafkaTx) ToHttpTask() (ht HttpTask) {
 	//Fill the service data
 	ht.id = tx.ID
 	ht.ServiceName = tx.ServiceName
-	ht.RetryPolicy = tx.RetryPolicy
+	ht.CPolicy = tx.CPolicy
 	ht.Timeout = tx.Timeout
 	ht.TimeStamp = tx.TimeStamp
 	ht.Ignore = tx.Ignore
