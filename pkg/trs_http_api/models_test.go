@@ -23,11 +23,12 @@
 package trs_http_api
 
 import (
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/suite"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/suite"
 )
 
 type ModelsTS struct {
@@ -43,7 +44,7 @@ func GenerateStockHttpTask() (ht HttpTask) {
 		TimeStamp:     time.Now().String(),
 		Err:           nil,
 		Timeout:       0,
-		RetryPolicy:   RetryPolicy{},
+		CPolicy:       ClientPolicy{},
 		context:       nil,
 		contextCancel: nil,
 	}
