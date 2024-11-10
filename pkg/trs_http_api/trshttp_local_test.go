@@ -552,18 +552,6 @@ func TestPCSUseCase(t *testing.T) {
 	t.Logf("Testing open connections after stalled tasks completed")
 	testOpenConnections(t, true, 0)
 
-	// Cancel the stalled server handlers so we can close the servers later.
-	// We will need to do it once for the first set that timed out due to the
-	// HTTPClient.Timeout and once for the second set that timed out due to
-	// the context timeout.
-	t.Logf("Signaling stalled handlers ")
-	for i := 0; i < numStallTasks * 2; i++ {
-		t.Logf("Sending signal %v", i)
-		stallCancel <- true
-		t.Logf("Sent")
-	}
-	close(stallCancel)
-
 	t.Logf("Closing the task list channel")
 	close(taskListChannel)
 
@@ -622,6 +610,16 @@ func TestPCSUseCase(t *testing.T) {
 
 	t.Logf("Cleaning up task system")
 	tloc.Cleanup()
+
+	// Cancel the stalled server handlers so we can close the servers. We
+	// will need to do it once for the first set that timed out due to the
+	// HTTPClient.Timeout and once for the second set that timed out due to
+	// the context timeout.
+	t.Logf("Signaling stalled handlers ")
+	for i := 0; i < numStallTasks * 2; i++ {
+		stallCancel <- true
+	}
+	close(stallCancel)
 
 	t.Logf("Closing servers")
 	successSrv.Close()
