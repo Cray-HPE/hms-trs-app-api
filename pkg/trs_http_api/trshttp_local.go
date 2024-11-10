@@ -211,8 +211,7 @@ func configureClient(client *retryablehttp.Client, task *HttpTask, CACertPool *x
 	//tr.ResponseHeaderTimeout =  5 * time.Second // Timeout for reading response headers
 	//tr.TLSHandshakeTimeout   = 10 * time.Second // Timeout for TLS handshakes
 
-	//client.HTTPClient.Transport = tr
-	client.HTTPClient.Transport = &loggingRoundTripper{rt: tr, logger: tloc.Logger}
+	client.HTTPClient.Transport = tr
 }
 
 func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
@@ -229,6 +228,10 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		cpack.insecure.Logger = httpLogger
 
 		configureClient(cpack.insecure, tct.task, nil)
+		cpack.insecure.HTTPClient.Transport = &loggingRoundTripper{
+			rt:     cpack.insecure.HTTPClient.Transport,
+			logger: tloc.Logger,
+		}
 
 		tloc.Logger.Tracef("Created insecure client with policy %v", tct.task.CPolicy)
 		tloc.Logger.Tracef("RetryMax: %d\n", cpack.insecure.RetryMax)
