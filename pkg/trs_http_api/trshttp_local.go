@@ -74,7 +74,7 @@ func (tloc *TRSHTTPLocal) Init(serviceName string, logger *logrus.Logger) error 
 	}
 	tloc.svcName = serviceName
 
-	tloc.Logger.Tracef("%s: Init() successful", tloc.svcName)
+	tloc.Logger.Tracef("Init() successful")
 
 	return nil
 }
@@ -108,7 +108,7 @@ func (tloc *TRSHTTPLocal) SetSecurity(inParams interface{}) error {
 		}
 	}
 
-	tloc.Logger.Tracef("%s: SetSecurity() successful", tloc.svcName)
+	tloc.Logger.Tracef("SetSecurity() successful")
 
 	return nil
 }
@@ -250,10 +250,10 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	// Execute the request
 	var tmpError error
 	if (tct.task.forceInsecure || tloc.CACertPool == nil || cpack.secure == nil) {
-		tloc.Logger.Tracef("Using insecure client")
+		tloc.Logger.Tracef("Using INsecure client to send request")
 		tct.task.Request.Response, tmpError = cpack.insecure.Do(req)
 	} else {
-		tloc.Logger.Tracef("Using secure client")
+		tloc.Logger.Tracef("Using secure client to send request")
 		tct.task.Request.Response, tmpError = cpack.secure.Do(req)
 
 		//If the error is a TLS error, fall back to insecure and log it.
@@ -331,7 +331,7 @@ func (tloc *TRSHTTPLocal) Launch(taskList *[]HttpTask) (chan *HttpTask, error) {
 		go ExecuteTask(tloc, tct)
 	}
 
-	tloc.Logger.Tracef("%s: Launch() completed", tloc.svcName)
+	tloc.Logger.Tracef("Launch() completed")
 
 	return taskListChannel, nil
 }
@@ -380,7 +380,7 @@ func (tloc *TRSHTTPLocal) Cancel(taskList *[]HttpTask) {
 			v.contextCancel()
 		}
 	}
-	tloc.Logger.Tracef("%s: Cancel() completed", tloc.svcName)
+	tloc.Logger.Tracef("Cancel() completed")
 }
 
 // Close out a task list transaction.  The frees up a small amount of resources
@@ -403,7 +403,7 @@ func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 		tloc.taskMutex.Unlock()
 
 	}
-	tloc.Logger.Tracef("%s: Close() completed", tloc.svcName)
+	tloc.Logger.Tracef("Close() completed")
 }
 
 // Clean up a local HTTP task system.
@@ -438,6 +438,6 @@ func (tloc *TRSHTTPLocal) Cleanup() {
 		tloc.taskMutex.Unlock()
 
 	}
-	tloc.Logger.Tracef("%s: Cleanup() completed", tloc.svcName)
+	tloc.Logger.Tracef("Cleanup() completed")
 	// this really just a big red button to STOP ALL? b/c im not clearing any memory
 }
