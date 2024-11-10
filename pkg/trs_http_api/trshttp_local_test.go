@@ -186,11 +186,7 @@ func TestSecureLaunch(t *testing.T) {
 	testLaunch(t, 1, true, false)
 }
 
-func TestSecureLaunchFailure(t *testing.T) {
-	testLaunch(t, 1, true, true)
-}
-
-func testLaunch(t *testing.T, numTasks int, testSecureLaunch bool, testSecureLaunchFailure bool) {
+func testLaunch(t *testing.T, numTasks int, testSecureLaunch bool) {
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger(logrus.TraceLevel))
 
@@ -198,17 +194,15 @@ func testLaunch(t *testing.T, numTasks int, testSecureLaunch bool, testSecureLau
 	if (testSecureLaunch == true) {
 		srv = httptest.NewTLSServer(http.HandlerFunc(launchHandler))
 
-		if (testSecureLaunchFailure == false) {
-			secInfo := TRSHTTPLocalSecurity{CACertBundleData:
+		secInfo := TRSHTTPLocalSecurity{CACertBundleData:
 				string(pem.EncodeToMemory(
 					&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw},
 				)),}
 
-			err := tloc.SetSecurity(secInfo)
-			if err != nil {
-				t.Errorf("Error setting security info: %v", err)
-				return
-			}
+		err := tloc.SetSecurity(secInfo)
+		if err != nil {
+			t.Errorf("Error setting security info: %v", err)
+			return
 		}
 	} else {
 		srv = httptest.NewServer(http.HandlerFunc(launchHandler))
