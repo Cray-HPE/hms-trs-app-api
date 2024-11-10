@@ -324,6 +324,12 @@ func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
 		return
 	}
 
+	t.Logf("")
+	t.Logf("==========================================================")
+	t.Logf("%s", output)
+	t.Logf("==========================================================")
+	t.Logf("")
+
 	srvrPorts := map[string]bool{}
 	debugOutput := map[string][]string{}
 
