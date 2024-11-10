@@ -174,7 +174,7 @@ func configureClient(client *retryablehttp.Client, task *HttpTask, CACertPool *x
 		tr.DisableKeepAlives	 = false
 
 		// remote this later
-		tr.TLSNextProto = make(map[string]func(authority string, c *tls.Conn) http.RoundTripper), // Disable HTTP/2
+		tr.TLSNextProto = make(map[string]func(authority string, c *tls.Conn) http.RoundTripper) // Disable HTTP/2
 	}
 
 	// maxIdleConns logic
