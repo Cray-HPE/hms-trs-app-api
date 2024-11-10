@@ -552,6 +552,14 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	retrySrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
 	stallSrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
 
+	successSrv.Config.ReadTimeout = 0
+	retrySrv.Config.ReadTimeout   = 0
+	stallSrv.Config.ReadTimeout   = 0
+
+	successSrv.Config.WriteTimeout = 0
+	retrySrv.Config.WriteTimeout   = 0
+	stallSrv.Config.WriteTimeout   = 0
+
 	successSrv.Start()
 	retrySrv.Start()
 	stallSrv.Start()
