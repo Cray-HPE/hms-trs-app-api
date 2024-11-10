@@ -439,12 +439,25 @@ func (c *CustomReadCloser) WasClosed() bool {
 // requests that waiting for a server response and thus hit their task
 // timout which cancels their contexts.
 
-func TestPCSUseCase(t *testing.T) {
+func TestPCSUseCaseNoHttpTxPolicy(t *testing.T) {
+	httpTimeout := time.Duration(30) * time.Second	// 30 in PCS
+	httpRetries := 3
+	cPolicy := ClientPolicy{retry: RetryPolicy{Retries: httpRetries}}
+	testPCSUseCase(t, httpTimeout, cPolicy)
+}
+
+func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
+	//httpTimeout := time.Duration(30) * time.Second	// 30 in PCS
+	//httpRetries := 3
+	//cPolicy := ClientPolicy{retry: RetryPolicy{Retries: httpRetries}}, }
+	//testPCSUseCase(t, httpTimeout, cPolicy)
+	t.Skip("Skipping test that is not implemented yet")
+}
+
+func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolicy) {
 	numSuccessTasks := 5
 	numRetryTasks := 5
 	numStallTasks := 5
-	httpTimeout := time.Duration(30) * time.Second	// 30 in PCS
-	httpRetries := 3
 
 	// Initialize the task system
 	tloc := &TRSHTTPLocal{}
@@ -469,7 +482,7 @@ func TestPCSUseCase(t *testing.T) {
 	successProto := HttpTask{
 			Request: successReq,
 			Timeout: httpTimeout,
-			CPolicy: ClientPolicy{ retry: RetryPolicy{Retries: httpRetries}}, }
+			CPolicy: cPolicy, }
 
 	t.Logf("Creating success task list with %v tasks and URL %v", numStallTasks, successSrv.URL)
 	successList := tloc.CreateTaskList(&successProto, numSuccessTasks)
@@ -485,7 +498,7 @@ func TestPCSUseCase(t *testing.T) {
 	retryProto := HttpTask{
 			Request: retryReq,
 			Timeout: httpTimeout,
-			CPolicy: ClientPolicy{retry: RetryPolicy{Retries: httpRetries}}, }
+			CPolicy: cPolicy, }
 
 	t.Logf("Creating retry task list with %v tasks and URL %v", numStallTasks, retraySrv.URL)
 	retryList := tloc.CreateTaskList(&retryProto, numRetryTasks)
@@ -500,7 +513,7 @@ func TestPCSUseCase(t *testing.T) {
 	stallProto := HttpTask{
 			Request: stallReq,
 			Timeout: httpTimeout,
-			CPolicy: ClientPolicy{retry: RetryPolicy{Retries: httpRetries}}, }
+			CPolicy: cPolicy, }
 
 	t.Logf("Creating stalling task list with %v tasks and URL %v", numStallTasks, stallSrv.URL)
 	stallList := tloc.CreateTaskList(&stallProto, numStallTasks)
