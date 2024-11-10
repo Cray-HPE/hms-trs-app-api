@@ -283,7 +283,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 
 	//setup timeouts and context for request
 	tct.task.context, tct.task.contextCancel = context.WithTimeout(tloc.ctx, tct.task.Timeout)
-	defer tct.task.contextCancel()
+	//defer tct.task.contextCancel()
 
 	base.SetHTTPUserAgent(tct.task.Request,tloc.svcName)
 	req, err := retryablehttp.FromRequest(tct.task.Request)
