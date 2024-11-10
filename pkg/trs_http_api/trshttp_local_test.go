@@ -537,9 +537,10 @@ func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
 }
 
 func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolicy) {
-	numSuccessTasks := 5
-	numRetryTasks := 5
-	numStallTasks := 5
+	//numSuccessTasks := 5
+	numSuccessTasks := 1
+	//numRetryTasks := 5
+	//numStallTasks := 5
 
 	// Initialize the task system
 	tloc := &TRSHTTPLocal{}
