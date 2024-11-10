@@ -43,21 +43,31 @@ type loggingRoundTripper struct {
 }
 
 func (lrt *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	// Log the request here if needed
-	lrt.logger.Errorf("Connection opening to %s", req.URL)
-	resp, err := lrt.rt.RoundTrip(req)
-	// Log the response here if needed
-	if err == nil && resp.Header.Get("Connection") == "close" {
-		lrt.logger.Errorf("Connection closed by server after request to %s", req.URL)
-	} else {
-		lrt.logger.Errorf("Connection reused for request to %s", req.URL)
-	}
-	for key, values := range resp.Header {
+    // Log the request here if needed
+    lrt.logger.Errorf("Connection opening to %s", req.URL)
+    resp, err := lrt.rt.RoundTrip(req)
+
+    // Check if an error occurred
+    if err != nil {
+        lrt.logger.Errorf("Request to %s failed: %v", req.URL, err)
+        return nil, err
+    }
+
+    // Log the response status and headers
+    if resp.Header.Get("Connection") == "close" {
+        lrt.logger.Errorf("Connection closed by server after request to %s", req.URL)
+    } else {
+        lrt.logger.Errorf("Connection reused for request to %s", req.URL)
+    }
+
+    // Safely log all headers if resp is not nil
+    for key, values := range resp.Header {
         for _, value := range values {
-			lrt.logger.Errorf("%s: %s", key, value)
+            lrt.logger.Errorf("%s: %s", key, value)
         }
     }
-	return resp, err
+
+    return resp, err
 }
 
 const (
