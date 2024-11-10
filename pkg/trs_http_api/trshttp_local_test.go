@@ -179,11 +179,11 @@ func stallHandler(w http.ResponseWriter, req *http.Request) {
 
 
 func TestLaunch(t *testing.T) {
-	testLaunch(t, 5, false, false)
+	testLaunch(t, 5, false)
 }
 
 func TestSecureLaunch(t *testing.T) {
-	testLaunch(t, 1, true, false)
+	testLaunch(t, 1, true)
 }
 
 func testLaunch(t *testing.T, numTasks int, testSecureLaunch bool) {
