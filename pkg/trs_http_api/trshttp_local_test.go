@@ -28,7 +28,6 @@ import (
 	"context"
 	"encoding/pem"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"os/exec"
@@ -554,42 +553,67 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	// Create http servers.  One for eash request response we want to test
 	// Because we're testing idle connections we need to configure them to
 	// not close idle connections immediately
-	//successSrv := httptest.NewUnstartedServer(http.HandlerFunc(launchHandler))
+	successSrv := httptest.NewUnstartedServer(http.HandlerFunc(launchHandler))
 	//retrySrv   := httptest.NewUnstartedServer(http.HandlerFunc(retryHandler))
 	//stallSrv   := httptest.NewUnstartedServer(http.HandlerFunc(stallHandler))
 
-	//successSrv.Config.IdleTimeout = 300 * time.Second // 5 minutes
+	successSrv.Config.IdleTimeout = 300 * time.Second // 5 minutes
 	//retrySrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
 	//stallSrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
 
-	//successSrv.Config.ReadTimeout = 0
+	successSrv.Config.ReadTimeout = 0
 	//retrySrv.Config.ReadTimeout   = 0
 	//stallSrv.Config.ReadTimeout   = 0
 
-	//successSrv.Config.WriteTimeout = 0
+	successSrv.Config.WriteTimeout = 0
 	//retrySrv.Config.WriteTimeout   = 0
 	//stallSrv.Config.WriteTimeout   = 0
 
-	//successSrv.Start()
+	successSrv.Config.ConnState =  = func(conn net.Conn, state http.ConnState) {
+        //log.Printf("SERVER: Connection %v changed state to %v", conn.RemoteAddr(), state)
+        // Log the time and state change for each connection
+		now := time.Now().Format(time.RFC3339)
+		switch state {
+		case http.StateNew:
+			// Store the start time when the connection is new
+			connTimes.Store(conn, time.Now())
+			log.Printf("[%s] New connection %v started at %v", now, conn.RemoteAddr(), time.Now())
+			log.Printf("Local Address: %v, Remote Address: %v, State: %v", conn.LocalAddr(), conn.RemoteAddr(), state)
+		case http.StateActive:
+			log.Printf("[%s] Connection %v is now ACTIVE", now, conn.RemoteAddr())
+		case http.StateIdle:
+			log.Printf("[%s] Connection %v is now IDLE", now, conn.RemoteAddr())
+		case http.StateClosed:
+			// Calculate the duration of the connection's lifetime
+			if startTime, ok := connTimes.Load(conn); ok {
+				duration := time.Since(startTime.(time.Time))
+				log.Printf("[%s] Connection %v closed after %v", now, conn.RemoteAddr(), duration)
+				connTimes.Delete(conn)
+			} else {
+				log.Printf("[%s] Connection %v closed (no start time found)", now, conn.RemoteAddr())
+			}
+		}
+    }
+
 	//retrySrv.Start()
 	//stallSrv.Start()
 
-	successSrv := &http.Server{
-        Addr: "localhost:36411",
-		Handler: http.HandlerFunc(launchHandler),
-        IdleTimeout: 300 * time.Second,
-        ReadTimeout: 0,
-        WriteTimeout: 0,
-		ConnState: func(conn net.Conn, state http.ConnState) {
-			t.Logf("Connection %v changed state to %v", conn.RemoteAddr(), state)
-		},
-    }
-	go successSrv.ListenAndServe()
+	//successSrv := &http.Server{
+    //    Addr: "localhost:36411",
+	//	Handler: http.HandlerFunc(launchHandler),
+    //    IdleTimeout: 300 * time.Second,
+    //    ReadTimeout: 0,
+    //    WriteTimeout: 0,
+	//	ConnState: func(conn net.Conn, state http.ConnState) {
+	//		t.Logf("Connection %v changed state to %v", conn.RemoteAddr(), state)
+	//	},
+    //}
+	//go successSrv.ListenAndServe()
+	//successReq, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:36411", nil)
 
 	// Create an http request for tasks that complete successfully
 
-	//successReq, err := http.NewRequest(http.MethodGet, successSrv.URL, nil)
-	successReq, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:36411", nil)
+	successReq, err := http.NewRequest(http.MethodGet, successSrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
