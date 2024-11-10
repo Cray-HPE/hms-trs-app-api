@@ -599,6 +599,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 		}
     }
 
+	successSrv.Start()
 	//retrySrv.Start()
 	//stallSrv.Start()
 
