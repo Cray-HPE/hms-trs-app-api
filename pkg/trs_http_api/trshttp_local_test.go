@@ -37,8 +37,6 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/net/http2"
-
 	base "github.com/Cray-HPE/hms-base/v2"
 	"github.com/sirupsen/logrus"
 )
@@ -576,7 +574,6 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
         ReadTimeout: 0,
         WriteTimeout: 0,
     }
-	http2.ConfigureServer(successSrv, &http2.Server{MaxConcurrentStreams: 0})
 	go successSrv.ListenAndServe()
 
 	// Create an http request for tasks that complete successfully
