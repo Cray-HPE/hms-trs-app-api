@@ -37,6 +37,25 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type loggingRoundTripper struct {
+	rt http.RoundTripper
+	logger *logrus.Logger
+}
+
+func (lrt *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Log the request here if needed
+	lrt.logger.Tracef("Connection opening to %s", req.URL)
+	resp, err := lrt.rt.RoundTrip(req)
+	// Log the response here if needed
+	if err == nil && resp.Header.Get("Connection") == "close" {
+		lrt.logger.Tracef("Connection closed by server after request to %s", req.URL)
+	} else {
+		lrt.logger.Tracef("Connection reused for request to %s", req.URL)
+	}
+	lrt.logger.Tracef("resp.Header: %v", resp.Header)
+	return resp, err
+}
+
 const (
 	DFLT_RETRY_MAX   = 3	//default max # of retries on failure
 	DFLT_BACKOFF_MAX = 5	//default max seconds per retry
@@ -192,7 +211,8 @@ func configureClient(client *retryablehttp.Client, task *HttpTask, CACertPool *x
 	//tr.ResponseHeaderTimeout =  5 * time.Second // Timeout for reading response headers
 	//tr.TLSHandshakeTimeout   = 10 * time.Second // Timeout for TLS handshakes
 
-	client.HTTPClient.Transport = tr
+	//client.HTTPClient.Transport = tr
+	client.HTTPClient.Transport = &loggingRoundTripper{rt: tr, logger: tloc.Logger}
 }
 
 func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
