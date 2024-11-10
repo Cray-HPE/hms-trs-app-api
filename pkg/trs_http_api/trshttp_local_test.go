@@ -253,7 +253,7 @@ return
 			CPolicy: ClientPolicy{
 				retry: RetryPolicy{
 						Retries: 1,
-						BackoffTimeout: 3 * time.Second}
+						BackoffTimeout: 3 * time.Second},
 				},
 			}
 	tList := tloc.CreateTaskList(&tproto,1)
