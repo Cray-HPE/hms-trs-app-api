@@ -179,25 +179,25 @@ func stallHandler(w http.ResponseWriter, req *http.Request) {
 
 
 func TestLaunch(t *testing.T) {
-	testLaunch(t, TRSHTTPLocalSecurity{})
+	testLaunch(t, false)
 }
 
 func TestSecureLaunch(t *testing.T) {
-	secInfo := TRSHTTPLocalSecurity{CACertBundleData:
-				string(pem.EncodeToMemory(
-					&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw},
-				)),}
-
-	testLaunch(t, secInfo)
+	testLaunch(t, true)
 }
 
-func testLaunch(t *testing.T, secInfo TRSHTTPLocalSecurity) {
+func testLaunch(t *testing.T, testSecureLaunch bool) {
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger(logrus.TraceLevel))
 
 	var srv *httptest.Server
-	if (secInfo.CACertBundleData != "") {
+	if (testSecureLaunch == true) {
 		srv = httptest.NewTLSServer(http.HandlerFunc(launchHandler))
+
+		secInfo := TRSHTTPLocalSecurity{CACertBundleData:
+				string(pem.EncodeToMemory(
+					&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw},
+				)),}
 
 		err := tloc.SetSecurity(secInfo)
 		if err != nil {
