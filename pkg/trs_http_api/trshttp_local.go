@@ -171,7 +171,6 @@ func configureClient(client *retryablehttp.Client, task *HttpTask, CACertPool *x
 		tr.IdleConnTimeout       = httpTxPolicy.IdleConnTimeout
 		tr.ResponseHeaderTimeout = httpTxPolicy.ResponseHeaderTimeout
 		tr.TLSHandshakeTimeout   = httpTxPolicy.TLSHandshakeTimeout
-		tloc.Logger.Tracef("Configured client transport with policy: %+v", httpTxPolicy)
 	}
 
 	// maxIdleConns logic
@@ -208,6 +207,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		configureClient(cpack.insecure, tct.task, nil)
 
 		tloc.Logger.Tracef("Created insecure client with policy %v", tct.task.CPolicy)
+		tloc.Logger.Tracef("MaxIdleConns: %d", cpack.insecure.HTTPClient.Transport.(*http.Transport).MaxIdleConns)
 
 		if (tloc.CACertPool != nil) {
 			cpack.secure = retryablehttp.NewClient()
