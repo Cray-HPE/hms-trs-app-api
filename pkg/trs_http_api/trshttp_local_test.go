@@ -525,7 +525,7 @@ func TestPCSUseCase(t *testing.T) {
 		t.Errorf("Launch ERROR: %v", err)
 	}
 
-	// Wait for all connections to be established so output looks nice
+	// Wait for all connections to enter ESTABLISHED state so output looks nice
 	time.Sleep(200 * time.Millisecond)
 
 	// All connections should be in ESTABLISHED
@@ -550,12 +550,23 @@ func TestPCSUseCase(t *testing.T) {
 	// The stalled tasks timed out due to HTTPClient.Timeout because it was
 	// sized to 90% of the task timeout.  These tasks will now retry so
 	// sleep for the other 10% of the task timeout to allow them to be
-	// cancelled due to their context timeing out.
-	time.Sleep((httpTimeout / 10))
+	// cancelled due to their context timeing out.  We add a little extra
+	// to allow connection states to stabilize so output looks nice.
+	time.Sleep((httpTimeout / 10) + 1)
 
 	// All connections should now be closed
 	t.Logf("Testing open connections after stalled tasks completed")
 	testOpenConnections(t, true, 0)
+
+	// Cancel the stalled server handlers so we can close the servers later.
+	// We will need to do it once for the first set that timed out due to the
+	// HTTPClient.Timeout and once for the second set that timed out due to
+	// the context timeout.
+	t.Logf("Signaling stalled handlers ")
+	for i := 0; i < numStallTasks * 2; i++ {
+		stallCancel <- true
+	}
+	close(stallCancel)
 
 	t.Logf("Closing the task list channel")
 	close(taskListChannel)
@@ -615,18 +626,6 @@ func TestPCSUseCase(t *testing.T) {
 
 	t.Logf("Cleaning up task system")
 	tloc.Cleanup()
-
-	// Cancel the stalled server handlers so we can close the servers.  We
-	// will need to do it once for the first set that timed out due to the
-	// HTTPClient.Timeout and once for the second set that timed out due to
-	// the context timeout.
-	t.Logf("Signaling stalled handlers")
-	for i := 0; i < numStallTasks * 2; i++ {
-		t.Logf("Sending signal %v", i)
-		stallCancel <- true
-		t.Logf("Sent")
-	}
-	close(stallCancel)
 
 	t.Logf("Closing servers")
 	successSrv.Close()
