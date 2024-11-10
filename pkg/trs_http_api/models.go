@@ -84,6 +84,7 @@ type HttpTxPolicy struct {
 	MaxIdleConnsPerHost		int
 	IdleConnTimeout			time.Duration
 	ResponseHeaderTimeout	time.Duration
+	TLSHandshakeTimeout		time.Duration
 }
 
 type ClientPolicy struct {

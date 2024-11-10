@@ -164,22 +164,19 @@ func configureClient(client *retryablehttp.Client, task *HttpTask, CACertPool *x
 		tr = &http.Transport{TLSClientConfig: tlsConfig,}
 	}
 
-	// If we're not configuring the HTTP.Transport, we're done
-	if ! httpTxPolicy.Enabled {
-		client.HTTPClient.Transport = tr
-		return
+	// Configure the client't http transport policy
+	if httpTxPolicy.Enabled {
+		tr.MaxIdleConns          = httpTxPolicy.MaxIdleConns
+		tr.MaxIdleConnsPerHost   = httpTxPolicy.MaxIdleConnsPerHost
+		tr.IdleConnTimeout       = httpTxPolicy.IdleConnTimeout
+		tr.ResponseHeaderTimeout = httpTxPolicy.ResponseHeaderTimeout
+		tr.TLSHandshakeTimeout   = httpTxPolicy.TLSHandshakeTimeout
 	}
-
-	// Configure the http.Transport
-	tr.MaxIdleConns        = httpTxPolicy.MaxIdleConns
-	tr.MaxIdleConnsPerHost = httpTxPolicy.MaxIdleConnsPerHost
-	tr.IdleConnTimeout     = httpTxPolicy.IdleConnTimeout
-	tr.ResponseHeaderTimeout = httpTxPolicy.ResponseHeaderTimeout
 
 	// maxIdleConns logic
 
-	tr.MaxIdleConns        = 16000 // Total max idle connections across BMCs (4 per server)
-	tr.MaxIdleConnsPerHost = 4     // Up to 4 idle connections per BMC
+	//tr.MaxIdleConns        = 16000 // Total max idle connections across BMCs (4 per server)
+	//tr.MaxIdleConnsPerHost = 4     // Up to 4 idle connections per BMC
 
 	// Timeout logic ....
 	// idle cons = 1.5 times task.Timeout
@@ -187,9 +184,9 @@ func configureClient(client *retryablehttp.Client, task *HttpTask, CACertPool *x
 	// TLS handshake timeout = ? times task.Timeout
 	// Does this need to be fully configurable for each use case of TRS?
 
-	tr.IdleConnTimeout       = 90 * time.Second // Close idle connections after 90 seconds
-	tr.ResponseHeaderTimeout =  5 * time.Second // Timeout for reading response headers
-	tr.TLSHandshakeTimeout   = 10 * time.Second // Timeout for TLS handshakes
+	//tr.IdleConnTimeout       = 90 * time.Second // Close idle connections after 90 seconds
+	//tr.ResponseHeaderTimeout =  5 * time.Second // Timeout for reading response headers
+	//tr.TLSHandshakeTimeout   = 10 * time.Second // Timeout for TLS handshakes
 
 	client.HTTPClient.Transport = tr
 }
