@@ -443,15 +443,16 @@ func TestPCSUseCaseNoHttpTxPolicy(t *testing.T) {
 	httpTimeout := time.Duration(30) * time.Second	// 30 in PCS
 	httpRetries := 3
 	cPolicy := ClientPolicy{retry: RetryPolicy{Retries: httpRetries}}
+
 	testPCSUseCase(t, httpTimeout, cPolicy)
 }
 
 func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
-	//httpTimeout := time.Duration(30) * time.Second	// 30 in PCS
-	//httpRetries := 3
-	//cPolicy := ClientPolicy{retry: RetryPolicy{Retries: httpRetries}}, }
-	//testPCSUseCase(t, httpTimeout, cPolicy)
-	t.Skip("Skipping test that is not implemented yet")
+	httpTimeout := time.Duration(30) * time.Second	// 30 in PCS
+	httpRetries := 3
+	cPolicy := ClientPolicy{retry: RetryPolicy{Retries: httpRetries}}
+
+	testPCSUseCase(t, httpTimeout, cPolicy)
 }
 
 func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolicy) {
