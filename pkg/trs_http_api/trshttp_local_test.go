@@ -384,9 +384,11 @@ func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
 						}
 					} else {
 						// Not related, ignore
+						t.Logf("IGNORING 1: %v", line)
 					}
 				}
 			} else {
+				t.Logf("IGNORING 2: %v", line)
 				// Not related, ignore
 			}
 		}
