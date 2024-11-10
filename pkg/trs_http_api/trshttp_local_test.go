@@ -758,6 +758,6 @@ tList := successList
 
 	t.Logf("Closing servers")
 	successSrv.Close()
-	retrySrv.Close()
-	stallSrv.Close()
+	//retrySrv.Close()
+	//stallSrv.Close()
 }
