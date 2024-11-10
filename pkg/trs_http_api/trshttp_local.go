@@ -301,6 +301,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	if (tct.task.forceInsecure || tloc.CACertPool == nil || cpack.secure == nil) {
 		tloc.Logger.Tracef("Using INsecure client to send request")
 		tct.task.Request.Response, tmpError = cpack.insecure.Do(req)
+tloc.Logger.Tracef("Do completed")
 	} else {
 		tloc.Logger.Tracef("Using secure client to send request")
 		tct.task.Request.Response, tmpError = cpack.secure.Do(req)
@@ -320,7 +321,9 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		tloc.Logger.Tracef("Response: %d", tct.task.Request.Response.StatusCode)
 	}
 
+tloc.Logger.Tracef("Sending task to channel")
 	tct.taskListChannel <- tct.task
+tloc.Logger.Tracef("Returning from ExecuteTask")
 }
 
 // Launch an array of tasks.  This is non-blocking.  Use Check() to get
