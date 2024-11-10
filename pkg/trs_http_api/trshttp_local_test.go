@@ -382,7 +382,7 @@ func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
 					}
 				}
 			} else {
-				debugOutput["ignoredMisc"] = append(debugOutput["ignoredConn"], line)
+				debugOutput["ignoredMisc"] = append(debugOutput["ignoredMisc"], line)
 			}
 		}
 	}
