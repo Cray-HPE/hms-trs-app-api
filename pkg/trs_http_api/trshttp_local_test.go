@@ -516,7 +516,7 @@ func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
 				Enabled:               true,
 				MaxIdleConns:          100,
 				//MaxIdleConnsPerHost:   4,
-				//IdleConnTimeout:       (pcsStatusTimeout * 15 / 10) * time.Second,
+				IdleConnTimeout:       (pcsStatusTimeout * 15 / 10) * time.Second,
 				//ResponseHeaderTimeout:  5 * time.Second,
 				//TLSHandshakeTimeout:   10 * time.Second,
 			},
