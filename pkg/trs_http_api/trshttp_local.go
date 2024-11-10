@@ -73,6 +73,9 @@ func (tloc *TRSHTTPLocal) Init(serviceName string, logger *logrus.Logger) error 
 		tloc.clientMutex.Unlock()
 	}
 	tloc.svcName = serviceName
+
+	tloc.Logger.Tracef("%s: Init() successful", tloc.svcName)
+
 	return nil
 }
 
@@ -104,6 +107,8 @@ func (tloc *TRSHTTPLocal) SetSecurity(inParams interface{}) error {
 			return err
 		}
 	}
+
+	tloc.Logger.Tracef("%s: SetSecurity() successful", tloc.svcName)
 
 	return nil
 }
@@ -326,6 +331,8 @@ func (tloc *TRSHTTPLocal) Launch(taskList *[]HttpTask) (chan *HttpTask, error) {
 		go ExecuteTask(tloc, tct)
 	}
 
+	tloc.Logger.Tracef("%s: Launch() completed", tloc.svcName)
+
 	return taskListChannel, nil
 }
 
@@ -373,6 +380,7 @@ func (tloc *TRSHTTPLocal) Cancel(taskList *[]HttpTask) {
 			v.contextCancel()
 		}
 	}
+	tloc.Logger.Tracef("%s: Cancel() completed", tloc.svcName)
 }
 
 // Close out a task list transaction.  The frees up a small amount of resources
@@ -395,6 +403,7 @@ func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 		tloc.taskMutex.Unlock()
 
 	}
+	tloc.Logger.Tracef("%s: Close() completed", tloc.svcName)
 }
 
 // Clean up a local HTTP task system.
@@ -429,5 +438,6 @@ func (tloc *TRSHTTPLocal) Cleanup() {
 		tloc.taskMutex.Unlock()
 
 	}
+	tloc.Logger.Tracef("%s: Cleanup() completed", tloc.svcName)
 	// this really just a big red button to STOP ALL? b/c im not clearing any memory
 }

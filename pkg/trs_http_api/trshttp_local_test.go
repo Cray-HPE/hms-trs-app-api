@@ -179,18 +179,18 @@ func stallHandler(w http.ResponseWriter, req *http.Request) {
 
 
 func TestLaunch(t *testing.T) {
-	testLaunch(t, false, false)
+	testLaunch(t, 5, false, false)
 }
 
 func TestSecureLaunch(t *testing.T) {
-	testLaunch(t, true, false)
+	testLaunch(t, 1, true, false)
 }
 
 func TestSecureLaunchFailure(t *testing.T) {
-	testLaunch(t, true, true)
+	testLaunch(t, 1, true, true)
 }
 
-func testLaunch(t *testing.T, testSecureLaunch bool, testSecureLaunchFailure bool) {
+func testLaunch(t *testing.T, numTasks int, testSecureLaunch bool, testSecureLaunchFailure bool) {
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger(logrus.TraceLevel))
 
@@ -219,16 +219,11 @@ func testLaunch(t *testing.T, testSecureLaunch bool, testSecureLaunchFailure boo
 
 	req,_ := http.NewRequest("GET",srv.URL,nil)
 	tproto := HttpTask{Request: req, Timeout: 8*time.Second,}
-	tList := tloc.CreateTaskList(&tproto,5)
+	tList := tloc.CreateTaskList(&tproto, numTasks)
 
 	tch,err := tloc.Launch(&tList)
 	if (err != nil) {
-		if (testSecureLaunchFailure == false) {
-			t.Errorf("Launch ERROR: %v",err)
-		} else {
-			// This should fail, so its a success
-			return
-		}
+		t.Errorf("Launch ERROR: %v",err)
 	}
 
 	nDone := 0
