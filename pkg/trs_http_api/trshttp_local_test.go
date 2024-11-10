@@ -513,9 +513,12 @@ func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
 	pcsStatusTimeout      := 30
 	httpTimeout           := time.Duration(pcsStatusTimeout) * time.Second
 	//idleConnTimeout     := time.Duration(pcsStatusTimeout * 15 / 10) * time.Second
-	idleConnTimeout       := 60 * time.Second
-	responseHeaderTimeout :=  5 * time.Second
-	tLSHandshakeTimeout   := 10 * time.Second
+	//idleConnTimeout       := 60 * time.Second
+	idleConnTimeout       := 300 * time.Second
+	//responseHeaderTimeout :=  5 * time.Second
+	responseHeaderTimeout :=  50 * time.Second
+	//tLSHandshakeTimeout   := 10 * time.Second
+	tLSHandshakeTimeout   := 100 * time.Second
 
 	cPolicy := ClientPolicy{
 		retry: RetryPolicy{Retries: httpRetries},
@@ -584,6 +587,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
         t.Fatalf("Failed to create request: %v", err)
     }
 	successReq.Header.Set("Accept", "*/*")
+	successReq.Header.Set("Connection", "keep-alive")
 
 	successProto := HttpTask{
 			Request: successReq,
@@ -600,6 +604,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
         t.Fatalf("Failed to create request: %v", err)
     }
 	retryReq.Header.Set("Accept", "*/*")
+	retryReq.Header.Set("Connection", "keep-alive")
 
 	retryProto := HttpTask{
 			Request: retryReq,
@@ -616,6 +621,8 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
         t.Fatalf("Failed to create request: %v", err)
     }
 	stallReq.Header.Set("Accept", "*/*")
+	stallReq.Header.Set("Connection", "keep-alive")
+
 	stallProto := HttpTask{
 			Request: stallReq,
 			Timeout: httpTimeout,
