@@ -324,12 +324,6 @@ func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
 		return
 	}
 
-	t.Logf("")
-	t.Logf("==========================================================")
-	t.Logf("%s", output)
-	t.Logf("==========================================================")
-	t.Logf("")
-
 	srvrPorts := map[string]bool{}
 	debugOutput := map[string][]string{}
 
@@ -346,6 +340,7 @@ func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
 			// This is a server. LISTEN lines always comes first in the output.
 			// Ignore anything that isn't our test process
 			if !strings.Contains(line, "trs_http_api") {
+				debugOutput["ignoredListen"] = append(debugOutput["ignoredListen"], line)
 				continue
 			}
 
@@ -383,13 +378,11 @@ func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
 							debugOutput["clientOther"] = append(debugOutput["clientOther"], line)
 						}
 					} else {
-						// Not related, ignore
-						t.Logf("IGNORING 1: %v", line)
+						debugOutput["ignoredConn"] = append(debugOutput["ignoredConn"], line)
 					}
 				}
 			} else {
-				t.Logf("IGNORING 2: %v", line)
-				// Not related, ignore
+				debugOutput["ignoredMisc"] = append(debugOutput["ignoredConn"], line)
 			}
 		}
 	}
@@ -443,6 +436,36 @@ func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
 			t.Logf("Server Other Connections: (%v)", len(debugOutput["serverOther"]))
 			t.Logf("")
 			for _,v := range(debugOutput["serverOther"]) {
+				t.Log(v)
+			}
+			t.Logf("")
+		}
+		if len(debugOutput["ignoredConn"]) > 0 {
+			sort.Strings(debugOutput["ignoredConn"])
+
+			t.Logf("Ignored Connections: (%v)", len(debugOutput["ignoredConn"]))
+			t.Logf("")
+			for _,v := range(debugOutput["ignoredConn"]) {
+				t.Log(v)
+			}
+			t.Logf("")
+		}
+		if len(debugOutput["ignoredListen"]) > 0 {
+			sort.Strings(debugOutput["ignoredListen"])
+
+			t.Logf("Ignored LISTEN Connections: (%v)", len(debugOutput["ignoredListen"]))
+			t.Logf("")
+			for _,v := range(debugOutput["ignoredListen"]) {
+				t.Log(v)
+			}
+			t.Logf("")
+		}
+		if len(debugOutput["ignoredMisc"]) > 0 {
+			sort.Strings(debugOutput["ignoredMisc"])
+
+			t.Logf("Ignored Misc Output: (%v)", len(debugOutput["ignoredMisc"]))
+			t.Logf("")
+			for _,v := range(debugOutput["ignoredMisc"]) {
 				t.Log(v)
 			}
 			t.Logf("")
