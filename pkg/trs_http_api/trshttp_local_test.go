@@ -551,7 +551,7 @@ func TestPCSUseCase(t *testing.T) {
 	// sized to 90% of the task timeout.  These tasks will now retry so
 	// sleep for the other 10% of the task timeout to allow them to be
 	// cancelled due to their context timeing out.
-	time.Sleep(150 * time.Second)
+	time.Sleep((httpTimeout / 10))
 
 	// All connections should now be closed
 	t.Logf("Testing open connections after stalled tasks completed")
@@ -620,12 +620,15 @@ func TestPCSUseCase(t *testing.T) {
 	// will need to do it once for the first set that timed out due to the
 	// HTTPClient.Timeout and once for the second set that timed out due to
 	// the context timeout.
-	t.Logf("Closing servers")
+	t.Logf("Signaling stalled handlers")
 	for i := 0; i < numStallTasks * 2; i++ {
+		t.Logf("Sending signal %v", i)
 		stallCancel <- true
+		t.Logf("Sent")
 	}
 	close(stallCancel)
 
+	t.Logf("Closing servers")
 	successSrv.Close()
 	retraySrv.Close()
 	stallSrv.Close()
