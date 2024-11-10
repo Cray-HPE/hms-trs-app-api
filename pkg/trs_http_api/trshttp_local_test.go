@@ -542,9 +542,19 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	handlerLogger = t
 
 	// Create http servers.  One for eash request response we want to test
-	successSrv := httptest.NewServer(http.HandlerFunc(launchHandler))
-	retraySrv := httptest.NewServer(http.HandlerFunc(retryHandler))
-	stallSrv := httptest.NewServer(http.HandlerFunc(stallHandler))
+	// Because we're testing idle connections we need to configure them to
+	// not close idle connections immediately
+	successSrv := httptest.NewUnstartedServer(http.HandlerFunc(launchHandler))
+	retrySrv   := httptest.NewUnstartedServer(http.HandlerFunc(retryHandler))
+	stallSrv   := httptest.NewUnstartedServer(http.HandlerFunc(stallHandler))
+
+	successSrv.Config.IdleTimeout = 300 * time.Second // 5 minutes
+	retrySrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
+	stallSrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
+
+	successSrv.Start()
+	retrySrv.Start()
+	stallSrv.Start()
 
 	// Create an http request for tasks that complete successfully
 
@@ -564,7 +574,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 
 	// Create an http request for tasks that retry muliple times and fail
 
-	retryReq, err := http.NewRequest(http.MethodGet, retraySrv.URL, nil)
+	retryReq, err := http.NewRequest(http.MethodGet, retrySrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
@@ -575,7 +585,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 			Timeout: httpTimeout,
 			CPolicy: cPolicy, }
 
-	t.Logf("Creating retry task list with %v tasks and URL %v", numStallTasks, retraySrv.URL)
+	t.Logf("Creating retry task list with %v tasks and URL %v", numStallTasks, retrySrv.URL)
 	retryList := tloc.CreateTaskList(&retryProto, numRetryTasks)
 
 	// Create an http request for tasks that stall
@@ -711,6 +721,6 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 
 	t.Logf("Closing servers")
 	successSrv.Close()
-	retraySrv.Close()
+	retrySrv.Close()
 	stallSrv.Close()
 }
