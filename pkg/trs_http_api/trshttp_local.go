@@ -208,9 +208,9 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		configureClient(cpack.insecure, tct.task, nil)
 
 		tloc.Logger.Tracef("Created insecure client with policy %v", tct.task.CPolicy)
-		fmt.Printf("MaxIdleConns: %d\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).MaxIdleConns)
-		fmt.Printf("MaxIdleConnsPerHost: %d\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).MaxIdleConnsPerHost)
-		fmt.Printf("IdleConnTimeout: %s\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).IdleConnTimeout)
+		tloc.Logger.Tracef("MaxIdleConns: %d\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).MaxIdleConns)
+		tloc.Logger.Tracef("MaxIdleConnsPerHost: %d\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).MaxIdleConnsPerHost)
+		tloc.Logger.Tracef("IdleConnTimeout: %s\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).IdleConnTimeout)
 
 
 		if (tloc.CACertPool != nil) {
