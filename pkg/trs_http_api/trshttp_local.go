@@ -171,6 +171,7 @@ func configureClient(client *retryablehttp.Client, task *HttpTask, CACertPool *x
 		tr.IdleConnTimeout       = httpTxPolicy.IdleConnTimeout
 		tr.ResponseHeaderTimeout = httpTxPolicy.ResponseHeaderTimeout
 		tr.TLSHandshakeTimeout   = httpTxPolicy.TLSHandshakeTimeout
+		tr.DisableKeepAlives	 = false
 	}
 
 	// maxIdleConns logic
