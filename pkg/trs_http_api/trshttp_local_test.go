@@ -28,6 +28,7 @@ import (
 	"context"
 	"encoding/pem"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os/exec"
@@ -576,6 +577,9 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
         IdleTimeout: 300 * time.Second,
         ReadTimeout: 0,
         WriteTimeout: 0,
+		ConnState: func(conn net.Conn, state http.ConnState) {
+			t.Logf("Connection %v changed state to %v", conn.RemoteAddr(), state)
+		},
     }
 	go successSrv.ListenAndServe()
 
