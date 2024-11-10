@@ -62,7 +62,7 @@ type HttpKafkaTx struct {
 	Request     SerializedRequest `json:",omitempty"`
 	TimeStamp   string            `json:",omitempty"` // Time the request time.Now().String()
 	Timeout     time.Duration     `json:",omitempty"`
-	CPolicy     RetryPolicy
+	CPolicy     ClientPolicy
 	ServiceName string
 	Ignore      bool
 }
