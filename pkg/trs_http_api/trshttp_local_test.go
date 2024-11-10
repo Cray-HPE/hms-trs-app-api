@@ -231,14 +231,9 @@ func TestLaunch(t *testing.T) {
 	if (nErr != 0) {
 		t.Errorf("Got %d errors from Launch",nErr)
 	}
-
-	// Clean up and exit
-	//tloc.Close(&tList)
-	//tloc.Cleanup()
 }
 
 func TestLaunchTimeout(t *testing.T) {
-return
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger(logrus.TraceLevel))
 	srv := httptest.NewServer(http.HandlerFunc(stallHandler))
@@ -289,11 +284,7 @@ return
 	if (nErr != 0) {
 		t.Errorf("Got %d errors from Launch",nErr)
 	}
-	// Clean up and exit
-	//<-tch	// release the retried handler
-	//close(tch)
-	//tloc.Close(&tList)
-	//tloc.Cleanup()
+	close(stallCancel)
 }
 
 // Test connection states using 'ss' utility
@@ -513,6 +504,10 @@ func TestPCSUseCase(t *testing.T) {
 
 	t.Logf("Creating stalling task list with %v tasks and URL %v", numStallTasks, stallSrv.URL)
 	stallList := tloc.CreateTaskList(&stallProto, numStallTasks)
+
+	// Create a channel to signal the stalled server handlers to complete
+	// We will need two sets for the initial call and then a retry
+	stallCancel = make(chan bool, numStallTasks * 2)
 
 	// Launch all three sets of tasks using a single list
 
