@@ -506,11 +506,11 @@ func TestPCSUseCaseNoHttpTxPolicy(t *testing.T) {
 }
 
 func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
-	httpRetries      := 3
-	pcsStatusTimeout := 30
-	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
-	//idleConnTimeout  := time.Duration(pcsStatusTimeout * 15 / 10) * time.Second
-	idleConnTimeout  := time.Duration(60) * time.Second
+	httpRetries           := 3
+	pcsStatusTimeout      := 30
+	httpTimeout           := time.Duration(pcsStatusTimeout) * time.Second
+	//idleConnTimeout     := time.Duration(pcsStatusTimeout * 15 / 10) * time.Second
+	idleConnTimeout       := 60 * time.Second
 	responseHeaderTimeout :=  5 * time.Second
 	tLSHandshakeTimeout   := 10 * time.Second
 
