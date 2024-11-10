@@ -44,15 +44,15 @@ type loggingRoundTripper struct {
 
 func (lrt *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Log the request here if needed
-	lrt.logger.Tracef("Connection opening to %s", req.URL)
+	lrt.logger.Errorf("Connection opening to %s", req.URL)
 	resp, err := lrt.rt.RoundTrip(req)
 	// Log the response here if needed
 	if err == nil && resp.Header.Get("Connection") == "close" {
-		lrt.logger.Tracef("Connection closed by server after request to %s", req.URL)
+		lrt.logger.Errorf("Connection closed by server after request to %s", req.URL)
 	} else {
-		lrt.logger.Tracef("Connection reused for request to %s", req.URL)
+		lrt.logger.Errorf("Connection reused for request to %s", req.URL)
 	}
-	lrt.logger.Tracef("resp.Header: %v", resp.Header)
+	lrt.logger.Errorf("resp.Header: %v", resp.Header)
 	return resp, err
 }
 
@@ -230,7 +230,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		configureClient(cpack.insecure, tct.task, nil)
 		cpack.insecure.HTTPClient.Transport = &loggingRoundTripper{
 			rt:     cpack.insecure.HTTPClient.Transport,
-			logger: tloc.Logger,
+			logger: httpLogger,
 		}
 
 		//tloc.Logger.Tracef("Created insecure client with policy %v", tct.task.CPolicy)
