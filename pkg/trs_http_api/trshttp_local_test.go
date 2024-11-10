@@ -28,6 +28,7 @@ import (
 	"context"
 	"encoding/pem"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os/exec"
@@ -602,12 +603,12 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 
 	// Create an http request for tasks that retry muliple times and fail
 
-	/*
+/*
 	retryReq, err := http.NewRequest(http.MethodGet, retrySrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
-	retryReq.Header.Set("Accept", "*/*")
+	retryReq.Header.Set("Accept", "STAR/STAR")
 	retryReq.Header.Set("Connection", "keep-alive")
 
 	retryProto := HttpTask{
@@ -624,7 +625,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
-	stallReq.Header.Set("Accept", "*/*")
+	stallReq.Header.Set("Accept", "STAR/STAR")
 	stallReq.Header.Set("Connection", "keep-alive")
 
 	stallProto := HttpTask{
