@@ -52,7 +52,11 @@ func (lrt *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	} else {
 		lrt.logger.Errorf("Connection reused for request to %s", req.URL)
 	}
-	lrt.logger.Errorf("resp.Header: %v", resp.Header)
+	for key, values := range resp.Header {
+        for _, value := range values {
+			lrt.logger.Errorf("%s: %s", key, value)
+        }
+    }
 	return resp, err
 }
 
