@@ -568,7 +568,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	stallSrv.Start()
 
 	successSrv := &http.Server{
-        Addr: ":36411",
+        Addr: "localhost:36411",
 		Handler: http.HandlerFunc(launchHandler),
         IdleTimeout: 300 * time.Second,
         ReadTimeout: 0,
