@@ -1,6 +1,6 @@
 module github.com/Cray-HPE/hms-trs-app-api/v2
 
-go 1.17
+go 1.22
 
 require (
 	github.com/Cray-HPE/hms-base/v2 v2.0.1
