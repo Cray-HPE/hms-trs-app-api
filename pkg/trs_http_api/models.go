@@ -85,6 +85,7 @@ type HttpTxPolicy struct {
 	IdleConnTimeout			time.Duration
 	ResponseHeaderTimeout	time.Duration
 	TLSHandshakeTimeout		time.Duration
+	DisableKeepAlives		bool
 }
 
 type ClientPolicy struct {

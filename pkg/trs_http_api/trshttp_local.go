@@ -38,73 +38,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type loggingRoundTripper struct {
-	rt http.RoundTripper
-	logger *logrus.Logger
-}
-
-/*
-func (lrt *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	done := make(chan struct{})
-
-	// Log the request here if needed
-	lrt.logger.Errorf("Connection opening to %s", req.URL)
-
-	// Execute the request in a seperate goroutine
-	var resp *http.Response
-	var err error
-	go func() {
-		resp, err = lrt.rt.RoundTrip(req)
-		close(done)
-	}()
-
-	// Wait for the request to complete
-	select {
-		case <-req.Context().Done():
-			// Context was cancelled
-			return nil,req.Context().Err()
-		case <-done:
-			// Request completed
-	}
-
-	// Check if an error occurred
-	if err != nil {
-		lrt.logger.Errorf("Request to %s failed: %v", req.URL, err)
-		return nil, err
-    }
-
-    
-	// Determine if server closed the connection on us
-	if resp.Header.Get("Connection") == "close" {
-		lrt.logger.Errorf("Connection closed by server after request to %s", req.URL)
-	} else {
-		lrt.logger.Errorf("Connection reused for request to %s", req.URL)
-	}
-
-	// Log all of the headers
-	for key, values := range resp.Header {
-		for _, value := range values {
-			lrt.logger.Errorf("%s: %s", key, value)
-		}
-	}
-
-	return resp, err
-}
-func (lrt *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-    resp, err := lrt.rt.RoundTrip(req)
-
-    select {
-    case <-req.Context().Done():
-        // Context was canceled; return the context's error but don't handle the response
-        return nil, req.Context().Err()
-    default:
-        // Context is still active; proceed as usual
-    }
-
-    return resp, err
-}
-*/
-
 const (
 	DFLT_RETRY_MAX   = 3	//default max # of retries on failure
 	DFLT_BACKOFF_MAX = 5	//default max seconds per retry
@@ -239,7 +172,7 @@ func configureClient(client *retryablehttp.Client, task *HttpTask, CACertPool *x
 		tr.IdleConnTimeout       = httpTxPolicy.IdleConnTimeout
 		tr.ResponseHeaderTimeout = httpTxPolicy.ResponseHeaderTimeout
 		tr.TLSHandshakeTimeout   = httpTxPolicy.TLSHandshakeTimeout
-		tr.DisableKeepAlives	 = false
+		tr.DisableKeepAlives	 = httpTxPolicy.DisableKeepAlives
 	}
 
 	client.HTTPClient.Transport = tr
@@ -259,12 +192,6 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		cpack.insecure.Logger = httpLogger
 
 		configureClient(cpack.insecure, tct.task, nil)
-/*
-		cpack.insecure.HTTPClient.Transport = &loggingRoundTripper{
-			rt:     cpack.insecure.HTTPClient.Transport,
-			logger: tloc.Logger,
-		}
-*/
 
 		tloc.Logger.Tracef("Created insecure client with policy %v", tct.task.CPolicy)
 		tloc.Logger.Tracef("RetryMax: %d\n", cpack.insecure.RetryMax)
@@ -272,21 +199,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		tloc.Logger.Tracef("HTTPClient.Timeout: %s\n", cpack.insecure.HTTPClient.Timeout)
 		tloc.Logger.Tracef("tct.task.Timeout: %s\n", tct.task.Timeout)
 
-		//tloc.Logger.Tracef("MaxIdleConns: %d\n", cpack.insecure.HTTPClient.Transport.(*loggingRoundTripper).rt.(*http.Transport).MaxIdleConns)
-		//tloc.Logger.Tracef("MaxIdleConnsPerHost: %d\n", cpack.insecure.HTTPClient.Transport.(*loggingRoundTripper).rt.(*http.Transport).MaxIdleConnsPerHost)
-		//tloc.Logger.Tracef("IdleConnTimeout: %s\n", cpack.insecure.HTTPClient.Transport.(*loggingRoundTripper).rt.(*http.Transport).IdleConnTimeout)
-		//tloc.Logger.Tracef("ResponseHeaderTimeout: %s\n", cpack.insecure.HTTPClient.Transport.(*loggingRoundTripper).rt.(*http.Transport).ResponseHeaderTimeout)
-		//tloc.Logger.Tracef("TLSHandshakeTimeout: %s\n", cpack.insecure.HTTPClient.Transport.(*loggingRoundTripper).rt.(*http.Transport).TLSHandshakeTimeout)
-		//tloc.Logger.Tracef("DisableKeepAlives: %v\n", cpack.insecure.HTTPClient.Transport.(*loggingRoundTripper).rt.(*http.Transport).DisableKeepAlives)
-
 		tloc.Logger.Tracef("Go runtime version: %s\n", runtime.Version())
-
-		//tloc.Logger.Tracef("MaxIdleConns: %d\n", cpack.insecure.HTTPClient.Transport.(*trs_http_api.loggingRoundTripper).Transport.(*http.Transport).MaxIdleConns)
-		//tloc.Logger.Tracef("MaxIdleConnsPerHost: %d\n", cpack.insecure.HTTPClient.Transport.(*trs_http_api.loggingRoundTripper).Transport.(*http.Transport).MaxIdleConnsPerHost)
-		//tloc.Logger.Tracef("IdleConnTimeout: %d\n", cpack.insecure.HTTPClient.Transport.(*trs_http_api.loggingRoundTripper).Transport.(*http.Transport).IdleConTimeout)
-		//tloc.Logger.Tracef("ResponseHeaderTimeout: %d\n", cpack.insecure.HTTPClient.Transport.(*trs_http_api.loggingRoundTripper).Transport.(*http.Transport).ResponseHeaderTimeout)
-		//tloc.Logger.Tracef("TLSHandshakeTimeout: %d\n", cpack.insecure.HTTPClient.Transport.(*trs_http_api.loggingRoundTripper).Transport.(*http.Transport).TLSHandshakeTimeout)
-		//tloc.Logger.Tracef("DisableKeepAlives: %d\n", cpack.insecure.HTTPClient.Transport.(*trs_http_api.loggingRoundTripper).Transport.(*http.Transport).Disable)
 
 		tloc.Logger.Tracef("MaxIdleConns: %d\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).MaxIdleConns)	
 		tloc.Logger.Tracef("MaxIdleConnsPerHost: %d\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).MaxIdleConnsPerHost)
@@ -319,9 +232,9 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 
 	//setup timeouts and context for request
 	tct.task.context, tct.task.contextCancel = context.WithTimeout(tloc.ctx, tct.task.Timeout)
-// NEVER CALL contextCancel() on a task's context!!!
-//defer tct.task.contextCancel()
-// ???
+	// Uncommenting this line will cause connections to close and not be reused
+	// However, keeping it commented will lead to resource leaks
+	//defer tct.task.contextCancel()
 
 	base.SetHTTPUserAgent(tct.task.Request,tloc.svcName)
 	req, err := retryablehttp.FromRequest(tct.task.Request)
@@ -339,7 +252,6 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	if (tct.task.forceInsecure || tloc.CACertPool == nil || cpack.secure == nil) {
 		tloc.Logger.Tracef("Using INsecure client to send request")
 		tct.task.Request.Response, tmpError = cpack.insecure.Do(req)
-tloc.Logger.Tracef("Do completed")
 	} else {
 		tloc.Logger.Tracef("Using secure client to send request")
 		tct.task.Request.Response, tmpError = cpack.secure.Do(req)
@@ -359,9 +271,7 @@ tloc.Logger.Tracef("Do completed")
 		tloc.Logger.Tracef("Response: %d", tct.task.Request.Response.StatusCode)
 	}
 
-tloc.Logger.Tracef("Sending task to channel")
 	tct.taskListChannel <- tct.task
-tloc.Logger.Tracef("Returning from ExecuteTask")
 }
 
 // Launch an array of tasks.  This is non-blocking.  Use Check() to get

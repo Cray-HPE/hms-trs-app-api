@@ -499,8 +499,6 @@ func (c *CustomReadCloser) WasClosed() bool {
 // timout which cancels their contexts.
 
 func TestPCSUseCaseNoHttpTxPolicy(t *testing.T) {
-	return 
-	/*
 	httpRetries      := 3
 	pcsStatusTimeout := 30
 	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
@@ -508,24 +506,24 @@ func TestPCSUseCaseNoHttpTxPolicy(t *testing.T) {
 	cPolicy := ClientPolicy{retry: RetryPolicy{Retries: httpRetries}}
 
 	testPCSUseCase(t, httpTimeout, cPolicy)
-	*/
 }
 
 func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
+/*
 	httpRetries           := 3
 	pcsStatusTimeout      := 30
 	httpTimeout           := time.Duration(pcsStatusTimeout) * time.Second
 	//idleConnTimeout     := time.Duration(pcsStatusTimeout * 15 / 10) * time.Second
-	//idleConnTimeout       := 60 * time.Second
+	idleConnTimeout       := 60 * time.Second
 	//idleConnTimeout       := 300 * time.Second
-	//responseHeaderTimeout :=  5 * time.Second
+	responseHeaderTimeout :=  5 * time.Second
 	//responseHeaderTimeout :=  50 * time.Second
-	//tLSHandshakeTimeout   := 10 * time.Second
+	tLSHandshakeTimeout   := 10 * time.Second
 	//tLSHandshakeTimeout   := 100 * time.Second
+	DisableKeepAlives       := false
 
 	cPolicy := ClientPolicy{
 		retry: RetryPolicy{Retries: httpRetries},
-/*
 		tx: HttpTxPolicy{
 				Enabled:                true,
 				MaxIdleConns:           100,
@@ -533,10 +531,11 @@ func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
 				IdleConnTimeout:        idleConnTimeout,
 				ResponseHeaderTimeout:  responseHeaderTimeout,
 				TLSHandshakeTimeout:    tLSHandshakeTimeout,
+				DisableKeepAlives:      DisableKeepAlives,
 			},
-*/
 	}
 	testPCSUseCase(t, httpTimeout, cPolicy)
+*/
 }
 
 func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolicy) {
