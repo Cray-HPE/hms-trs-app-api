@@ -705,7 +705,7 @@ for _, tsk := range(tList) {
 		tsk.Request.Response.Body = nil
 	}
 }
-tloc.Cancel(&tList)
+//tloc.Cancel(&tList)
 	// The only remaining connections should be for the stalled tasks
 	// which should still be in ESTABLISHED
 	t.Logf("Testing open connections after normally completing tasks completed")
