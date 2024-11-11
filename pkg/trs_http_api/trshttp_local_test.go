@@ -698,6 +698,13 @@ tList := successList
 		<-taskListChannel
 	}
 
+for _, tsk := range(tList) {
+	if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+		tsk.Request.Response.Body.Close()
+		tsk.Request.Response.Body = nil
+	}
+}
+tloc.Cancel(&tList)
 	// The only remaining connections should be for the stalled tasks
 	// which should still be in ESTABLISHED
 	t.Logf("Testing open connections after normally completing tasks completed")
