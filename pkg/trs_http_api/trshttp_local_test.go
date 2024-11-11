@@ -515,11 +515,11 @@ func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
 	pcsStatusTimeout      := 30
 	httpTimeout           := time.Duration(pcsStatusTimeout) * time.Second
 	//idleConnTimeout     := time.Duration(pcsStatusTimeout * 15 / 10) * time.Second
-	idleConnTimeout       := 60 * time.Second
+	idleConnTimeout       := 90 * time.Second
 	//idleConnTimeout       := 300 * time.Second
-	responseHeaderTimeout :=  5 * time.Second
+//	responseHeaderTimeout :=  5 * time.Second
 	//responseHeaderTimeout :=  50 * time.Second
-	tLSHandshakeTimeout   := 10 * time.Second
+//	tLSHandshakeTimeout   := 10 * time.Second
 	//tLSHandshakeTimeout   := 100 * time.Second
 	DisableKeepAlives       := false
 
@@ -530,8 +530,8 @@ func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
 				MaxIdleConns:           100,
 				MaxIdleConnsPerHost:    100,
 				IdleConnTimeout:        idleConnTimeout,
-				ResponseHeaderTimeout:  responseHeaderTimeout,
-				TLSHandshakeTimeout:    tLSHandshakeTimeout,
+				//ResponseHeaderTimeout:  responseHeaderTimeout,
+				//TLSHandshakeTimeout:    tLSHandshakeTimeout,
 				DisableKeepAlives:      DisableKeepAlives,
 			},
 	}
