@@ -720,6 +720,7 @@ tList := append(successList, retryList...)
 	time.Sleep(httpTimeout / 10)
 */
 
+/*
 for _, tsk := range(tList) {
 	if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 		t.Logf("Response headers: %s", tsk.Request.Response.Header)
@@ -731,7 +732,8 @@ for _, tsk := range(tList) {
 		tsk.Request.Response.Body = nil
 	}
 }
-//tloc.Cancel(&tList)
+tloc.Cancel(&tList)
+*/
 	// All connections should now be closed
 	t.Logf("Testing open connections after stalled tasks completed")
 	testOpenConnections(t, true, 0)
