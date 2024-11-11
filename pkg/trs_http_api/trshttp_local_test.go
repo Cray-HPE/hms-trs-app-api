@@ -699,18 +699,6 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 		<-taskListChannel
 	}
 
-for _, tsk := range(tList) {
-	if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
-		t.Logf("Response headers: %s", tsk.Request.Response.Header)
-		t.Logf("Protocol: %s", tsk.Request.Response.Proto)
-		t.Logf("discarding the body")
-		_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
-		t.Logf("Closing response body for task %v", tsk.Request.URL)
-		tsk.Request.Response.Body.Close()
-//		tsk.Request.Response.Body = nil
-	}
-}
-tloc.Cancel(&tList)
 	// The only remaining connections should be for the stalled tasks
 	// which should still be in ESTABLISHED
 	t.Logf("Testing open connections after normally completing tasks completed")
@@ -727,6 +715,18 @@ tloc.Cancel(&tList)
 	// cancelled due to their context timeing out.
 	time.Sleep(httpTimeout / 10)
 
+for _, tsk := range(tList) {
+	if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+		t.Logf("Response headers: %s", tsk.Request.Response.Header)
+		t.Logf("Protocol: %s", tsk.Request.Response.Proto)
+		t.Logf("discarding the body")
+		_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
+		t.Logf("Closing response body for task %v", tsk.Request.URL)
+		tsk.Request.Response.Body.Close()
+//		tsk.Request.Response.Body = nil
+	}
+}
+tloc.Cancel(&tList)
 	// All connections should now be closed
 	t.Logf("Testing open connections after stalled tasks completed")
 	testOpenConnections(t, true, 0)
