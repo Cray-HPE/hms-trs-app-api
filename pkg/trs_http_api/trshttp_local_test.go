@@ -28,7 +28,6 @@ import (
 	"context"
 	"encoding/pem"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -36,7 +35,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -554,6 +552,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	// Copy logger into global namespace for the http servers
 	handlerLogger = t
 
+/*
 	// Create http servers.  One for eash request response we want to test
 	// Because we're testing idle connections we need to configure them to
 	// not close idle connections immediately
@@ -601,25 +600,26 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
     }
 
 	successSrv.Start()
+*/
 	//retrySrv.Start()
 	//stallSrv.Start()
 
-	//successSrv := &http.Server{
-    //    Addr: "localhost:36411",
-	//	Handler: http.HandlerFunc(launchHandler),
-    //    IdleTimeout: 300 * time.Second,
-    //    ReadTimeout: 0,
-    //    WriteTimeout: 0,
-	//	ConnState: func(conn net.Conn, state http.ConnState) {
-	//		t.Logf("Connection %v changed state to %v", conn.RemoteAddr(), state)
-	//	},
-    //}
-	//go successSrv.ListenAndServe()
-	//successReq, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:36411", nil)
+	successSrv := &http.Server{
+        Addr: "localhost:36411",
+		Handler: http.HandlerFunc(launchHandler),
+        IdleTimeout: 300 * time.Second,
+        ReadTimeout: 300 * time.Second,
+        WriteTimeout: 300 * time.Second,
+		ConnState: func(conn net.Conn, state http.ConnState) {
+			t.Logf("Connection %v changed state to %v", conn.RemoteAddr(), state)
+		},
+    }
+	go successSrv.ListenAndServe()
+	successReq, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:36411", nil)
 
 	// Create an http request for tasks that complete successfully
 
-	successReq, err := http.NewRequest(http.MethodGet, successSrv.URL, nil)
+//	successReq, err := http.NewRequest(http.MethodGet, successSrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
@@ -700,7 +700,7 @@ tList := successList
 
 for _, tsk := range(tList) {
 	t.Logf("Response headers: %s", tsk.Request.Response.Header)
-	t.Logf("Protoc;l: %s", tsk.Request.Response.Proto)
+	t.Logf("Protocol: %s", tsk.Request.Response.Proto)
 	if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 		t.Logf("Closing response body for task %v", tsk.Request.URL)
 		tsk.Request.Response.Body.Close()
