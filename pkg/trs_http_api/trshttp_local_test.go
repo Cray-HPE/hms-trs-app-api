@@ -543,9 +543,9 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	//numSuccessTasks := 5
 	numSuccessTasks := 1
 	//numRetryTasks := 5
-	numRetryTasks := 0
+	numRetryTasks := 1
 	//numStallTasks := 5
-	numStallTasks := 0
+	numStallTasks := 1
 
 	// Initialize the task system
 	tloc := &TRSHTTPLocal{}
@@ -558,6 +558,8 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	// Because we're testing idle connections we need to configure them to
 	// not close idle connections immediately
 	successSrv := httptest.NewServer(http.HandlerFunc(launchHandler))
+	retrySrv := httptest.NewServer(http.HandlerFunc(retryHandler))
+	stallSrv := httptest.NewServer(http.HandlerFunc(stallHandler))
 	//successSrv := httptest.NewUnstartedServer(http.HandlerFunc(launchHandler))
 	//retrySrv   := httptest.NewUnstartedServer(http.HandlerFunc(retryHandler))
 	//stallSrv   := httptest.NewUnstartedServer(http.HandlerFunc(stallHandler))
@@ -638,7 +640,6 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 
 	// Create an http request for tasks that retry muliple times and fail
 
-/*
 	retryReq, err := http.NewRequest(http.MethodGet, retrySrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
@@ -679,8 +680,6 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 
 	tList := append(successList, retryList...)
 	tList = append(tList, stallList...)
-*/
-tList := successList
 
 	t.Logf("Launching all tasks")
 	taskListChannel, err := tloc.Launch(&tList)
