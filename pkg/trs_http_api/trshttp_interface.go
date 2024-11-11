@@ -26,6 +26,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"net/http"
 	"sync"
 	"time"
 
@@ -76,7 +77,8 @@ type TRSHTTPLocalSecurity struct {
 
 type clientPack struct {
 	secure *retryablehttp.Client
-	insecure *retryablehttp.Client
+	//insecure *retryablehttp.Client
+	insecure *http.Client
 }
 
 type TRSHTTPLocal struct {
