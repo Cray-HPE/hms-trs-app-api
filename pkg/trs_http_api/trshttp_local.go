@@ -277,7 +277,8 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 
 		configureClient(cpack.insecure, tct.task, nil)
 		cpack.insecure.HTTPClient.Transport = &loggingRoundTripper{
-			rt:     cpack.insecure.HTTPClient.Transport,
+			//rt:     cpack.insecure.HTTPClient.Transport,
+			rt:     http.DefaultTransport,
 			logger: tloc.Logger,
 		}
 
