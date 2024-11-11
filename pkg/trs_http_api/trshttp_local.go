@@ -247,7 +247,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	tct.task.context, tct.task.contextCancel = context.WithTimeout(tloc.ctx, tct.task.Timeout)
 	// Uncommenting this line will cause connections to close and not be reused
 	// However, keeping it commented will lead to resource leaks
-	//defer tct.task.contextCancel()
+	defer tct.task.contextCancel()
 
 /*
 	base.SetHTTPUserAgent(tct.task.Request,tloc.svcName)
