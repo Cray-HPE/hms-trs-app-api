@@ -28,6 +28,7 @@ all:  unittest integration
 unittest:
 	ls ./pkg/trs_http_api
 	which go
+	ls -al /usr/bin/go
 	go test -v ./pkg/trs_http_api/... -cover
 	# no -v -tags musl
 
