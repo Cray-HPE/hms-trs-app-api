@@ -645,12 +645,9 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
         t.Fatalf("Failed to create request: %v", err)
     }
 	retryReq.Header.Set("Accept", "*/*")
-//	retryReq.Header.Set("Connection", "keep-alive")
-
 	retryProto := HttpTask{
 			Request: retryReq,
-			//Timeout: httpTimeout,
-			Timeout: 666,
+			Timeout: httpTimeout,
 			CPolicy: cPolicy, }
 
 	t.Logf("Creating retry task list with %v tasks and URL %v", numRetryTasks, retrySrv.URL)
@@ -722,7 +719,7 @@ tList := append(successList, retryList...)
 */
 
 for _, tsk := range(tList) {
-	if tsk.Timeout == 666 {
+	if tsk.Request.URL.String() == retrySrv.URL {
 		t.Logf("Skipping body close for retry task %v", tsk.Request.URL)
 		continue
 	}
