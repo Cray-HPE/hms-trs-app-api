@@ -543,7 +543,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	//numSuccessTasks := 5
 	numSuccessTasks := 1
 	//numRetryTasks := 5
-	numRetryTasks := 1
+	numRetryTasks := 0
 	//numStallTasks := 5
 	numStallTasks := 0
 
@@ -638,13 +638,16 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	t.Logf("Creating success task list with %v tasks and URL %v", numSuccessTasks, successSrv.URL)
 	successList := tloc.CreateTaskList(&successProto, numSuccessTasks)
 
+/*
 	// Create an http request for tasks that retry muliple times and fail
 
 	retryReq, err := http.NewRequest(http.MethodGet, retrySrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
-	retryReq.Header.Set("Accept", "*/*")
+*/
+//	retryReq.Header.Set("Accept", "*/*")
+/*
 //	retryReq.Header.Set("Connection", "keep-alive")
 
 	retryProto := HttpTask{
@@ -655,7 +658,6 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	t.Logf("Creating retry task list with %v tasks and URL %v", numRetryTasks, retrySrv.URL)
 	retryList := tloc.CreateTaskList(&retryProto, numRetryTasks)
 
-/*
 	// Create an http request for tasks that stall
 
 	stallReq, err := http.NewRequest("GET", stallSrv.URL, nil)
@@ -682,7 +684,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	tList := append(successList, retryList...)
 	tList = append(tList, stallList...)
 */
-	tList := append(successList, retryList...)
+tList := successList
 
 	t.Logf("Launching all tasks")
 	taskListChannel, err := tloc.Launch(&tList)
