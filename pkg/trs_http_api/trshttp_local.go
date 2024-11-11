@@ -333,7 +333,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	//setup timeouts and context for request
 	tct.task.context, tct.task.contextCancel = context.WithTimeout(tloc.ctx, tct.task.Timeout)
 // NEVER CALL contextCancel() on a task's context!!!
-defer tct.task.contextCancel()
+//defer tct.task.contextCancel()
 // ???
 
 	base.SetHTTPUserAgent(tct.task.Request,tloc.svcName)
