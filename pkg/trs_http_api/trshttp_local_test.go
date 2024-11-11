@@ -500,7 +500,6 @@ func (c *CustomReadCloser) WasClosed() bool {
 // timout which cancels their contexts.
 
 func TestPCSUseCaseNoHttpTxPolicy(t *testing.T) {
-/*
 	httpRetries      := 3
 	pcsStatusTimeout := 30
 	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
@@ -508,10 +507,10 @@ func TestPCSUseCaseNoHttpTxPolicy(t *testing.T) {
 	cPolicy := ClientPolicy{retry: RetryPolicy{Retries: httpRetries}}
 
 	testPCSUseCase(t, httpTimeout, cPolicy)
-*/
 }
 
 func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
+/*
 	httpRetries           := 3
 	pcsStatusTimeout      := 30
 	httpTimeout           := time.Duration(pcsStatusTimeout) * time.Second
@@ -537,6 +536,7 @@ func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
 			},
 	}
 	testPCSUseCase(t, httpTimeout, cPolicy)
+*/
 }
 
 func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolicy) {
