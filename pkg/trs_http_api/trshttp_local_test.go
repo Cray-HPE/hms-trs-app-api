@@ -151,7 +151,7 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 var retryNum = 0
 func retryHandler(w http.ResponseWriter, req *http.Request) {
 	if retryNum == 0 {
-		retryNum++
+		//retryNum++
 
 		// Wait for all connections to be established so output looks nice
 		time.Sleep(100 * time.Millisecond)
