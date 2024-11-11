@@ -699,11 +699,10 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 		<-taskListChannel
 	}
 
-/*
 for _, tsk := range(tList) {
-	t.Logf("Response headers: %s", tsk.Request.Response.Header)
-	t.Logf("Protocol: %s", tsk.Request.Response.Proto)
 	if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+		t.Logf("Response headers: %s", tsk.Request.Response.Header)
+		t.Logf("Protocol: %s", tsk.Request.Response.Proto)
 		t.Logf("discarding the body")
 		_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
 		t.Logf("Closing response body for task %v", tsk.Request.URL)
@@ -711,7 +710,6 @@ for _, tsk := range(tList) {
 //		tsk.Request.Response.Body = nil
 	}
 }
-*/
 tloc.Cancel(&tList)
 	// The only remaining connections should be for the stalled tasks
 	// which should still be in ESTABLISHED
