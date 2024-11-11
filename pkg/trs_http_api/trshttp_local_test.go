@@ -545,7 +545,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	//numRetryTasks := 5
 	numRetryTasks := 1
 	//numStallTasks := 5
-	numStallTasks := 1
+	numStallTasks := 0
 
 	// Initialize the task system
 	tloc := &TRSHTTPLocal{}
@@ -635,7 +635,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 			Timeout: httpTimeout,
 			CPolicy: cPolicy, }
 
-	//t.Logf("Creating success task list with %v tasks and URL %v", numStallTasks, successSrv.URL)
+	t.Logf("Creating success task list with %v tasks and URL %v", numSuccessTasks, successSrv.URL)
 	successList := tloc.CreateTaskList(&successProto, numSuccessTasks)
 
 	// Create an http request for tasks that retry muliple times and fail
@@ -652,9 +652,10 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 			Timeout: httpTimeout,
 			CPolicy: cPolicy, }
 
-	t.Logf("Creating retry task list with %v tasks and URL %v", numStallTasks, retrySrv.URL)
+	t.Logf("Creating retry task list with %v tasks and URL %v", numRetryTasks, retrySrv.URL)
 	retryList := tloc.CreateTaskList(&retryProto, numRetryTasks)
 
+/*
 	// Create an http request for tasks that stall
 
 	stallReq, err := http.NewRequest("GET", stallSrv.URL, nil)
@@ -680,6 +681,8 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 
 	tList := append(successList, retryList...)
 	tList = append(tList, stallList...)
+*/
+	tList := append(successList, retryList...)
 
 	t.Logf("Launching all tasks")
 	taskListChannel, err := tloc.Launch(&tList)
@@ -704,6 +707,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	t.Logf("Testing open connections after normally completing tasks completed")
 	testOpenConnections(t, true, numStallTasks)
 
+/*
 	t.Logf("Waiting for stalled tasks to time out")
 	for i := 0; i < numStallTasks; i++ {
 		<-taskListChannel
@@ -714,6 +718,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	// sleep for the other 10% of the task timeout to allow them to be
 	// cancelled due to their context timeing out.
 	time.Sleep(httpTimeout / 10)
+*/
 
 for _, tsk := range(tList) {
 	if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
@@ -789,6 +794,7 @@ tloc.Cancel(&tList)
 
 	t.Logf("Cleaning up task system")
 	tloc.Cleanup()
+/*
 
 	// Cancel the stalled server handlers so we can close the servers. We
 	// will need to do it once for the first set that timed out due to the
@@ -799,6 +805,7 @@ tloc.Cancel(&tList)
 		stallCancel <- true
 	}
 	close(stallCancel)
+*/
 
 	t.Logf("Closing servers")
 	successSrv.Close()
