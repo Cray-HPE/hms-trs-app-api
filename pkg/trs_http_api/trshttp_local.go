@@ -194,7 +194,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		cpack = new(clientPack)
 
 		//cpack.insecure = retryablehttp.NewClient()
-		cpack.insecure = http.NewClient()
+		//cpack.insecure = http.NewClient()
 		//cpack.insecure.Logger = httpLogger
 
 		configureClient(cpack.insecure, tct.task, nil)
@@ -431,7 +431,7 @@ func (tloc *TRSHTTPLocal) Cleanup() {
 	for k := range tloc.clientMap {
 		//cancel it first
 		if (tloc.clientMap[k].insecure != nil) {
-			tloc.clientMap[k].insecure.HTTPClient.CloseIdleConnections()
+			//tloc.clientMap[k].insecure.HTTPClient.CloseIdleConnections()
 		}
 		if (tloc.clientMap[k].secure != nil) {
 			tloc.clientMap[k].secure.HTTPClient.CloseIdleConnections()
