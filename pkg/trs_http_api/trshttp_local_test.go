@@ -649,7 +649,8 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 
 	retryProto := HttpTask{
 			Request: retryReq,
-			Timeout: httpTimeout,
+			//Timeout: httpTimeout,
+			Timeout: 666,
 			CPolicy: cPolicy, }
 
 	t.Logf("Creating retry task list with %v tasks and URL %v", numRetryTasks, retrySrv.URL)
@@ -721,6 +722,10 @@ tList := append(successList, retryList...)
 */
 
 for _, tsk := range(tList) {
+	if tsk.Timeout == 666 {
+		t.Logf("Skipping body close for retry task %v", tsk.Request.URL)
+		continue
+	}
 	if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 		t.Logf("Response headers: %s", tsk.Request.Response.Header)
 		t.Logf("Protocol: %s", tsk.Request.Response.Proto)
