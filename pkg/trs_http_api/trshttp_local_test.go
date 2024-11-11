@@ -705,7 +705,7 @@ for _, tsk := range(tList) {
 	t.Logf("Protocol: %s", tsk.Request.Response.Proto)
 	if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 		t.Logf("discarding the body")
-		_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
+		//_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
 		t.Logf("Sleep for 1 second")
 		time.Sleep(1 * time.Second)
 		t.Logf("Closing response body for task %v", tsk.Request.URL)
