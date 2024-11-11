@@ -700,6 +700,7 @@ tList := successList
 
 for _, tsk := range(tList) {
 	if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+		t.Logf("Closing response body for task %v", tsk.Request.URL)
 		tsk.Request.Response.Body.Close()
 		tsk.Request.Response.Body = nil
 	}

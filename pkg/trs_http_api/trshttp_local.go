@@ -393,6 +393,7 @@ func (tloc *TRSHTTPLocal) Alive() (bool, error) {
 func (tloc *TRSHTTPLocal) Cancel(taskList *[]HttpTask) {
 	for _, v := range *taskList {
 		if (v.Ignore == false) {
+tloc.Logger.Tracef("Cancel() issuing for %s", v.id)
 			v.contextCancel()
 		}
 	}
