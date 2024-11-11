@@ -277,22 +277,21 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 
 		configureClient(cpack.insecure, tct.task, nil)
 		cpack.insecure.HTTPClient.Transport = &loggingRoundTripper{
-			//rt:     cpack.insecure.HTTPClient.Transport,
-			rt:     http.DefaultTransport,
+			rt:     cpack.insecure.HTTPClient.Transport,
 			logger: tloc.Logger,
 		}
 
-		//tloc.Logger.Tracef("Created insecure client with policy %v", tct.task.CPolicy)
-		//tloc.Logger.Tracef("RetryMax: %d\n", cpack.insecure.RetryMax)
-		//tloc.Logger.Tracef("RetryWaitMax: %s\n", cpack.insecure.RetryWaitMax)
-		//tloc.Logger.Tracef("HTTPClient.Timeout: %s\n", cpack.insecure.HTTPClient.Timeout)
-		//tloc.Logger.Tracef("tct.task.Timeout: %s\n", tct.task.Timeout)
-		//tloc.Logger.Tracef("MaxIdleConns: %d\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).MaxIdleConns)
-		//tloc.Logger.Tracef("MaxIdleConnsPerHost: %d\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).MaxIdleConnsPerHost)
-		//tloc.Logger.Tracef("IdleConnTimeout: %s\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).IdleConnTimeout)
-		//tloc.Logger.Tracef("ResponseHeaderTimeout: %s\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).ResponseHeaderTimeout)
-		//tloc.Logger.Tracef("TLSHandshakeTimeout: %s\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).TLSHandshakeTimeout)
-		//tloc.Logger.Tracef("DisableKeepAlives: %v\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).DisableKeepAlives)
+		tloc.Logger.Tracef("Created insecure client with policy %v", tct.task.CPolicy)
+		tloc.Logger.Tracef("RetryMax: %d\n", cpack.insecure.RetryMax)
+		tloc.Logger.Tracef("RetryWaitMax: %s\n", cpack.insecure.RetryWaitMax)
+		tloc.Logger.Tracef("HTTPClient.Timeout: %s\n", cpack.insecure.HTTPClient.Timeout)
+		tloc.Logger.Tracef("tct.task.Timeout: %s\n", tct.task.Timeout)
+		tloc.Logger.Tracef("MaxIdleConns: %d\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).MaxIdleConns)
+		tloc.Logger.Tracef("MaxIdleConnsPerHost: %d\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).MaxIdleConnsPerHost)
+		tloc.Logger.Tracef("IdleConnTimeout: %s\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).IdleConnTimeout)
+		tloc.Logger.Tracef("ResponseHeaderTimeout: %s\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).ResponseHeaderTimeout)
+		tloc.Logger.Tracef("TLSHandshakeTimeout: %s\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).TLSHandshakeTimeout)
+		tloc.Logger.Tracef("DisableKeepAlives: %v\n", cpack.insecure.HTTPClient.Transport.(*http.Transport).DisableKeepAlives)
 
 
 		if (tloc.CACertPool != nil) {
