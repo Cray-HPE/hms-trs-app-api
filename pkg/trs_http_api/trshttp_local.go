@@ -177,7 +177,7 @@ func configureClient(client *http.Client, task *HttpTask, CACertPool *x509.CertP
 		tr.ResponseHeaderTimeout = httpTxPolicy.ResponseHeaderTimeout
 		tr.TLSHandshakeTimeout   = httpTxPolicy.TLSHandshakeTimeout
 		tr.DisableKeepAlives	 = httpTxPolicy.DisableKeepAlives
-tr.ForceAttemptHTTP2 = false // Force HTTP/1.1 only
+//tr.ForceAttemptHTTP2 = false // Force HTTP/1.1 only
 	}
 
 	//client.HTTPClient.Transport = tr

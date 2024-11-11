@@ -628,7 +628,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
         t.Fatalf("Failed to create request: %v", err)
     }
 	successReq.Header.Set("Accept", "*/*")
-	successReq.Header.Set("Connection", "keep-alive")
+//	successReq.Header.Set("Connection", "keep-alive")
 
 	successProto := HttpTask{
 			Request: successReq,
@@ -644,8 +644,8 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
-	retryReq.Header.Set("Accept", "STAR/STAR")
-	retryReq.Header.Set("Connection", "keep-alive")
+	retryReq.Header.Set("Accept", "*/*")
+//	retryReq.Header.Set("Connection", "keep-alive")
 
 	retryProto := HttpTask{
 			Request: retryReq,
@@ -728,7 +728,7 @@ for _, tsk := range(tList) {
 		_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
 		t.Logf("Closing response body for task %v", tsk.Request.URL)
 		tsk.Request.Response.Body.Close()
-//		tsk.Request.Response.Body = nil
+		tsk.Request.Response.Body = nil
 	}
 }
 tloc.Cancel(&tList)
