@@ -28,6 +28,7 @@ import (
 	"context"
 	"encoding/pem"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -35,6 +36,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -552,7 +554,6 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	// Copy logger into global namespace for the http servers
 	handlerLogger = t
 
-/*
 	// Create http servers.  One for eash request response we want to test
 	// Because we're testing idle connections we need to configure them to
 	// not close idle connections immediately
@@ -600,10 +601,10 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
     }
 
 	successSrv.Start()
-*/
 	//retrySrv.Start()
 	//stallSrv.Start()
 
+/*
 	successSrv := &http.Server{
         Addr: "localhost:36411",
 		Handler: http.HandlerFunc(launchHandler),
@@ -616,10 +617,11 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
     }
 	go successSrv.ListenAndServe()
 	successReq, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:36411", nil)
+*/
 
 	// Create an http request for tasks that complete successfully
 
-//	successReq, err := http.NewRequest(http.MethodGet, successSrv.URL, nil)
+	successReq, err := http.NewRequest(http.MethodGet, successSrv.URL, nil)
 	if err != nil {
         t.Fatalf("Failed to create request: %v", err)
     }
@@ -707,6 +709,7 @@ for _, tsk := range(tList) {
 //		tsk.Request.Response.Body = nil
 	}
 }
+time.Sleep(1 * time.Second)
 //tloc.Cancel(&tList)
 	// The only remaining connections should be for the stalled tasks
 	// which should still be in ESTABLISHED
