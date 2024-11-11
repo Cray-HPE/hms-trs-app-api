@@ -677,6 +677,7 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 		if req.body != nil {
 			body, err := req.body()
 			if err != nil {
+				v.Error("JW_DEBUG: Closing idle connections BAD BODY")
 				c.HTTPClient.CloseIdleConnections()
 				return resp, err
 			}
@@ -768,6 +769,7 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 		select {
 		case <-req.Context().Done():
 			timer.Stop()
+			v.Error("JW_DEBUG: Closing idle connections DUE TO CONTEXT DONE")
 			c.HTTPClient.CloseIdleConnections()
 			return nil, req.Context().Err()
 		case <-timer.C:
@@ -791,6 +793,7 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 		return resp, nil
 	}
 
+	v.Error("JW_DEBUG: Closing idle connections AT END")
 	defer c.HTTPClient.CloseIdleConnections()
 
 	var err error
