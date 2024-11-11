@@ -699,6 +699,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 		<-taskListChannel
 	}
 
+/*
 for _, tsk := range(tList) {
 	t.Logf("Response headers: %s", tsk.Request.Response.Header)
 	t.Logf("Protocol: %s", tsk.Request.Response.Proto)
@@ -710,13 +711,13 @@ for _, tsk := range(tList) {
 //		tsk.Request.Response.Body = nil
 	}
 }
+*/
 tloc.Cancel(&tList)
 	// The only remaining connections should be for the stalled tasks
 	// which should still be in ESTABLISHED
 	t.Logf("Testing open connections after normally completing tasks completed")
 	testOpenConnections(t, true, numStallTasks)
 
-/*
 	t.Logf("Waiting for stalled tasks to time out")
 	for i := 0; i < numStallTasks; i++ {
 		<-taskListChannel
@@ -731,7 +732,6 @@ tloc.Cancel(&tList)
 	// All connections should now be closed
 	t.Logf("Testing open connections after stalled tasks completed")
 	testOpenConnections(t, true, 0)
-*/
 
 	t.Logf("Closing the task list channel")
 	close(taskListChannel)
@@ -804,6 +804,6 @@ tloc.Cancel(&tList)
 
 	t.Logf("Closing servers")
 	successSrv.Close()
-	//retrySrv.Close()
-	//stallSrv.Close()
+	retrySrv.Close()
+	stallSrv.Close()
 }
