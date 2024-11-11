@@ -731,7 +731,7 @@ for _, tsk := range(tList) {
 		tsk.Request.Response.Body = nil
 	}
 }
-tloc.Cancel(&tList)
+//tloc.Cancel(&tList)
 	// All connections should now be closed
 	t.Logf("Testing open connections after stalled tasks completed")
 	testOpenConnections(t, true, 0)
