@@ -148,20 +148,44 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 	handlerLogger.Logf("launchHandler returning Message Ok...")
 }
 
+var retryNum = 0
 func retryHandler(w http.ResponseWriter, req *http.Request) {
-	// Wait for all connections to be established so output looks nice
-	time.Sleep(100 * time.Millisecond)
+	if retryNum == 0 {
+		retryNum++
 
-	handlerLogger.Logf("retryHandler running...")
+		// Wait for all connections to be established so output looks nice
+		time.Sleep(100 * time.Millisecond)
 
-	time.Sleep(1 * time.Second) // Simulate network and BMC delay
+		handlerLogger.Logf("retryHandler running...")
 
-	w.Header().Set("Content-Type","application/json")
-	w.Header().Set("Retry-After","1")
-	w.WriteHeader(http.StatusServiceUnavailable)
-	w.Write([]byte(`{"Message":"Service Unavailable"}`))
+		time.Sleep(1 * time.Second) // Simulate network and BMC delay
 
-	handlerLogger.Logf("retryHandler returning Message Service Unavailable...")
+		w.Header().Set("Content-Type","application/json")
+		w.Header().Set("Retry-After","1")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		w.Write([]byte(`{"Message":"Service Unavailable"}`))
+
+		handlerLogger.Logf("retryHandler returning Message Service Unavailable...")
+	} else {
+		// Wait for all connections to be established so output looks nice
+		time.Sleep(100 * time.Millisecond)
+
+		handlerLogger.Logf("launchHandler running...")
+
+		time.Sleep(1 * time.Second) // Simulate network and BMC delay
+
+		if (!hasUserAgentHeader(req)) {
+			w.Write([]byte(`{"Message":"No User-Agent Header"}`))
+			w.WriteHeader(http.StatusInternalServerError)
+			handlerLogger.Logf("launchHandler returning no User-Agent header...")
+			return
+		}
+		w.Header().Set("Content-Type","application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"Message":"OK"}`))
+
+		handlerLogger.Logf("launchHandler returning Message Ok...")
+	}
 }
 
 var stallCancel chan bool
@@ -721,10 +745,6 @@ tList := append(successList, retryList...)
 */
 
 for _, tsk := range(tList) {
-	if tsk.Request.URL.String() != retrySrv.URL {
-		t.Logf("Skipping body close for retry task %v", tsk.Request.URL)
-		continue
-	}
 	if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 		t.Logf("Response headers: %s", tsk.Request.Response.Header)
 		t.Logf("Protocol: %s", tsk.Request.Response.Proto)
@@ -740,7 +760,7 @@ for _, tsk := range(tList) {
 		testOpenConnections(t, true, 0)
 	}
 }
-//tloc.Cancel(&tList)
+tloc.Cancel(&tList)
 	// All connections should now be closed
 	t.Logf("Testing open connections after stalled tasks completed")
 	testOpenConnections(t, true, 0)
