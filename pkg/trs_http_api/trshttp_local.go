@@ -270,7 +270,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		tct.task.Request.Response, tmpError = cpack.insecure.Do(req)
 	} else {
 		tloc.Logger.Tracef("Using secure client to send request")
-		tct.task.Request.Response, tmpError = cpack.secure.Do(req)
+		//tct.task.Request.Response, tmpError = cpack.secure.Do(req)
 
 		//If the error is a TLS error, fall back to insecure and log it.
 		if (tmpError != nil) {
