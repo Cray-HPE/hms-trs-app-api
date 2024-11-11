@@ -194,7 +194,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		cpack = new(clientPack)
 
 		//cpack.insecure = retryablehttp.NewClient()
-		//cpack.insecure = http.NewClient()
+		cpack.insecure = &http.Client{}
 		//cpack.insecure.Logger = httpLogger
 
 		configureClient(cpack.insecure, tct.task, nil)
