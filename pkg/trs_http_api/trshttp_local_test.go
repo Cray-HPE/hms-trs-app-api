@@ -509,7 +509,6 @@ func TestPCSUseCaseNoHttpTxPolicy(t *testing.T) {
 }
 
 func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
-/*
 	httpRetries           := 3
 	pcsStatusTimeout      := 30
 	httpTimeout           := time.Duration(pcsStatusTimeout) * time.Second
@@ -535,7 +534,6 @@ func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
 			},
 	}
 	testPCSUseCase(t, httpTimeout, cPolicy)
-*/
 }
 
 func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolicy) {
