@@ -26,8 +26,9 @@ all:  unittest integration
 .PHONY:  unittest integration
 
 unittest:
-	/opt/hostedtoolcache/go/1.21.13/x64/bin/go test -v ./pkg/trs_http_api/... -cover
-	#go test -v ./pkg/trs_http_api/... -cover
+	ls /opt/hostedtoolcache/go
+	#/opt/hostedtoolcache/go/1.21.13/x64/bin/go test -v ./pkg/trs_http_api/... -cover
+	go test -v ./pkg/trs_http_api/... -cover
 	# no -v -tags musl
 
 integration:
