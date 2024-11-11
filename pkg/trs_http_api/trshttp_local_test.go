@@ -141,7 +141,7 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type","application/json")
-	w.Header().Set("Connection","keep-alive")
+//	w.Header().Set("Connection","keep-alive")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"Message":"OK"}`))
 
