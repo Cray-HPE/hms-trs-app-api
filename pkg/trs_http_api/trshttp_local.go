@@ -42,6 +42,7 @@ type loggingRoundTripper struct {
 	logger *logrus.Logger
 }
 
+/*
 func (lrt *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	done := make(chan struct{})
 
@@ -87,6 +88,20 @@ func (lrt *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	}
 
 	return resp, err
+}
+*/
+func (lrt *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+    resp, err := lrt.rt.RoundTrip(req)
+
+    select {
+    case <-req.Context().Done():
+        // Context was canceled; return the context's error but don't handle the response
+        return nil, req.Context().Err()
+    default:
+        // Context is still active; proceed as usual
+    }
+
+    return resp, err
 }
 
 const (
@@ -303,7 +318,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	//setup timeouts and context for request
 	tct.task.context, tct.task.contextCancel = context.WithTimeout(tloc.ctx, tct.task.Timeout)
 // NEVER CALL contextCancel() on a task's context!!!
-//defer tct.task.contextCancel()
+defer tct.task.contextCancel()
 // ???
 
 	base.SetHTTPUserAgent(tct.task.Request,tloc.svcName)
