@@ -556,19 +556,20 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	// Create http servers.  One for eash request response we want to test
 	// Because we're testing idle connections we need to configure them to
 	// not close idle connections immediately
-	successSrv := httptest.NewUnstartedServer(http.HandlerFunc(launchHandler))
+	//successSrv := httptest.NewUnstartedServer(http.HandlerFunc(launchHandler))
+	successSrv := httptest.NewServer(http.HandlerFunc(launchHandler))
 	//retrySrv   := httptest.NewUnstartedServer(http.HandlerFunc(retryHandler))
 	//stallSrv   := httptest.NewUnstartedServer(http.HandlerFunc(stallHandler))
 
-	successSrv.Config.IdleTimeout = 300 * time.Second // 5 minutes
+	//successSrv.Config.IdleTimeout = 300 * time.Second // 5 minutes
 	//retrySrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
 	//stallSrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
 
-	successSrv.Config.ReadTimeout = 0
+	//successSrv.Config.ReadTimeout = 0
 	//retrySrv.Config.ReadTimeout   = 0
 	//stallSrv.Config.ReadTimeout   = 0
 
-	successSrv.Config.WriteTimeout = 0
+	//successSrv.Config.WriteTimeout = 0
 	//retrySrv.Config.WriteTimeout   = 0
 	//stallSrv.Config.WriteTimeout   = 0
 
@@ -582,7 +583,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 			// Store the start time when the connection is new
 			connTimes.Store(conn, time.Now())
 			log.Printf("[%s] New connection %v started at %v", now, conn.RemoteAddr(), time.Now())
-			log.Printf("Local Address: %v, Remote Address: %v, State: %v", conn.LocalAddr(), conn.RemoteAddr(), state)
+			log.Printf("     Local Address: %v, Remote Address: %v, State: %v", conn.LocalAddr(), conn.RemoteAddr(), state)
 		case http.StateActive:
 			log.Printf("[%s] Connection %v is now ACTIVE", now, conn.RemoteAddr())
 		case http.StateIdle:
