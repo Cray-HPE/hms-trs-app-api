@@ -768,7 +768,6 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 		select {
 		case <-req.Context().Done():
 			timer.Stop()
-			v.Error("JW_DEBUG: Closing idle connections DUE TO CONTEXT DONE")
 			c.HTTPClient.CloseIdleConnections()
 			return nil, req.Context().Err()
 		case <-timer.C:
