@@ -141,6 +141,7 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type","application/json")
+	w.Header().Set("Connection","keep-alive")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"Message":"OK"}`))
 
@@ -565,38 +566,37 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	//retrySrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
 	//stallSrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
 
-	successSrv.Config.ReadTimeout = 0
+	successSrv.Config.ReadTimeout = 300 * time.Second // 5 minutes
 	//retrySrv.Config.ReadTimeout   = 0
 	//stallSrv.Config.ReadTimeout   = 0
 
-	successSrv.Config.WriteTimeout = 0
+	successSrv.Config.WriteTimeout = 300 * time.Second // 5 minutes
 	//retrySrv.Config.WriteTimeout   = 0
 	//stallSrv.Config.WriteTimeout   = 0
 
 	var connTimes sync.Map
 	successSrv.Config.ConnState = func(conn net.Conn, state http.ConnState) {
-        //log.Printf("SERVER: Connection %v changed state to %v", conn.RemoteAddr(), state)
-        // Log the time and state change for each connection
-		now := time.Now().Format(time.RFC3339)
 		switch state {
 		case http.StateNew:
 			// Store the start time when the connection is new
 			connTimes.Store(conn, time.Now())
-			log.Printf("[%s] New connection %v started at %v", now, conn.RemoteAddr(), time.Now())
+			log.Printf("New connection %v started at %v", conn.RemoteAddr(), time.Now())
 			log.Printf("     Local Address: %v, Remote Address: %v, State: %v", conn.LocalAddr(), conn.RemoteAddr(), state)
 		case http.StateActive:
-			log.Printf("[%s] Connection %v is now ACTIVE", now, conn.RemoteAddr())
+			log.Printf("Connection %v is now ACTIVE", conn.RemoteAddr())
 		case http.StateIdle:
-			log.Printf("[%s] Connection %v is now IDLE", now, conn.RemoteAddr())
+			log.Printf("Connection %v is now IDLE", conn.RemoteAddr())
 		case http.StateClosed:
 			// Calculate the duration of the connection's lifetime
 			if startTime, ok := connTimes.Load(conn); ok {
 				duration := time.Since(startTime.(time.Time))
-				log.Printf("[%s] Connection %v closed after %v", now, conn.RemoteAddr(), duration)
+				log.Printf("Connection %v closed after %v", conn.RemoteAddr(), duration)
 				connTimes.Delete(conn)
 			} else {
-				log.Printf("[%s] Connection %v closed (no start time found)", now, conn.RemoteAddr())
+				log.Printf("Connection %v closed (no start time found)", conn.RemoteAddr())
 			}
+		default:
+			log.Printf("UNHANDLED STATE: Connection %v changed state to %v", conn.RemoteAddr(), state)
 		}
     }
 
