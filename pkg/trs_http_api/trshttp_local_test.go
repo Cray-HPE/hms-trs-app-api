@@ -512,20 +512,20 @@ func TestPCSUseCaseNoHttpTxPolicy(t *testing.T) {
 }
 
 func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
-/*
 	httpRetries           := 3
 	pcsStatusTimeout      := 30
 	httpTimeout           := time.Duration(pcsStatusTimeout) * time.Second
 	//idleConnTimeout     := time.Duration(pcsStatusTimeout * 15 / 10) * time.Second
 	//idleConnTimeout       := 60 * time.Second
-	idleConnTimeout       := 300 * time.Second
+	//idleConnTimeout       := 300 * time.Second
 	//responseHeaderTimeout :=  5 * time.Second
-	responseHeaderTimeout :=  50 * time.Second
+	//responseHeaderTimeout :=  50 * time.Second
 	//tLSHandshakeTimeout   := 10 * time.Second
-	tLSHandshakeTimeout   := 100 * time.Second
+	//tLSHandshakeTimeout   := 100 * time.Second
 
 	cPolicy := ClientPolicy{
 		retry: RetryPolicy{Retries: httpRetries},
+/*
 		tx: HttpTxPolicy{
 				Enabled:                true,
 				MaxIdleConns:           100,
@@ -534,8 +534,8 @@ func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
 				ResponseHeaderTimeout:  responseHeaderTimeout,
 				TLSHandshakeTimeout:    tLSHandshakeTimeout,
 			},
-	}
 */
+	}
 	testPCSUseCase(t, httpTimeout, cPolicy)
 }
 
