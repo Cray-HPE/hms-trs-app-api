@@ -29,6 +29,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"runtime"
 	"time"
 
 	base "github.com/Cray-HPE/hms-base/v2"
@@ -294,6 +295,8 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		tloc.Logger.Tracef("TLSHandshakeTimeout: %s\n", cpack.insecure.HTTPClient.Transport.(*loggingRoundTripper).rt.(*http.Transport).TLSHandshakeTimeout)
 		tloc.Logger.Tracef("DisableKeepAlives: %v\n", cpack.insecure.HTTPClient.Transport.(*loggingRoundTripper).rt.(*http.Transport).DisableKeepAlives)
 
+		tloc.Logger.Tracef("Go runtime version: %s\n", runtime.Version())
+
 		//tloc.Logger.Tracef("MaxIdleConns: %d\n", cpack.insecure.HTTPClient.Transport.(*trs_http_api.loggingRoundTripper).Transport.(*http.Transport).MaxIdleConns)
 		//tloc.Logger.Tracef("MaxIdleConnsPerHost: %d\n", cpack.insecure.HTTPClient.Transport.(*trs_http_api.loggingRoundTripper).Transport.(*http.Transport).MaxIdleConnsPerHost)
 		//tloc.Logger.Tracef("IdleConnTimeout: %d\n", cpack.insecure.HTTPClient.Transport.(*trs_http_api.loggingRoundTripper).Transport.(*http.Transport).IdleConTimeout)
@@ -333,7 +336,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	//setup timeouts and context for request
 	tct.task.context, tct.task.contextCancel = context.WithTimeout(tloc.ctx, tct.task.Timeout)
 // NEVER CALL contextCancel() on a task's context!!!
-//defer tct.task.contextCancel()
+defer tct.task.contextCancel()
 // ???
 
 	base.SetHTTPUserAgent(tct.task.Request,tloc.svcName)
