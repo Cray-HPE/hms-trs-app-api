@@ -677,7 +677,6 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 		if req.body != nil {
 			body, err := req.body()
 			if err != nil {
-				v.Error("JW_DEBUG: Closing idle connections BAD BODY")
 				c.HTTPClient.CloseIdleConnections()
 				return resp, err
 			}
@@ -793,8 +792,7 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 		return resp, nil
 	}
 
-	v.Error("JW_DEBUG: Closing idle connections AT END")
-	defer c.HTTPClient.CloseIdleConnections()
+	//defer c.HTTPClient.CloseIdleConnections()
 
 	var err error
 	if prepareErr != nil {
