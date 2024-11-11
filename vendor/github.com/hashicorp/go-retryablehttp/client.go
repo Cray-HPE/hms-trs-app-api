@@ -791,7 +791,7 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 		return resp, nil
 	}
 
-	//defer c.HTTPClient.CloseIdleConnections()
+	defer c.HTTPClient.CloseIdleConnections()
 
 	var err error
 	if prepareErr != nil {
