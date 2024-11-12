@@ -165,7 +165,8 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 			nRetries--
 		}
 
-		time.Sleep(1 * time.Second) // Simulate network and BMC delay
+		// Let retries fly without a simulated delay
+		//time.Sleep(1 * time.Second) // Simulate network and BMC delay
 
 		w.Header().Set("Content-Type","application/json")
 //	w.Header().Set("Connection","keep-alive")
