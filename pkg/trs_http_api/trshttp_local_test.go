@@ -565,7 +565,7 @@ type testConnsArg struct {
 	nTasks                 int       // Number of tasks to create
 	nSkipCloseBody         int       // Number of response bodies to skip closing
 	expEstabAfterBodyClose int       // Expected number of ESTAB connections after closing response bodies
-	nSuccessRetries        int       // Number of retries to succeed
+	nSuccessRetries        int32     // Number of retries to succeed
 	nFailRetries           int       // Number of retries to fail
 	tListProto             *HttpTask // Initialization to pass to tloc.CreateTaskList()
 	srvHandler             func(http.ResponseWriter, *http.Request) // response handler to use
