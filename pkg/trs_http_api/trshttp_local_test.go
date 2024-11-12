@@ -33,6 +33,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"os/exec"
 	"regexp"
 	"sort"
@@ -54,10 +55,17 @@ const (
 )
 var logLevel = ERROR
 
-func TestSetGlobals(t *testing.T) {
+func TestMain(m *testing.M) {
 	flag.IntVar(&logLevel, "logLevel", ERROR, "set log level (0=ERROR, 1=INFO, 2=DEBUG)")
 	flag.Parse()
+
 	t.Logf("logLevel set to %v", logLevel)
+
+	// Run the tests
+	code := m.Run()
+
+	// Exit
+	os.Exit(code)
 }
 
 // Create a logger for trs_http_api (not unit tests)
@@ -520,6 +528,10 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 
 // CustomConnState logs changes to connection states - Useful for debugging
 func CustomConnState(conn net.Conn, state http.ConnState) {
+	if logLevel >= ERROR {
+		return
+	}
+
 	switch state {
 	case http.StateNew:
 		log.Printf("HTTP_SERVER(%v): Connection -> NEW    %v (State %v)",

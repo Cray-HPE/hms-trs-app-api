@@ -27,8 +27,8 @@ all:  unittest integration
 
 unittest:
 	ls /opt/hostedtoolcache/go
-	LOGLEVEL=2 /opt/hostedtoolcache/go/1.21.13/x64/bin/go test -v ./pkg/trs_http_api/... -cover
-	#LOGLEVEL=2 go test -v ./pkg/trs_http_api/... -cover
+	LOGLEVEL=3 /opt/hostedtoolcache/go/1.21.13/x64/bin/go test -v ./pkg/trs_http_api/... -cover
+	#LOGLEVEL=3 go test -v ./pkg/trs_http_api/... -cover
 	# no -v -tags musl
 
 integration:
