@@ -704,14 +704,24 @@ func testConns(t *testing.T, a testConnsArg, expEstabAfterBodyClose int) {
 	t.Logf("Testing connections after tasks complete")
 	testOpenConnections(t, a.nTasks)
 
-	// Close the response bodies so connections stay open during ctx cancel
-	// We always skip at least one to test that tloc.Close() will close it
+	// Set up custom read closer to test if all response bodies get closed
+	for _, tsk := range(tList) {
+		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
+		}
+	}
+	// Now close the response bodies so connections stay open after we call
+	// tloc.Cancel().  We always skip at least one to test that tloc.Close()
+	// closes it for us and the connection associated with it
 	nSkipCloseBody := 1
 	nSkipped := 0
 	t.Logf("Closing response bodies")
 	for _, tsk := range(tList) {
 		if nSkipped < nSkipCloseBody {
 			nSkipped++
+			if logLevel == logrus.TraceLevel {
+				t.Logf("Skipping closing response body for task %v", tsk.GetID())
+			}
 			continue
 		}
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
@@ -734,15 +744,37 @@ func testConns(t *testing.T, a testConnsArg, expEstabAfterBodyClose int) {
 	// based on the Transport configuration
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after response bodies closed")
-	testOpenConnections(t, expEstabAfterBodyClose)
+	testOpenConnections(t, expEstabAfterBodyClose + nSkipCloseBody)
 
+t.Logf("Checking for closed response bodies")
+for _, tsk := range(tList) {
+	if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+		if !tsk.Request.Response.Body.(*CustomReadCloser).WasClosed() {
+			t.Errorf("Expected response body to be closed, but it was not")
+		}
+	}
+}
 	// Now cancel the task list
 	tloc.Cancel(&tList)
 
-	// Cancelling the task list should not alter existing ESTAB(LISHED) connections
+	// Cancelling the task list should not alter existing ESTAB(LISHED)
+	// connections except for connections where a response body was not
+	// previously closed.  The lower level libraries assume there's an
+	// issue with the connection if the body is not closed.
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after task list cancelled")
 	testOpenConnections(t, expEstabAfterBodyClose)
+
+	// Since we never closed all of the response bodies lets test that
+	// tloc.Cancel() did it for us
+	t.Logf("Checking for closed response bodies")
+	for _, tsk := range(tList) {
+		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+			if !tsk.Request.Response.Body.(*CustomReadCloser).WasClosed() {
+				t.Errorf("Expected response body to be closed, but it was not")
+			}
+		}
+	}
 
 	t.Logf("Closing the task list")
 	tloc.Close(&tList)
