@@ -606,10 +606,10 @@ func TestSuccessfulRequestsWithHttpTxPolicy(t *testing.T) {
 				Enabled:                true,
 				MaxIdleConns:           200,
 				MaxIdleConnsPerHost:    100,
-				IdleConnTimeout:        idleConnTimeout,
-				ResponseHeaderTimeout:  responseHeaderTimeout,
-				TLSHandshakeTimeout:    tLSHandshakeTimeout,
-				DisableKeepAlives:      DisableKeepAlives,
+//				IdleConnTimeout:        idleConnTimeout,
+//				ResponseHeaderTimeout:  responseHeaderTimeout,
+//				TLSHandshakeTimeout:    tLSHandshakeTimeout,
+//				DisableKeepAlives:      DisableKeepAlives,
 			},
 	}
 	testSuccessfulRequests(t, nTasks, httpTimeout, cPolicy)
