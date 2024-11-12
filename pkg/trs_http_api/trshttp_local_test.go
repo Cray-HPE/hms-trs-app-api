@@ -523,16 +523,185 @@ func (c *CustomReadCloser) WasClosed() bool {
 // requests that waiting for a server response and thus hit their task
 // timout which cancels their contexts.
 
-func TestPCSUseCaseNoHttpTxPolicy(t *testing.T) {
-	httpRetries      := 1
+func TestSuccessfulRequestsWithNoHttpTxPolicy(t *testing.T) {
+	httpRetries      := 3
 	pcsStatusTimeout := 30
 	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
 
 	cPolicy := ClientPolicy{retry: RetryPolicy{Retries: httpRetries}}
 
-	testPCSUseCase(t, httpTimeout, cPolicy)
+	testSuccessfulRequests(t, httpTimeout, cPolicy)
 }
 
+func TestSuccessfulRequestsWithHttpTxPolicy(t *testing.T) {
+/*
+	httpRetries           := 3
+	pcsStatusTimeout      := 30
+	httpTimeout           := time.Duration(pcsStatusTimeout) * time.Second
+	//idleConnTimeout     := time.Duration(pcsStatusTimeout * 15 / 10) * time.Second
+	idleConnTimeout       := 90 * time.Second
+	//idleConnTimeout       := 300 * time.Second
+	responseHeaderTimeout :=  5 * time.Second
+	//responseHeaderTimeout :=  50 * time.Second
+	tLSHandshakeTimeout   := 10 * time.Second
+	//tLSHandshakeTimeout   := 100 * time.Second
+	DisableKeepAlives       := false
+
+	cPolicy := ClientPolicy{
+		retry: RetryPolicy{Retries: httpRetries},
+		tx: HttpTxPolicy{
+				Enabled:                true,
+				MaxIdleConns:           100,
+				MaxIdleConnsPerHost:    100,
+				IdleConnTimeout:        idleConnTimeout,
+				ResponseHeaderTimeout:  responseHeaderTimeout,
+				TLSHandshakeTimeout:    tLSHandshakeTimeout,
+				DisableKeepAlives:      DisableKeepAlives,
+			},
+	}
+	testSuccessfulRequests(t, httpTimeout, cPolicy)
+*/
+}
+
+func testSuccessfulRequests(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolicy) {
+	nTasks := 1
+
+	// Initialize the task system
+	tloc := &TRSHTTPLocal{}
+	tloc.Init(svcName, createLogger(logrus.TraceLevel))
+
+	// Copy logger into global namespace for the http server handlers
+	handlerLogger = t
+
+	// Create http server.
+	srv := httptest.NewServer(http.HandlerFunc(launchHandler))
+
+	// Configure server to log changes to connection states
+	srv.Config.ConnState = func(conn net.Conn, state http.ConnState) {
+		switch state {
+		case http.StateNew:
+			log.Printf("HTTP_SERVER(%v): Connection -> NEW    %v (State %v)",
+					   conn.LocalAddr(), conn.RemoteAddr(), state)
+		case http.StateActive:
+			log.Printf("HTTP_SERVER(%v): Connection -> ACTIVE %v (State %v)",
+					   conn.LocalAddr(), conn.RemoteAddr())
+		case http.StateIdle:
+			log.Printf("HTTP_SERVER(%v): Connection -> IDLE   %v (State %v)",
+					   conn.LocalAddr(), conn.RemoteAddr())
+		case http.StateClosed:
+			log.Printf("HTTP_SERVER(%v): Connection -> CLOSED %v (State %v)",
+					   conn.LocalAddr(), conn.RemoteAddr(), state)
+		default:
+			log.Printf("HTTP_SERVER(%v): Connection -> ?      %v (State %v)",
+					   conn.LocalAddr(), conn.RemoteAddr(), state)
+		}
+    }
+
+	// Create an http request
+
+	req, err := http.NewRequest(http.MethodGet, srv.URL, nil)
+	if err != nil {
+        t.Fatalf("Failed to create request: %v", err)
+    }
+	req.Header.Set("Accept", "*/*")
+
+	proto := HttpTask{
+			Request: req,
+			Timeout: httpTimeout,
+			CPolicy: cPolicy, }
+
+	t.Logf("Creating task list with %v tasks and URL %v", nTasks, srv.URL)
+	tList := tloc.CreateTaskList(&proto, nTasks)
+
+	t.Logf("Launching all tasks")
+	taskListChannel, err := tloc.Launch(&tList)
+	if (err != nil) {
+		t.Errorf("Launch ERROR: %v", err)
+	}
+
+	// All connections should be in ESTAB(LISHED)
+	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
+	t.Logf("Testing connections after Launch")
+	testOpenConnections(t, true, (nTasks))
+
+	t.Logf("Waiting for tasks to complete")
+	for i := 0; i < (nTasks); i++ {
+		<-taskListChannel
+	}
+
+	t.Logf("Closing the task list channel")
+	close(taskListChannel)
+
+	// All connections should still be in ESTAB(LISHED)
+	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
+	t.Logf("Testing connections after tasks complete")
+	testOpenConnections(t, true, nTasks)
+
+	// Close the response bodies so connections stay open during ctx cancel
+	for _, tsk := range(tList) {
+		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+			t.Logf("Response headers: %s", tsk.Request.Response.Header)
+			// Must fully read the body in order to close the body so that
+			// the underlying libraries/modules don't close the connection.
+			// If body not fully conusmed they assume the connection had issues
+			_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
+
+			tsk.Request.Response.Body.Close()
+			tsk.Request.Response.Body = nil
+		}
+	}
+
+	// Closing the body should not alter ESTAB(LISHED) connections
+	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
+	t.Logf("Testing connections after response bodies closed")
+	testOpenConnections(t, true, nTasks)
+
+	// Now cancel the task list
+	tloc.Cancel(&tList)
+
+	// Cancelling the task list should not alter ESTAB(LISHED) connections
+	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
+	t.Logf("Testing connections after task list cancelled")
+	testOpenConnections(t, true, nTasks)
+
+	t.Logf("Closing the task list")
+	tloc.Close(&tList)
+
+	t.Logf("Checking that the task list was closed")
+	if (len(tloc.taskMap) != 0) {
+		t.Errorf("Expected task list map to be empty")
+	}
+
+	// Closing the task list should not alter ESTAB(LISHED) connections
+	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
+	t.Logf("Testing connections after task list closed")
+	testOpenConnections(t, true, nTasks)
+
+	t.Logf("Cleaning up task system")
+	tloc.Cleanup()
+
+	// Cleaking up the task list system should close all connections
+	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
+	t.Logf("Testing connections after task list cleaned up")
+	testOpenConnections(t, true, 0)
+/*
+
+	// Cancel the stalled server handlers so we can close the servers. We
+	// will need to do it once for the first set that timed out due to the
+	// HTTPClient.Timeout and once for the second set that timed out due to
+	// the context timeout.
+	t.Logf("Signaling stalled handlers ")
+	for i := 0; i < numStallTasks * 2; i++ {
+		stallCancel <- true
+	}
+	close(stallCancel)
+*/
+
+	t.Logf("Closing servers")
+	successSrv.Close()
+	retrySrv.Close()
+	stallSrv.Close()
+}
 func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
 /*
 	httpRetries           := 3
@@ -584,21 +753,6 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 	successSrv := httptest.NewServer(http.HandlerFunc(launchHandler))
 	retrySrv := httptest.NewServer(http.HandlerFunc(retryHandler))
 	stallSrv := httptest.NewServer(http.HandlerFunc(stallHandler))
-	//successSrv := httptest.NewUnstartedServer(http.HandlerFunc(launchHandler))
-	//retrySrv   := httptest.NewUnstartedServer(http.HandlerFunc(retryHandler))
-	//stallSrv   := httptest.NewUnstartedServer(http.HandlerFunc(stallHandler))
-
-	//successSrv.Config.IdleTimeout = 300 * time.Second // 5 minutes
-	//retrySrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
-	//stallSrv.Config.IdleTimeout   = 300 * time.Second // 5 minutes
-
-	//successSrv.Config.ReadTimeout = 300 * time.Second // 5 minutes
-	//retrySrv.Config.ReadTimeout   = 0
-	//stallSrv.Config.ReadTimeout   = 0
-
-	//successSrv.Config.WriteTimeout = 300 * time.Second // 5 minutes
-	//retrySrv.Config.WriteTimeout   = 0
-	//stallSrv.Config.WriteTimeout   = 0
 
 	var connTimes sync.Map
 	successSrv.Config.ConnState = func(conn net.Conn, state http.ConnState) {
