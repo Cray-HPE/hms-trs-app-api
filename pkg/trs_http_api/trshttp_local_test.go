@@ -144,19 +144,25 @@ func hasTRSAlwaysRetryHeader(r *http.Request) bool {
         return false
     }
 
-    _,ok := r.Header["TRS-Fail-All-Retries"]
-    return ok
+	if (logLevel == logrus.TraceLevel) {
+		handlerLogger.Logf("Received header %v", r.Header)
+	}
+
+	_,ok := r.Header["TRS-Fail-All-Retries"]
+	return ok
 }
 
 var handlerLogger *testing.T
 var nRetries int32 = 0
 
 func launchHandler(w http.ResponseWriter, req *http.Request) {
-
+	// Distinguish between limited retries that will succeed and retries
+	// that should continually fail and exceed their retry limit
 	singletonRetry := false
 	if !hasTRSAlwaysRetryHeader(req) {
 		singletonRetry = atomic.AddInt32(&nRetries, -1) >= 0
 	}
+
 	if singletonRetry || hasTRSAlwaysRetryHeader(req) {
 		handlerLogger.Logf("launchHandler 503 running...")
 
@@ -698,6 +704,11 @@ func testConns(t *testing.T, a testConnsArg) {
 	for i := 0; i < a.nFailRetries; i++ {
 		// Just choose the ones at the beginning
 		tList[i].Request.Header.Set("TRS-Fail-All-Retries", "true")
+
+		if (logLevel == logrus.TraceLevel) {
+			t.Errorf("Set request header %v for task %v",
+					 tList[i].Request.Header, tList[i].GetID())
+		}
 	}
 
 	// All connections should be in ESTAB(LISHED) and should stay there
