@@ -59,7 +59,7 @@ func TestMain(m *testing.M) {
 	flag.IntVar(&logLevel, "logLevel", ERROR, "set log level (0=ERROR, 1=INFO, 2=DEBUG)")
 	flag.Parse()
 
-	t.Logf("logLevel set to %v", logLevel)
+	log.Printf("logLevel set to %v", logLevel)
 
 	// Run the tests
 	code := m.Run()
