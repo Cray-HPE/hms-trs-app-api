@@ -565,9 +565,11 @@ func (c *CustomReadCloser) WasClosed() bool {
 }
 
 type testConnsArg struct {
-	nTasks      int
-	tListProto  *HttpTask
-	srvHandler  func(http.ResponseWriter, *http.Request)
+	nTasks                 int       // Number of tasks to create
+	nSkipCloseBody         int       // Number of response bodies to skip closing
+	expEstabAfterBodyClose int       // Expected number of ESTAB connections after closing response bodies
+	tListProto             *HttpTask // Initialization to pass to tloc.CreateTaskList()
+	srvHandler             func(http.ResponseWriter, *http.Request) // response handler to use
 }
 
 // TestPCSUseCase tests the PCS use case of the TRS HTTP API.  It launches
@@ -582,7 +584,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
 
 	// Default prototype to initialize each task in the task list with
-	tListProto := &HttpTask{
+	defaultTListProto := &HttpTask{
 		Timeout: httpTimeout,
 		CPolicy: ClientPolicy {
 			retry: RetryPolicy{Retries: httpRetries},
@@ -591,9 +593,11 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 
 	// Set up the arguments for the test
 	arg := testConnsArg{
-		nTasks:      1,
-		tListProto:  tListProto,
-		srvHandler:  launchHandler,	// always returns success
+		nTasks:                 1,
+		nSkipCloseBody:         1,
+		expEstabAfterBodyClose: 0,
+		tListProto:             defaultTListProto,
+		srvHandler:             launchHandler,	// always returns success
 	}
 
 	testConns(t, arg, 2)	// 2 ESTAB connections by default
@@ -619,7 +623,7 @@ func TestConnsWithHttpTxPolicy(t *testing.T) {
 		(pcsStatusTimeout + pcsTimeToNextStatusPoll) * 15 / 10) * time.Second
 
 	// Default prototype to initialize each task in the task list with
-	tListProto := &HttpTask{
+	defaultTListProto := &HttpTask{
 		Timeout: httpTimeout,
 		CPolicy: ClientPolicy {
 			retry:
@@ -641,19 +645,21 @@ func TestConnsWithHttpTxPolicy(t *testing.T) {
 
 	// Set up the arguments for the test
 	arg := testConnsArg{
-		nTasks:      20,
-		tListProto:  tListProto,
-		srvHandler:  launchHandler,	// always returns success
+		nTasks:                 10,
+		nSkipCloseBody:         2,
+		expEstabAfterBodyClose: 8,
+		tListProto:             defaultTListProto,
+		srvHandler:             launchHandler,	// always returns success
 	}
 
-	arg.nTasks                                    = 10
 	arg.tListProto.CPolicy.tx.MaxIdleConns        = 4
 	arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost = 2
+	arg.expEstabAfterBodyClose                    = arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost
 
-	testConns(t, arg, arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost)
+	testConns(t, arg)
 }
 
-func testConns(t *testing.T, a testConnsArg, expEstabAfterBodyClose int) {
+func testConns(t *testing.T, a testConnsArg) {
 	// Initialize the task system
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger())
@@ -744,7 +750,7 @@ func testConns(t *testing.T, a testConnsArg, expEstabAfterBodyClose int) {
 	// based on the Transport configuration
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after response bodies closed")
-	testOpenConnections(t, expEstabAfterBodyClose + nSkipCloseBody)
+	testOpenConnections(t, a.expEstabAfterBodyClose + nSkipCloseBody)
 
 	// tloc.Cancel() cancels the contexts for all of the tasks in the task list
 	t.Logf("Calling tloc.Cancel() to cancel all tasks")
@@ -756,7 +762,7 @@ func testConns(t *testing.T, a testConnsArg, expEstabAfterBodyClose int) {
 	// that there's a problem with the connection if the body was not closed.
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after task list cancelled")
-	testOpenConnections(t, expEstabAfterBodyClose)
+	testOpenConnections(t, a.expEstabAfterBodyClose)
 
 	// tloc.Close() closes any reponse bodies left open and removes all
 	// of the tasks from the task list
@@ -782,7 +788,7 @@ func testConns(t *testing.T, a testConnsArg, expEstabAfterBodyClose int) {
 	// Closing the task list should not alter existing ESTAB(LISHED) connections
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after task list closed")
-	testOpenConnections(t, expEstabAfterBodyClose)
+	testOpenConnections(t, a.expEstabAfterBodyClose)
 
 	t.Logf("Calling tloc.Cleanup to clean up task system")
 	tloc.Cleanup()
