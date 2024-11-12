@@ -581,7 +581,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	pcsStatusTimeout := 30
 	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
 
-	// Prototype to initialize each task in the task list with
+	// Default prototype to initialize each task in the task list with
 	tListProto := &HttpTask{
 		Timeout: httpTimeout,
 		CPolicy: ClientPolicy {
@@ -618,7 +618,7 @@ func TestConnsWithHttpTxPolicy(t *testing.T) {
 	idleConnTimeout := time.Duration(
 		(pcsStatusTimeout + pcsTimeToNextStatusPoll) * 15 / 10) * time.Second
 
-	// Prototype to initialize each task in the task list with
+	// Default prototype to initialize each task in the task list with
 	tListProto := &HttpTask{
 		Timeout: httpTimeout,
 		CPolicy: ClientPolicy {
@@ -645,6 +645,10 @@ func TestConnsWithHttpTxPolicy(t *testing.T) {
 		tListProto:  tListProto,
 		srvHandler:  launchHandler,	// always returns success
 	}
+
+	arg.nTasks                                    = 10
+	arg.tListProto.CPolicy.tx.MaxIdleConns        = 4
+	arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost = 2
 
 	testConns(t, arg, arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost)
 }
