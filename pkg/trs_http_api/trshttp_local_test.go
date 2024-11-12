@@ -705,11 +705,13 @@ func testConns(t *testing.T, a testConnsArg, expEstabAfterBodyClose int) {
 	testOpenConnections(t, a.nTasks)
 
 	// Close the response bodies so connections stay open during ctx cancel
+	// We always skip at least one to test that tloc.Close() will close it
+	nSkipCloseBody := 1
+	nSkipped := 0
 	t.Logf("Closing response bodies")
-tmp := 0
 	for _, tsk := range(tList) {
-		if tmp == 0 {
-			tmp++
+		if nSkipped < nSkipCloseBody {
+			nSkipped++
 			continue
 		}
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
