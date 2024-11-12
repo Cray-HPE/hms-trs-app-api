@@ -441,8 +441,11 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 	}
 
 	if (len(debugOutput["clientEstab"]) != clientEstabExp) {
-		t.Errorf("Expected %v ESTABLISHED connections, but got %v:\n%s",
-				 clientEstabExp, len(debugOutput["clientEstab"]), output)
+		t.Errorf("Expected %v ESTABLISHED connections, but got %v",
+				 clientEstabExp, len(debugOutput["clientEstab"]))
+		if loglevel == TRACE {
+			t.Errorf("Full 'ss' output:\n%s", output)
+		}
 	}
 
 	if loglevel <= INFO {
@@ -494,7 +497,7 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 			t.Logf("")
 		}
 	}
-	if loglevel <= TRACE {
+	if loglevel == TRACE {
 		if len(debugOutput["ignoredConn"]) > 0 {
 			sort.Strings(debugOutput["ignoredConn"])
 
@@ -530,7 +533,8 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 
 // CustomConnState logs changes to connection states - Useful for debugging
 func CustomConnState(conn net.Conn, state http.ConnState) {
-	if loglevel >= ERROR {
+	if loglevel == ERROR {
+		// Only logging critical errors so return
 		return
 	}
 
@@ -569,6 +573,12 @@ func (c *CustomReadCloser) WasClosed() bool {
 	return c.closed
 }
 
+type testConnsArg struct {
+	nTasks      int
+	tListProto  *HttpTask
+	srvHandler  func(http.ResponseWriter, *http.Request)
+}
+
 // TestPCSUseCase tests the PCS use case of the TRS HTTP API.  It launches
 // a mix of tasks that make http requests that complete successfully,
 // requests that retry multiple times and fail to get good responses, and
@@ -576,22 +586,43 @@ func (c *CustomReadCloser) WasClosed() bool {
 // timout which cancels their contexts.
 
 func TestSuccessfulRequestsWithNoHttpTxPolicy(t *testing.T) {
-	nTasks           := 1
-	httpRetries      := 3
+	httpRetries := 3
 	pcsStatusTimeout := 30
-	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
 
-	cPolicy := ClientPolicy{retry: RetryPolicy{Retries: httpRetries}}
+	httpTimeout := time.Duration(pcsStatusTimeout) * time.Second
 
-	testSuccessfulRequests(t, nTasks, httpTimeout, cPolicy)
+	// Retry and HttpTx policies to use
+	cPolicy := ClientPolicy{
+		retry: RetryPolicy{Retries: httpRetries},
+	}
+
+	// Prototype to initialize each task in the task list with
+	tListProto := &HttpTask{
+			Timeout: httpTimeout,
+			CPolicy: cPolicy,
+	}
+
+	// Set up the arguments for the test
+	arg := testConnsArg{
+		nTasks:      1,
+		tListProto:  tListProto,
+		srvHandler:  launchHandler,	// always returns success
+	}
+
+	testConns(t, arg)
 }
 
 func TestSuccessfulRequestsWithHttpTxPolicy(t *testing.T) {
-	nTasks                := 200
-	httpRetries           := 3
-	pcsStatusTimeout      := 30
+	httpRetries := 3
+	pcsStatusTimeout := 30
+
+	// httpTimeout is the timeout placed on the context for the http request.
+	// The default PCS polling interval is 30 seconds after last task list
+	// completed (including if it timed out).  So lets set idleConnTimeout
+	// to 150% more than the httpTimeout plus the PCS polling interval
 	httpTimeout           := time.Duration(pcsStatusTimeout) * time.Second
-	//idleConnTimeout     := time.Duration(pcsStatusTimeout * 15 / 10) * time.Second
+	idleConnTimeout       := time.Duration((pcsStatusTimeout + 30) * 15 / 10) * time.Second
+
 //	idleConnTimeout       := 90 * time.Second
 	//idleConnTimeout       := 300 * time.Second
 //	responseHeaderTimeout :=  5 * time.Second
@@ -600,22 +631,37 @@ func TestSuccessfulRequestsWithHttpTxPolicy(t *testing.T) {
 	//tLSHandshakeTimeout   := 100 * time.Second
 //	DisableKeepAlives       := false
 
+	// Retry and HttpTx policies to use
 	cPolicy := ClientPolicy{
 		retry: RetryPolicy{Retries: httpRetries},
 		tx: HttpTxPolicy{
-				Enabled:                true,
-				MaxIdleConns:           200,
-				MaxIdleConnsPerHost:    100,
-//				IdleConnTimeout:        idleConnTimeout,
-//				ResponseHeaderTimeout:  responseHeaderTimeout,
-//				TLSHandshakeTimeout:    tLSHandshakeTimeout,
-//				DisableKeepAlives:      DisableKeepAlives,
-			},
+			Enabled:                true,
+			MaxIdleConns:           200,
+			MaxIdleConnsPerHost:    100,
+			IdleConnTimeout:        idleConnTimeout,
+//			ResponseHeaderTimeout:  responseHeaderTimeout,
+//			TLSHandshakeTimeout:    tLSHandshakeTimeout,
+//			DisableKeepAlives:      DisableKeepAlives,
+		},
 	}
-	testSuccessfulRequests(t, nTasks, httpTimeout, cPolicy)
+
+	// Prototype to initialize each task in the task list with
+	tListProto := &HttpTask{
+			Timeout: httpTimeout,
+			CPolicy: cPolicy,
+	}
+
+	// Set up the arguments for the test
+	arg := testConnsArg{
+		nTasks:      2,
+		tListProto:  tListProto,
+		srvHandler:  launchHandler,	// always returns success
+	}
+
+	testConns(t, arg)
 }
 
-func testSuccessfulRequests(t *testing.T, nTasks int, httpTimeout time.Duration, cPolicy ClientPolicy) {
+func testConns(t *testing.T, a testConnsArg) {
 	// Initialize the task system
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger())
@@ -624,7 +670,7 @@ func testSuccessfulRequests(t *testing.T, nTasks int, httpTimeout time.Duration,
 	handlerLogger = t
 
 	// Create http server.
-	srv := httptest.NewServer(http.HandlerFunc(launchHandler))
+	srv := httptest.NewServer(http.HandlerFunc(a.srvHandler))
 
 	// Configure server to log changes to connection states
 	srv.Config.ConnState = CustomConnState
@@ -636,14 +682,10 @@ func testSuccessfulRequests(t *testing.T, nTasks int, httpTimeout time.Duration,
         t.Fatalf("Failed to create request: %v", err)
     }
 	req.Header.Set("Accept", "*/*")
+	a.tListProto.Request = req
 
-	tListProto := HttpTask{
-			Request: req,
-			Timeout: httpTimeout,
-			CPolicy: cPolicy, }
-
-	t.Logf("Creating task list with %v tasks and URL %v", nTasks, srv.URL)
-	tList := tloc.CreateTaskList(&tListProto, nTasks)
+	t.Logf("Creating task list with %v tasks and URL %v", a.nTasks, srv.URL)
+	tList := tloc.CreateTaskList(a.tListProto, a.nTasks)
 
 	t.Logf("Launching all tasks")
 	taskListChannel, err := tloc.Launch(&tList)
@@ -654,10 +696,10 @@ func testSuccessfulRequests(t *testing.T, nTasks int, httpTimeout time.Duration,
 	// All connections should be in ESTAB(LISHED)
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after Launch")
-	testOpenConnections(t, (nTasks))
+	testOpenConnections(t, (a.nTasks))
 
 	t.Logf("Waiting for tasks to complete")
-	for i := 0; i < (nTasks); i++ {
+	for i := 0; i < (a.nTasks); i++ {
 		<-taskListChannel
 	}
 
@@ -667,7 +709,7 @@ func testSuccessfulRequests(t *testing.T, nTasks int, httpTimeout time.Duration,
 	// All connections should still be in ESTAB(LISHED)
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after tasks complete")
-	testOpenConnections(t, nTasks)
+	testOpenConnections(t, a.nTasks)
 
 	// Close the response bodies so connections stay open during ctx cancel
 	t.Logf("Closing response bodies")
@@ -681,8 +723,8 @@ func testSuccessfulRequests(t *testing.T, nTasks int, httpTimeout time.Duration,
 			tsk.Request.Response.Body.Close()
 			tsk.Request.Response.Body = nil
 
-			// Response headers can be  helpful for debug
-			if loglevel <= TRACE {
+			if loglevel == TRACE {
+				// Response headers can be  helpful for debug
 				t.Logf("Response headers: %s", tsk.Request.Response.Header)
 			}
 		}
@@ -691,7 +733,7 @@ func testSuccessfulRequests(t *testing.T, nTasks int, httpTimeout time.Duration,
 	// Closing the body should not alter ESTAB(LISHED) connections
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after response bodies closed")
-	testOpenConnections(t, nTasks)
+	testOpenConnections(t, a.nTasks)
 
 	// Now cancel the task list
 	tloc.Cancel(&tList)
@@ -699,7 +741,7 @@ func testSuccessfulRequests(t *testing.T, nTasks int, httpTimeout time.Duration,
 	// Cancelling the task list should not alter ESTAB(LISHED) connections
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after task list cancelled")
-	testOpenConnections(t, nTasks)
+	testOpenConnections(t, a.nTasks)
 
 	t.Logf("Closing the task list")
 	tloc.Close(&tList)
@@ -712,7 +754,7 @@ func testSuccessfulRequests(t *testing.T, nTasks int, httpTimeout time.Duration,
 	// Closing the task list should not alter ESTAB(LISHED) connections
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after task list closed")
-	testOpenConnections(t, nTasks)
+	testOpenConnections(t, a.nTasks)
 
 	t.Logf("Cleaning up task system")
 	tloc.Cleanup()
