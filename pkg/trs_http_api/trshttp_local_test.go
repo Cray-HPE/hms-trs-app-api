@@ -706,7 +706,12 @@ func testConns(t *testing.T, a testConnsArg, expEstabAfterBodyClose int) {
 
 	// Close the response bodies so connections stay open during ctx cancel
 	t.Logf("Closing response bodies")
+tmp := 0
 	for _, tsk := range(tList) {
+		if tmp == 0 {
+			tmp++
+			continue
+		}
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 			// Must fully read the body in order to close the body so that
 			// the underlying libraries/modules don't close the connection.
