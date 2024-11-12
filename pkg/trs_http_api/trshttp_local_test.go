@@ -581,15 +581,12 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	pcsStatusTimeout := 30
 	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
 
-	// Retry and HttpTx policies to use
-	cPolicy := ClientPolicy{
-		retry: RetryPolicy{Retries: httpRetries},
-	}
-
 	// Prototype to initialize each task in the task list with
 	tListProto := &HttpTask{
-			Timeout: httpTimeout,
-			CPolicy: cPolicy,
+		Timeout: httpTimeout,
+		CPolicy: ClientPolicy {
+			retry: RetryPolicy{Retries: httpRetries},
+		},
 	}
 
 	// Set up the arguments for the test
@@ -621,7 +618,7 @@ func TestConnsWithHttpTxPolicy(t *testing.T) {
 	idleConnTimeout := time.Duration(
 		(pcsStatusTimeout + pcsTimeToNextStatusPoll) * 15 / 10) * time.Second
 
-	// Retry and HttpTx policies to use
+	// Prototype to initialize each task in the task list with
 	tListProto := &HttpTask{
 		Timeout: httpTimeout,
 		CPolicy: ClientPolicy {
@@ -649,7 +646,7 @@ func TestConnsWithHttpTxPolicy(t *testing.T) {
 		srvHandler:  launchHandler,	// always returns success
 	}
 
-	testConns(t, arg, 100)
+	testConns(t, arg, arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost)
 }
 
 func testConns(t *testing.T, a testConnsArg, expEstabAfterBodyClose int) {
