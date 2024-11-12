@@ -576,11 +576,10 @@ type testConnsArg struct {
 // requests that waiting for a server response and thus hit their task
 // timout which cancels their contexts.
 
-func TestSuccessfulRequestsWithNoHttpTxPolicy(t *testing.T) {
-	httpRetries := 3
+func TestConnsWithNoHttpTxPolicy(t *testing.T) {
+	httpRetries      := 3
 	pcsStatusTimeout := 30
-
-	httpTimeout := time.Duration(pcsStatusTimeout) * time.Second
+	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
 
 	// Retry and HttpTx policies to use
 	cPolicy := ClientPolicy{
@@ -603,48 +602,49 @@ func TestSuccessfulRequestsWithNoHttpTxPolicy(t *testing.T) {
 	testConns(t, arg, 2)	// 2 ESTAB connections by default
 }
 
-func TestSuccessfulRequestsWithHttpTxPolicy(t *testing.T) {
-	httpRetries := 3
-	pcsStatusTimeout := 30
+func TestConnsWithHttpTxPolicy(t *testing.T) {
+	httpRetries             := 3
+	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
+	pcsStatusTimeout        := 30
+	pcsMaxIdleConns         := 1000
+	pcsMaxIdleConnsPerHost  := 4
 
 	// httpTimeout is the timeout placed on the context for the http request.
-	// The default PCS polling interval is 30 seconds after last task list
-	// completed (including if it timed out).  So lets set idleConnTimeout
-	// to 150% more than the httpTimeout plus the PCS polling interval
-	httpTimeout           := time.Duration(pcsStatusTimeout) * time.Second
-	idleConnTimeout       := time.Duration((pcsStatusTimeout + 30) * 15 / 10) * time.Second
+	httpTimeout := time.Duration(pcsStatusTimeout) * time.Second
 
-//	idleConnTimeout       := 90 * time.Second
-	//idleConnTimeout       := 300 * time.Second
-//	responseHeaderTimeout :=  5 * time.Second
-	//responseHeaderTimeout :=  50 * time.Second
-//	tLSHandshakeTimeout   := 10 * time.Second
-	//tLSHandshakeTimeout   := 100 * time.Second
-//	DisableKeepAlives       := false
+	// idleConnTimeout is the time after which idle connections are closed.
+	// In PCS we want them to stay open between polling intervals so they
+	// can be reused for the next poll.  Thus, we set it to the worst case
+	// time it takes for one poll (pcsStatusTimeout) plus the time until
+	// the next poll (pcsStatusPollInterval).  We add an additional 50% to
+	// this for a buffer (ie. multiply by 150%).
+	idleConnTimeout := time.Duration(
+		(pcsStatusTimeout + pcsTimeToNextStatusPoll) * 15 / 10) * time.Second
 
 	// Retry and HttpTx policies to use
-	cPolicy := ClientPolicy{
-		retry: RetryPolicy{Retries: httpRetries},
-		tx: HttpTxPolicy{
-			Enabled:                true,
-			MaxIdleConns:           200,
-			MaxIdleConnsPerHost:    100,
-			IdleConnTimeout:        idleConnTimeout,
-//			ResponseHeaderTimeout:  responseHeaderTimeout,
-//			TLSHandshakeTimeout:    tLSHandshakeTimeout,
-//			DisableKeepAlives:      DisableKeepAlives,
-		},
-	}
-
-	// Prototype to initialize each task in the task list with
 	tListProto := &HttpTask{
-			Timeout: httpTimeout,
-			CPolicy: cPolicy,
+		Timeout: httpTimeout,
+		CPolicy: ClientPolicy {
+			retry:
+				RetryPolicy {
+					Retries: httpRetries,
+				},
+			tx:
+				HttpTxPolicy {
+					Enabled:                  true,
+					MaxIdleConns:             pcsMaxIdleConns,
+					MaxIdleConnsPerHost:      pcsMaxIdleConnsPerHost,
+					IdleConnTimeout:          idleConnTimeout,
+					// ResponseHeaderTimeout: responseHeaderTimeout,
+					// TLSHandshakeTimeout:   tLSHandshakeTimeout,
+					// DisableKeepAlives:     DisableKeepAlives,
+			},
+		},
 	}
 
 	// Set up the arguments for the test
 	arg := testConnsArg{
-		nTasks:      200,
+		nTasks:      20,
 		tListProto:  tListProto,
 		srvHandler:  launchHandler,	// always returns success
 	}
@@ -684,7 +684,8 @@ func testConns(t *testing.T, a testConnsArg, expEstabAfterBodyClose int) {
 		t.Errorf("Launch ERROR: %v", err)
 	}
 
-	// All connections should be in ESTAB(LISHED)
+	// All connections should be in ESTAB(LISHED) and should stay there
+	// until response bodies are closed or Cancel is called
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after Launch")
 	testOpenConnections(t, (a.nTasks))
