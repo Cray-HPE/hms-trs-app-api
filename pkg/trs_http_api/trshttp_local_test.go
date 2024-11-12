@@ -61,6 +61,11 @@ func TestMain(m *testing.M) {
 
 	log.Printf("logLevel set to %v", logLevel)
 
+	    // Debugging: print all flag values to confirm parsing
+		flag.VisitAll(func(f *flag.Flag) {
+			log.Printf("Flag %s set to %s", f.Name, f.Value)
+		})
+
 	// Run the tests
 	code := m.Run()
 
