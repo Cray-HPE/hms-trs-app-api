@@ -396,6 +396,7 @@ func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 				_, _ = io.Copy(io.Discard, v.Request.Response.Body)
 				v.Request.Response.Body.Close()
 				v.Request.Response.Body = nil
+				tloc.Logger.Tracef("Response body for task %s closed", v.id)
 			}
 		}
 		tloc.taskMutex.Lock()
@@ -421,6 +422,7 @@ func (tloc *TRSHTTPLocal) CancelAndClose(taskList *[]HttpTask) {
 				_, _ = io.Copy(io.Discard, v.Request.Response.Body)
 				v.Request.Response.Body.Close()
 				v.Request.Response.Body = nil
+				tloc.Logger.Tracef("Response body for task %s closed", v.id)
 			}
 			v.contextCancel()
 		}

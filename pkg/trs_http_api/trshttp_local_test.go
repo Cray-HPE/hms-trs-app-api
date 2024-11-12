@@ -676,10 +676,10 @@ func testConns(t *testing.T, a testConnsArg, expEstabAfterBodyClose int) {
 	req.Header.Set("Accept", "*/*")
 	a.tListProto.Request = req
 
-	t.Logf("Creating task list with %v tasks and URL %v", a.nTasks, srv.URL)
+	t.Logf("Calling tloc.CreateTaskList() to create %v tasks for URL %v", a.nTasks, srv.URL)
 	tList := tloc.CreateTaskList(a.tListProto, a.nTasks)
 
-	t.Logf("Launching all tasks")
+	t.Logf("Calling tloc.Launch() to launch all tasks")
 	taskListChannel, err := tloc.Launch(&tList)
 	if (err != nil) {
 		t.Errorf("Launch ERROR: %v", err)
@@ -750,11 +750,12 @@ t.Logf("Checking for closed response bodies")
 for _, tsk := range(tList) {
 	if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 		if !tsk.Request.Response.Body.(*CustomReadCloser).WasClosed() {
-			t.Errorf("Expected response body to be closed, but it was not")
+			t.Errorf("Expected response body for %v to be closed, but it was not", tsk.GetID())
 		}
 	}
 }
 	// Now cancel the task list
+	t.Logf("Calling tloc.Cancel() to cancel all tasks")
 	tloc.Cancel(&tList)
 
 	// Cancelling the task list should not alter existing ESTAB(LISHED)
@@ -771,12 +772,12 @@ for _, tsk := range(tList) {
 	for _, tsk := range(tList) {
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 			if !tsk.Request.Response.Body.(*CustomReadCloser).WasClosed() {
-				t.Errorf("Expected response body to be closed, but it was not")
+				t.Errorf("Expected response body for %v to be closed, but it was not", tsk.GetID())
 			}
 		}
 	}
 
-	t.Logf("Closing the task list")
+	t.Logf("Calling tloc.Close() to close out the task list")
 	tloc.Close(&tList)
 
 	t.Logf("Checking that the task list was closed")
@@ -789,7 +790,7 @@ for _, tsk := range(tList) {
 	t.Logf("Testing connections after task list closed")
 	testOpenConnections(t, expEstabAfterBodyClose)
 
-	t.Logf("Cleaning up task system")
+	t.Logf("Calling tloc.Cleanup to clean up task system")
 	tloc.Cleanup()
 
 	// Cleaking up the task list system should close all connections
