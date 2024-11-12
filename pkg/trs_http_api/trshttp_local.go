@@ -182,7 +182,7 @@ func configureClient(client *retryablehttp.Client, task *HttpTask, tloc *TRSHTTP
 	tloc.Logger.Tracef("Created %s client with incoming policy %v", clientType, task.CPolicy)
 	tloc.Logger.Tracef("    RetryMax:                                   %d", client.RetryMax)
 	tloc.Logger.Tracef("    RetryWaitMax:                               %s", client.RetryWaitMax)
-	tloc.Logger.Tracef("    HTTPClient.Timeout:                         %s", client.HTTPClient.Timeout)
+	tloc.Logger.Tracef("    HTTPClient.Timeout (from %s):               %s", client.HTTPClient.Timeout, task.Timeout)
 	tloc.Logger.Tracef("    HTTPClient.Transport.MaxIdleConns:          %d", tr.MaxIdleConns)
 	tloc.Logger.Tracef("    HTTPClient.Transport.MaxIdleConnsPerHost:   %d", tr.MaxIdleConnsPerHost)
 	tloc.Logger.Tracef("    HTTPClient.Transport.IdleConnTimeout:       %s", tr.IdleConnTimeout)

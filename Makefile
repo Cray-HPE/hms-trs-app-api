@@ -26,8 +26,9 @@ all:  unittest integration
 .PHONY:  unittest integration
 
 unittest:
-	/opt/hostedtoolcache/go/1.21.13/x64/bin/go test -v ./pkg/trs_http_api/... -cover -logLevel=6
-	#go test -v ./pkg/trs_http_api/... -cover -logLevel=6
+	# -logLevel values: 0=Panic, 1=Fatal, 2=Error 3=Warn, 4=Info, 5=Debug, 6=Trace"
+	/opt/hostedtoolcache/go/1.21.13/x64/bin/go test -v ./pkg/trs_http_api/... -cover -logLevel=4
+	#go test -v ./pkg/trs_http_api/... -cover -logLevel=4
 	# no -v -tags musl
 
 integration:
