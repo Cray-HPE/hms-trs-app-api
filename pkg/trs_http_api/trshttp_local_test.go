@@ -581,14 +581,14 @@ func (c *CustomReadCloser) WasClosed() bool {
 // timout which cancels their contexts.
 
 func TestSuccessfulRequestsWithNoHttpTxPolicy(t *testing.T) {
-	//nTasks           := 200
+	nTasks           := 200
 	httpRetries      := 3
 	pcsStatusTimeout := 30
 	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
 
 	cPolicy := ClientPolicy{retry: RetryPolicy{Retries: httpRetries}}
 
-	testSuccessfulRequests(t, httpTimeout, cPolicy)
+	testSuccessfulRequests(t, nTasks, httpTimeout, cPolicy)
 }
 
 func TestSuccessfulRequestsWithHttpTxPolicy(t *testing.T) {
@@ -621,9 +621,7 @@ func TestSuccessfulRequestsWithHttpTxPolicy(t *testing.T) {
 */
 }
 
-func testSuccessfulRequests(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolicy) {
-	nTasks := 1
-
+func testSuccessfulRequests(t *testing.T, nTasks int, httpTimeout time.Duration, cPolicy ClientPolicy) {
 	// Initialize the task system
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger())
