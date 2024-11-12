@@ -613,7 +613,6 @@ func TestSuccessfulRequestsWithHttpTxPolicy(t *testing.T) {
 			},
 	}
 	testSuccessfulRequests(t, nTasks, httpTimeout, cPolicy)
-*/
 }
 
 func testSuccessfulRequests(t *testing.T, nTasks int, httpTimeout time.Duration, cPolicy ClientPolicy) {
