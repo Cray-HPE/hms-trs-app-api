@@ -135,10 +135,7 @@ func hasUserAgentHeader(r *http.Request) bool {
     }
 
     _,ok := r.Header["User-Agent"]
-    if (!ok) {
-        return false
-    }
-    return true
+	return ok
 }
 
 func hasTRSAlwaysRetryHeader(r *http.Request) bool {
@@ -147,10 +144,7 @@ func hasTRSAlwaysRetryHeader(r *http.Request) bool {
     }
 
     _,ok := r.Header["TRS-Fail-All-Retries"]
-    if (!ok) {
-        return false
-    }
-    return true
+    return ok
 }
 
 var handlerLogger *testing.T
@@ -158,7 +152,7 @@ var handlerLogger *testing.T
 var nRetries = 0
 func launchHandler(w http.ResponseWriter, req *http.Request) {
 	if nRetries > 0 || hasTRSAlwaysRetryHeader(req) {
-		handlerLogger.Logf("retryHandler 503 running...")
+		handlerLogger.Logf("launchHandler 503 running...")
 
 		if !hasTRSAlwaysRetryHeader(req) {
 			// Only update for tasks not retrying forever
