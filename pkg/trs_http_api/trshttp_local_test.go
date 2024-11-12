@@ -47,11 +47,11 @@ import (
 
 var svcName = "TestMe"
 
-const {
+const (
 	ERROR = iota
 	INFO
 	TRACE
-}
+)
 var logLevel = ERROR
 
 func TestSetGlobals(t *testing.T) {
