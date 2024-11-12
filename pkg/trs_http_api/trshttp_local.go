@@ -390,7 +390,6 @@ func (tloc *TRSHTTPLocal) Alive() (bool, error) {
 func (tloc *TRSHTTPLocal) Cancel(taskList *[]HttpTask) {
 	for _, v := range *taskList {
 		if (v.Ignore == false) {
-tloc.Logger.Tracef("Cancel() issuing for %s", v.id)
 			v.contextCancel()
 		}
 	}
@@ -429,7 +428,7 @@ func (tloc *TRSHTTPLocal) Cleanup() {
 	for k := range tloc.clientMap {
 		//cancel it first
 		if (tloc.clientMap[k].insecure != nil) {
-			//tloc.clientMap[k].insecure.HTTPClient.CloseIdleConnections()
+			tloc.clientMap[k].insecure.HTTPClient.CloseIdleConnections()
 		}
 		if (tloc.clientMap[k].secure != nil) {
 			tloc.clientMap[k].secure.HTTPClient.CloseIdleConnections()

@@ -27,6 +27,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/pem"
+	"flag"
 	"io"
 	"log"
 	"net"
@@ -46,11 +47,25 @@ import (
 
 var svcName = "TestMe"
 
-// Create a logger with default log level of Error that can be overridden
-// if debugging of a test is necessary.
-func createLogger(level ...logrus.Level) *logrus.Logger {
-	if len(level) == 0 {
-		level = append(level, logrus.ErrorLevel)
+const {
+	ERROR = iota
+	INFO
+	TRACE
+}
+var logLevel = ERROR
+
+func TestSetGlobals(t *testing.T) {
+	flag.IntVar(&logLevel, "logLevel", ERROR, "set log level (0=ERROR, 1=INFO, 2=DEBUG)")
+	flag.Parse()
+	t.Logf("logLevel set to %v", logLevel)
+}
+
+// Create a logger for trs_http_api (not unit tests)
+func createLogger() *logrus.Logger {
+	switch logLevel {
+	case ERROR:	level = []logrus.Level{logrus.ErrorLevel}
+	case INFO:	level = []logrus.Level{logrus.InfoLevel}
+	case DEBUG:	level = []logrus.Level{logrus.TraceLevel}
 	}
 
 	trsLogger := logrus.New()
@@ -65,7 +80,7 @@ func createLogger(level ...logrus.Level) *logrus.Logger {
 func TestInit(t *testing.T) {
 	tloc := &TRSHTTPLocal{}
 
-	tloc.Init(svcName, createLogger(logrus.TraceLevel))
+	tloc.Init(svcName, createLogger())
 	if (tloc.taskMap == nil) {
 		t.Errorf("Init() failed to create task map")
 	}
@@ -79,7 +94,7 @@ func TestInit(t *testing.T) {
 
 func TestCreateTaskList(t *testing.T) {
 	tloc := &TRSHTTPLocal{}
-	tloc.Init(svcName, createLogger(logrus.TraceLevel))
+	tloc.Init(svcName, createLogger())
 	req,_ := http.NewRequest("GET","http://www.example.com",nil)
 	tproto := HttpTask{Request: req,}
 	base.SetHTTPUserAgent(req,tloc.svcName)
@@ -216,7 +231,7 @@ func TestSecureLaunch(t *testing.T) {
 
 func testLaunch(t *testing.T, numTasks int, testSecureLaunch bool) {
 	tloc := &TRSHTTPLocal{}
-	tloc.Init(svcName, createLogger(logrus.TraceLevel))
+	tloc.Init(svcName, createLogger())
 
 	var srv *httptest.Server
 	if (testSecureLaunch == true) {
@@ -288,7 +303,7 @@ func testLaunch(t *testing.T, numTasks int, testSecureLaunch bool) {
 
 func TestLaunchTimeout(t *testing.T) {
 	tloc := &TRSHTTPLocal{}
-	tloc.Init(svcName, createLogger(logrus.TraceLevel))
+	tloc.Init(svcName, createLogger())
 	srv := httptest.NewServer(http.HandlerFunc(stallHandler))
 	defer srv.Close()
 
@@ -589,7 +604,7 @@ func testSuccessfulRequests(t *testing.T, httpTimeout time.Duration, cPolicy Cli
 
 	// Initialize the task system
 	tloc := &TRSHTTPLocal{}
-	tloc.Init(svcName, createLogger(logrus.TraceLevel))
+	tloc.Init(svcName, createLogger())
 
 	// Copy logger into global namespace for the http server handlers
 	handlerLogger = t
@@ -641,6 +656,7 @@ func testSuccessfulRequests(t *testing.T, httpTimeout time.Duration, cPolicy Cli
 	testOpenConnections(t, true, nTasks)
 
 	// Close the response bodies so connections stay open during ctx cancel
+	t.Logf("Closing response bodies")
 	for _, tsk := range(tList) {
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 			t.Logf("Response headers: %s", tsk.Request.Response.Header)
@@ -732,7 +748,7 @@ func testPCSUseCase(t *testing.T, httpTimeout time.Duration, cPolicy ClientPolic
 
 	// Initialize the task system
 	tloc := &TRSHTTPLocal{}
-	tloc.Init(svcName, createLogger(logrus.TraceLevel))
+	tloc.Init(svcName, createLogger())
 
 	// Copy logger into global namespace for the http servers
 	handlerLogger = t
