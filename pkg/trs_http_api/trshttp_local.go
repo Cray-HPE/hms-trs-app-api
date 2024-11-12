@@ -168,12 +168,12 @@ func configureClient(client *retryablehttp.Client, task *HttpTask, tloc *TRSHTTP
 
 	// Configure the client't http transport policy
 	if httpTxPolicy.Enabled {
-		tr.MaxIdleConns          = httpTxPolicy.MaxIdleConns          // default 2
-		tr.MaxIdleConnsPerHost   = httpTxPolicy.MaxIdleConnsPerHost   // default 100
-		tr.IdleConnTimeout       = httpTxPolicy.IdleConnTimeout       // default no timeout
-		tr.ResponseHeaderTimeout = httpTxPolicy.ResponseHeaderTimeout // default no timeout
-		tr.TLSHandshakeTimeout   = httpTxPolicy.TLSHandshakeTimeout   // default 10s
-		tr.DisableKeepAlives	 = httpTxPolicy.DisableKeepAlives     // default false
+		tr.MaxIdleConns          = httpTxPolicy.MaxIdleConns          // if 0 defaults to 2
+		tr.MaxIdleConnsPerHost   = httpTxPolicy.MaxIdleConnsPerHost   // if 0 defaults to 100
+		tr.IdleConnTimeout       = httpTxPolicy.IdleConnTimeout       // if 0 defaults to no timeout
+		tr.ResponseHeaderTimeout = httpTxPolicy.ResponseHeaderTimeout // if 0 defaults to no timeout
+		tr.TLSHandshakeTimeout   = httpTxPolicy.TLSHandshakeTimeout   // if 0 defaults to 10s
+		tr.DisableKeepAlives	 = httpTxPolicy.DisableKeepAlives     // if 0 defaults to false
 	}
 
 	// Log the configuration we're going to use. Clients are generally long

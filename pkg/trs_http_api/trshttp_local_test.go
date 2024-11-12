@@ -145,7 +145,7 @@ var handlerLogger *testing.T
 
 func launchHandler(w http.ResponseWriter, req *http.Request) {
 	// Wait for all connections to be established so output looks nice
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(250 * time.Millisecond)
 
 	handlerLogger.Logf("launchHandler running...")
 
@@ -171,7 +171,7 @@ func retryHandler(w http.ResponseWriter, req *http.Request) {
 		//retryNum++
 
 		// Wait for all connections to be established so output looks nice
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(250 * time.Millisecond)
 
 		handlerLogger.Logf("retryHandler running...")
 
@@ -186,7 +186,7 @@ func retryHandler(w http.ResponseWriter, req *http.Request) {
 		handlerLogger.Logf("retryHandler returning Message Service Unavailable...")
 	} else {
 		// Wait for all connections to be established so output looks nice
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(250 * time.Millisecond)
 
 		handlerLogger.Logf("launchHandler running...")
 
