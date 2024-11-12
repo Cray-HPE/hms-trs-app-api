@@ -48,18 +48,18 @@ import (
 
 var svcName = "TestMe"
 
-const (
-	ERROR = 3
-	INFO  = 2
-	TRACE = 1
-)
-var loglevel int
+var logLevel logrus.Level	// use this for more than logrus
 
 func TestMain(m *testing.M) {
-	flag.IntVar(&loglevel, "loglevel", INFO, "set log level (3=ERROR, 2=INFO, 1=TRACE)")
+	var logLevelInt int
+
+	flag.IntVar(&logLevelInt, "logLevel", int(logrus.InfoLevel),
+		"set log level (0=Panic, 1=Fatal, 2=Error 3=Warn, 4=Info, 5=Debug, 6=Trace)")
 	flag.Parse()
 
-	log.Printf("loglevel set to %v", loglevel)
+	logLevel = logrus.Level(logLevelInt)
+
+	log.Printf("logLevel set to %v", logLevel)
 
 	// Run the tests
 	code := m.Run()
@@ -70,18 +70,10 @@ func TestMain(m *testing.M) {
 
 // Create a logger for trs_http_api (not unit tests)
 func createLogger() *logrus.Logger {
-	var level []logrus.Level
-
-	switch loglevel {
-	case ERROR:	level = []logrus.Level{logrus.ErrorLevel}
-	case INFO:	level = []logrus.Level{logrus.InfoLevel}
-	case TRACE:	level = []logrus.Level{logrus.TraceLevel}
-	}
-
 	trsLogger := logrus.New()
 
 	trsLogger.SetFormatter(&logrus.TextFormatter{ FullTimestamp: true, })
-	trsLogger.SetLevel(level[0])
+	trsLogger.SetLevel(logrus.Level(logLevel))
 	trsLogger.SetReportCaller(true)
 
 	return trsLogger
@@ -443,12 +435,12 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 	if (len(debugOutput["clientEstab"]) != clientEstabExp) {
 		t.Errorf("Expected %v ESTABLISHED connections, but got %v",
 				 clientEstabExp, len(debugOutput["clientEstab"]))
-		if loglevel == TRACE {
+		if logLevel == logrus.TraceLevel {
 			t.Errorf("Full 'ss' output:\n%s", output)
 		}
 	}
 
-	if loglevel <= INFO {
+	if logLevel >= logrus.DebugLevel {
 		if len(debugOutput["header"]) > 0 {
 			t.Logf("")
 			for _,v := range(debugOutput["header"]) {
@@ -456,48 +448,62 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 			}
 			t.Logf("")
 		}
+	}
+	if logLevel >= logrus.InfoLevel {
 		if len(debugOutput["clientEstab"]) > 0 {
 			sort.Strings(debugOutput["clientEstab"])
 
 			t.Logf("Client ESTAB Connections: (%v)", len(debugOutput["clientEstab"]))
-			t.Logf("")
-			for _,v := range(debugOutput["clientEstab"]) {
-				t.Log(v)
+
+			if logLevel > logrus.InfoLevel {
+				t.Logf("")
+				for _,v := range(debugOutput["clientEstab"]) {
+					t.Log(v)
+				}
+				t.Logf("")
 			}
-			t.Logf("")
 		}
 		if len(debugOutput["clientOther"]) > 0 {
 			sort.Strings(debugOutput["clientOther"])
 
 			t.Logf("Client Other Connections: (%v)", len(debugOutput["clientOther"]))
-			t.Logf("")
-			for _,v := range(debugOutput["clientOther"]) {
-				t.Log(v)
+
+			if logLevel > logrus.InfoLevel {
+				t.Logf("")
+				for _,v := range(debugOutput["clientOther"]) {
+					t.Log(v)
+				}
+				t.Logf("")
 			}
-			t.Logf("")
 		}
 		if len(debugOutput["serverListen"]) > 0 {
 			sort.Strings(debugOutput["serverListen"])
 
 			t.Logf("Server LISTEN Connections: (%v)", len(debugOutput["serverListen"]))
-			t.Logf("")
-			for _,v := range(debugOutput["serverListen"]) {
-				t.Log(v)
+
+			if logLevel > logrus.InfoLevel {
+				t.Logf("")
+				for _,v := range(debugOutput["serverListen"]) {
+					t.Log(v)
+				}
+				t.Logf("")
 			}
-			t.Logf("")
 		}
 		if len(debugOutput["serverOther"]) > 0 {
 			sort.Strings(debugOutput["serverOther"])
 
 			t.Logf("Server Other Connections: (%v)", len(debugOutput["serverOther"]))
-			t.Logf("")
-			for _,v := range(debugOutput["serverOther"]) {
-				t.Log(v)
+
+			if logLevel > logrus.InfoLevel {
+				t.Logf("")
+				for _,v := range(debugOutput["serverOther"]) {
+					t.Log(v)
+				}
+				t.Logf("")
 			}
-			t.Logf("")
 		}
 	}
-	if loglevel == TRACE {
+	if logLevel == logrus.TraceLevel {
 		if len(debugOutput["ignoredConn"]) > 0 {
 			sort.Strings(debugOutput["ignoredConn"])
 
@@ -533,11 +539,11 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 
 // CustomConnState logs changes to connection states - Useful for debugging
 func CustomConnState(conn net.Conn, state http.ConnState) {
-	if loglevel == ERROR {
-		// Only logging critical errors so return
-		return
+	if logLevel >= logrus.InfoLevel {
+		log.Printf("HTTP_SERVER %v Connection -> %v\t%v",
+				   conn.LocalAddr(), state, conn.RemoteAddr())
 	}
-
+/*
 	switch state {
 	case http.StateNew:
 		log.Printf("HTTP_SERVER(%v): Connection -> NEW    %v (State %v)",
@@ -555,6 +561,7 @@ func CustomConnState(conn net.Conn, state http.ConnState) {
 		log.Printf("HTTP_SERVER(%v): Connection -> ?      %v (State %v)",
 				   conn.LocalAddr(), conn.RemoteAddr(), state)
 	}
+*/
 }
 
 // CustomReadCloser wraps an io.ReadCloser and tracks if it was closed.
@@ -723,7 +730,7 @@ func testConns(t *testing.T, a testConnsArg) {
 			tsk.Request.Response.Body.Close()
 			tsk.Request.Response.Body = nil
 
-			if loglevel == TRACE {
+			if logLevel == logrus.TraceLevel {
 				// Response headers can be  helpful for debug
 				t.Logf("Response headers: %s", tsk.Request.Response.Header)
 			}
