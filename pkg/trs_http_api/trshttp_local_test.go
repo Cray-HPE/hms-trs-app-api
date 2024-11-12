@@ -56,7 +56,7 @@ const (
 var logLevel int
 
 func TestMain(m *testing.M) {
-	flag.IntVar(&logLevel, "loglevel", INFO, "set log level (0=ERROR, 1=INFO, 2=DEBUG)")
+	flag.IntVar(&logLevel, "loglevel", INFO, "set log level (3=ERROR, 2=INFO, 1=TRACE)")
 	flag.Parse()
 
 	log.Printf("logLevel set to %v", logLevel)
