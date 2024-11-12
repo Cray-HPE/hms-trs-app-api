@@ -62,10 +62,12 @@ func TestSetGlobals(t *testing.T) {
 
 // Create a logger for trs_http_api (not unit tests)
 func createLogger() *logrus.Logger {
+	var level []logrus.Level
+
 	switch logLevel {
 	case ERROR:	level = []logrus.Level{logrus.ErrorLevel}
 	case INFO:	level = []logrus.Level{logrus.InfoLevel}
-	case DEBUG:	level = []logrus.Level{logrus.TraceLevel}
+	case TRACE:	level = []logrus.Level{logrus.TraceLevel}
 	}
 
 	trsLogger := logrus.New()
