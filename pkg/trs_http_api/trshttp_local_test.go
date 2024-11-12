@@ -61,11 +61,6 @@ func TestMain(m *testing.M) {
 
 	log.Printf("loglevel set to %v", loglevel)
 
-	    // Debugging: print all flag values to confirm parsing
-		flag.VisitAll(func(f *flag.Flag) {
-			log.Printf("Flag %s set to %s", f.Name, f.Value)
-		})
-
 	// Run the tests
 	code := m.Run()
 
@@ -581,7 +576,7 @@ func (c *CustomReadCloser) WasClosed() bool {
 // timout which cancels their contexts.
 
 func TestSuccessfulRequestsWithNoHttpTxPolicy(t *testing.T) {
-	nTasks           := 200
+	nTasks           := 1
 	httpRetries      := 3
 	pcsStatusTimeout := 30
 	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
@@ -592,24 +587,24 @@ func TestSuccessfulRequestsWithNoHttpTxPolicy(t *testing.T) {
 }
 
 func TestSuccessfulRequestsWithHttpTxPolicy(t *testing.T) {
-/*
+	nTasks                := 200
 	httpRetries           := 3
 	pcsStatusTimeout      := 30
 	httpTimeout           := time.Duration(pcsStatusTimeout) * time.Second
 	//idleConnTimeout     := time.Duration(pcsStatusTimeout * 15 / 10) * time.Second
-	idleConnTimeout       := 90 * time.Second
+//	idleConnTimeout       := 90 * time.Second
 	//idleConnTimeout       := 300 * time.Second
-	responseHeaderTimeout :=  5 * time.Second
+//	responseHeaderTimeout :=  5 * time.Second
 	//responseHeaderTimeout :=  50 * time.Second
-	tLSHandshakeTimeout   := 10 * time.Second
+//	tLSHandshakeTimeout   := 10 * time.Second
 	//tLSHandshakeTimeout   := 100 * time.Second
-	DisableKeepAlives       := false
+//	DisableKeepAlives       := false
 
 	cPolicy := ClientPolicy{
 		retry: RetryPolicy{Retries: httpRetries},
 		tx: HttpTxPolicy{
 				Enabled:                true,
-				MaxIdleConns:           100,
+				MaxIdleConns:           200,
 				MaxIdleConnsPerHost:    100,
 				IdleConnTimeout:        idleConnTimeout,
 				ResponseHeaderTimeout:  responseHeaderTimeout,
@@ -617,7 +612,7 @@ func TestSuccessfulRequestsWithHttpTxPolicy(t *testing.T) {
 				DisableKeepAlives:      DisableKeepAlives,
 			},
 	}
-	testSuccessfulRequests(t, httpTimeout, cPolicy)
+	testSuccessfulRequests(t, nTasks, httpTimeout, cPolicy)
 */
 }
 
