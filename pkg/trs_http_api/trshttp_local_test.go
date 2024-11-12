@@ -144,9 +144,6 @@ func hasUserAgentHeader(r *http.Request) bool {
 var handlerLogger *testing.T
 
 func launchHandler(w http.ResponseWriter, req *http.Request) {
-	// Wait for all connections to be established so output looks nice
-	time.Sleep(250 * time.Millisecond)
-
 	handlerLogger.Logf("launchHandler running...")
 
 	time.Sleep(1 * time.Second) // Simulate network and BMC delay
@@ -167,13 +164,11 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 
 var retryNum = 0
 func retryHandler(w http.ResponseWriter, req *http.Request) {
+
 	if retryNum == 0 {
+		handlerLogger.Logf("retryHandler 503 running...")
+
 		//retryNum++
-
-		// Wait for all connections to be established so output looks nice
-		time.Sleep(250 * time.Millisecond)
-
-		handlerLogger.Logf("retryHandler running...")
 
 		time.Sleep(1 * time.Second) // Simulate network and BMC delay
 
@@ -185,10 +180,7 @@ func retryHandler(w http.ResponseWriter, req *http.Request) {
 
 		handlerLogger.Logf("retryHandler returning Message Service Unavailable...")
 	} else {
-		// Wait for all connections to be established so output looks nice
-		time.Sleep(250 * time.Millisecond)
-
-		handlerLogger.Logf("launchHandler running...")
+		handlerLogger.Logf("retryHandler 200 running...")
 
 		time.Sleep(1 * time.Second) // Simulate network and BMC delay
 
@@ -608,7 +600,7 @@ func TestSuccessfulRequestsWithNoHttpTxPolicy(t *testing.T) {
 		srvHandler:  launchHandler,	// always returns success
 	}
 
-	testConns(t, arg)
+	testConns(t, arg, 2)	// 2 ESTAB connections by default
 }
 
 func TestSuccessfulRequestsWithHttpTxPolicy(t *testing.T) {
@@ -652,15 +644,15 @@ func TestSuccessfulRequestsWithHttpTxPolicy(t *testing.T) {
 
 	// Set up the arguments for the test
 	arg := testConnsArg{
-		nTasks:      2,
+		nTasks:      200,
 		tListProto:  tListProto,
 		srvHandler:  launchHandler,	// always returns success
 	}
 
-	testConns(t, arg)
+	testConns(t, arg, 100)
 }
 
-func testConns(t *testing.T, a testConnsArg) {
+func testConns(t *testing.T, a testConnsArg, expEstabAfterBodyClose int) {
 	// Initialize the task system
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger())
@@ -729,18 +721,19 @@ func testConns(t *testing.T, a testConnsArg) {
 		}
 	}
 
-	// Closing the body should not alter ESTAB(LISHED) connections
+	// Closing the body affects the number of ESTAB(LISHED) connections
+	// based on the Transport configuration
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after response bodies closed")
-	testOpenConnections(t, a.nTasks)
+	testOpenConnections(t, expEstabAfterBodyClose)
 
 	// Now cancel the task list
 	tloc.Cancel(&tList)
 
-	// Cancelling the task list should not alter ESTAB(LISHED) connections
+	// Cancelling the task list should not alter existing ESTAB(LISHED) connections
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after task list cancelled")
-	testOpenConnections(t, a.nTasks)
+	testOpenConnections(t, expEstabAfterBodyClose)
 
 	t.Logf("Closing the task list")
 	tloc.Close(&tList)
@@ -750,10 +743,10 @@ func testConns(t *testing.T, a testConnsArg) {
 		t.Errorf("Expected task list map to be empty")
 	}
 
-	// Closing the task list should not alter ESTAB(LISHED) connections
+	// Closing the task list should not alter existing ESTAB(LISHED) connections
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after task list closed")
-	testOpenConnections(t, a.nTasks)
+	testOpenConnections(t, expEstabAfterBodyClose)
 
 	t.Logf("Cleaning up task system")
 	tloc.Cleanup()
