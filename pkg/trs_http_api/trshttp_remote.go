@@ -291,6 +291,20 @@ func (tloc *TRSHTTPRemote) Close(taskList *[]HttpTask) {
 	}
 }
 
+// Optimization for callers that want to cancel and close in one call.
+// This reduces need to iterate through entire task list twice.
+//
+// taskList:  Ptr to a recently launched task list.
+
+func (tloc *TRSHTTPRemote) CancelAndClose(taskList *[]HttpTask) {
+	for _, v := range *taskList {
+		tloc.taskMutex.Lock()
+		delete(tloc.taskMap, v.id)
+		tloc.taskMutex.Unlock()
+		//TODO Mk3 -> send a messaage via Kafka to CANCEL a running task
+	}
+}
+
 // Clean up a Remote HTTP task system.
 func (tloc *TRSHTTPRemote) Cleanup() {
 	//statement order is important! NO CHANGE

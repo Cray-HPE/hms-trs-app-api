@@ -178,6 +178,7 @@ func retryHandler(w http.ResponseWriter, req *http.Request) {
 		time.Sleep(1 * time.Second) // Simulate network and BMC delay
 
 		w.Header().Set("Content-Type","application/json")
+//	w.Header().Set("Connection","keep-alive")
 		w.Header().Set("Retry-After","1")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(`{"Message":"Service Unavailable"}`))
@@ -193,6 +194,7 @@ func retryHandler(w http.ResponseWriter, req *http.Request) {
 
 		if (!hasUserAgentHeader(req)) {
 			w.Write([]byte(`{"Message":"No User-Agent Header"}`))
+//	w.Header().Set("Connection","keep-alive")
 			w.WriteHeader(http.StatusInternalServerError)
 			handlerLogger.Logf("launchHandler returning no User-Agent header...")
 			return
@@ -216,6 +218,7 @@ func stallHandler(w http.ResponseWriter, req *http.Request) {
 	<-stallCancel
 
 	w.Header().Set("Content-Type","application/json")
+//	w.Header().Set("Connection","keep-alive")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"Message":"OK"}`))
 
@@ -230,6 +233,9 @@ func TestLaunch(t *testing.T) {
 func TestSecureLaunch(t *testing.T) {
 	// TODO:  THIS NEEDS TO BE FIXED:
 	//			http: TLS handshake error from 127.0.0.1:54184: remote error: tls: bad certificate
+	//		TRS wasn't configuring secure client at this point so probably retried
+	//		with insecure client but logging wasn't set to warn. Try again making sure I
+	// 		see the above message + trying insecure backup
 	testLaunch(t, 1, true)
 }
 
@@ -543,25 +549,6 @@ func CustomConnState(conn net.Conn, state http.ConnState) {
 		log.Printf("HTTP_SERVER %v Connection -> %v\t%v",
 				   conn.LocalAddr(), state, conn.RemoteAddr())
 	}
-/*
-	switch state {
-	case http.StateNew:
-		log.Printf("HTTP_SERVER(%v): Connection -> NEW    %v (State %v)",
-				   conn.LocalAddr(), conn.RemoteAddr(), state)
-	case http.StateActive:
-		log.Printf("HTTP_SERVER(%v): Connection -> ACTIVE %v (State %v)",
-				   conn.LocalAddr(), conn.RemoteAddr(), state)
-	case http.StateIdle:
-		log.Printf("HTTP_SERVER(%v): Connection -> IDLE   %v (State %v)",
-				   conn.LocalAddr(), conn.RemoteAddr(), state)
-	case http.StateClosed:
-		log.Printf("HTTP_SERVER(%v): Connection -> CLOSED %v (State %v)",
-				   conn.LocalAddr(), conn.RemoteAddr(), state)
-	default:
-		log.Printf("HTTP_SERVER(%v): Connection -> ?      %v (State %v)",
-				   conn.LocalAddr(), conn.RemoteAddr(), state)
-	}
-*/
 }
 
 // CustomReadCloser wraps an io.ReadCloser and tracks if it was closed.

@@ -62,6 +62,7 @@ type TrsAPI interface {
 	Check(taskList *[]HttpTask) (running bool, err error)
 	Cancel(taskList *[]HttpTask)
 	Close(taskList *[]HttpTask)
+	CancelAndClose(taskList *[]HttpTask)
 	Alive() (ok bool, err error)
 	Cleanup()
 }
@@ -77,7 +78,6 @@ type TRSHTTPLocalSecurity struct {
 type clientPack struct {
 	secure *retryablehttp.Client
 	insecure *retryablehttp.Client
-	//insecure *http.Client
 }
 
 type TRSHTTPLocal struct {
