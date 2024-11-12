@@ -603,7 +603,7 @@ func TestSuccessfulRequestsWithNoHttpTxPolicy(t *testing.T) {
 
 	// Set up the arguments for the test
 	arg := testConnsArg{
-		nTasks:      1,
+		nTasks:      10,
 		tListProto:  tListProto,
 		srvHandler:  launchHandler,	// always returns success
 	}
