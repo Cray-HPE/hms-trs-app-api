@@ -501,6 +501,27 @@ func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
 	}
 }
 
+// CustomConnState logs changes to connection states - Useful for debugging
+func CustomConnState(conn net.Conn, state http.ConnState) {
+	switch state {
+	case http.StateNew:
+		log.Printf("HTTP_SERVER(%v): Connection -> NEW    %v (State %v)",
+				   conn.LocalAddr(), conn.RemoteAddr(), state)
+	case http.StateActive:
+		log.Printf("HTTP_SERVER(%v): Connection -> ACTIVE %v (State %v)",
+				   conn.LocalAddr(), conn.RemoteAddr(), state)
+	case http.StateIdle:
+		log.Printf("HTTP_SERVER(%v): Connection -> IDLE   %v (State %v)",
+				   conn.LocalAddr(), conn.RemoteAddr(), state)
+	case http.StateClosed:
+		log.Printf("HTTP_SERVER(%v): Connection -> CLOSED %v (State %v)",
+				   conn.LocalAddr(), conn.RemoteAddr(), state)
+	default:
+		log.Printf("HTTP_SERVER(%v): Connection -> ?      %v (State %v)",
+				   conn.LocalAddr(), conn.RemoteAddr(), state)
+	}
+}
+
 // CustomReadCloser wraps an io.ReadCloser and tracks if it was closed.
 // This is used to test if response bodies are being closed properly.
 type CustomReadCloser struct {
@@ -577,25 +598,7 @@ func testSuccessfulRequests(t *testing.T, httpTimeout time.Duration, cPolicy Cli
 	srv := httptest.NewServer(http.HandlerFunc(launchHandler))
 
 	// Configure server to log changes to connection states
-	srv.Config.ConnState = func(conn net.Conn, state http.ConnState) {
-		switch state {
-		case http.StateNew:
-			log.Printf("HTTP_SERVER(%v): Connection -> NEW    %v (State %v)",
-					   conn.LocalAddr(), conn.RemoteAddr(), state)
-		case http.StateActive:
-			log.Printf("HTTP_SERVER(%v): Connection -> ACTIVE %v (State %v)",
-					   conn.LocalAddr(), conn.RemoteAddr())
-		case http.StateIdle:
-			log.Printf("HTTP_SERVER(%v): Connection -> IDLE   %v (State %v)",
-					   conn.LocalAddr(), conn.RemoteAddr())
-		case http.StateClosed:
-			log.Printf("HTTP_SERVER(%v): Connection -> CLOSED %v (State %v)",
-					   conn.LocalAddr(), conn.RemoteAddr(), state)
-		default:
-			log.Printf("HTTP_SERVER(%v): Connection -> ?      %v (State %v)",
-					   conn.LocalAddr(), conn.RemoteAddr(), state)
-		}
-    }
+	srv.Config.ConnState = CustomConnState
 
 	// Create an http request
 
@@ -605,13 +608,13 @@ func testSuccessfulRequests(t *testing.T, httpTimeout time.Duration, cPolicy Cli
     }
 	req.Header.Set("Accept", "*/*")
 
-	proto := HttpTask{
+	tListProto := HttpTask{
 			Request: req,
 			Timeout: httpTimeout,
 			CPolicy: cPolicy, }
 
 	t.Logf("Creating task list with %v tasks and URL %v", nTasks, srv.URL)
-	tList := tloc.CreateTaskList(&proto, nTasks)
+	tList := tloc.CreateTaskList(&tListProto, nTasks)
 
 	t.Logf("Launching all tasks")
 	taskListChannel, err := tloc.Launch(&tList)
