@@ -148,7 +148,7 @@ func hasTRSAlwaysRetryHeader(r *http.Request) bool {
 		handlerLogger.Logf("Received header %v", r.Header)
 	}
 
-	_,ok := r.Header["TRS-Fail-All-Retries"]
+	_,ok := r.Header["Trs-Fail-All-Retries"]
 	return ok
 }
 
@@ -703,7 +703,7 @@ func testConns(t *testing.T, a testConnsArg) {
 	nRetries = a.nSuccessRetries
 	for i := 0; i < a.nFailRetries; i++ {
 		// Just choose the ones at the beginning
-		tList[i].Request.Header.Set("TRS-Fail-All-Retries", "true")
+		tList[i].Request.Header.Set("Trs-Fail-All-Retries", "true")
 
 		if (logLevel == logrus.TraceLevel) {
 			t.Errorf("Set request header %v for task %v",
