@@ -227,19 +227,20 @@ func stallHandler(w http.ResponseWriter, req *http.Request) {
 
 
 func TestLaunch(t *testing.T) {
-	testLaunch(t, 5, false)
+	testLaunch(t, 5, false, false)
 }
 
 func TestSecureLaunch(t *testing.T) {
-	// TODO:  THIS NEEDS TO BE FIXED:
-	//			http: TLS handshake error from 127.0.0.1:54184: remote error: tls: bad certificate
-	//		TRS wasn't configuring secure client at this point so probably retried
-	//		with insecure client but logging wasn't set to warn. Try again making sure I
-	// 		see the above message + trying insecure backup
-	testLaunch(t, 1, true)
+	testLaunch(t, 1, true, false)
 }
 
-func testLaunch(t *testing.T, numTasks int, testSecureLaunch bool) {
+func TestSecureLaunchBadCert(t *testing.T) {
+	// Despite cert being bad, TRS should retry using the insecure
+	// client and succeed
+	testLaunch(t, 1, true, true)
+}
+
+func testLaunch(t *testing.T, numTasks int, testSecureLaunch bool, useBadCert bool) {
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger())
 
@@ -247,10 +248,14 @@ func testLaunch(t *testing.T, numTasks int, testSecureLaunch bool) {
 	if (testSecureLaunch == true) {
 		srv = httptest.NewTLSServer(http.HandlerFunc(launchHandler))
 
-		secInfo := TRSHTTPLocalSecurity{CACertBundleData:
+		secInfo := TRSHTTPLocalSecurity{CACertBundleData: string("BAD CERT")}
+
+		if (useBadCert != true) {
+			secInfo = TRSHTTPLocalSecurity{CACertBundleData:
 				string(pem.EncodeToMemory(
 					&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw},
 				)),}
+		}
 
 		err := tloc.SetSecurity(secInfo)
 		if err != nil {
