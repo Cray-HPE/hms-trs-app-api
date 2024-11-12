@@ -576,6 +576,7 @@ func (c *CustomReadCloser) WasClosed() bool {
 // timout which cancels their contexts.
 
 func TestSuccessfulRequestsWithNoHttpTxPolicy(t *testing.T) {
+	nTasks           := 200
 	httpRetries      := 3
 	pcsStatusTimeout := 30
 	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
