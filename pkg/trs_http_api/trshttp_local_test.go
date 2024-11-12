@@ -584,6 +584,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
 
 	// Default prototype to initialize each task in the task list with
+	// Can customize prior to each test
 	defaultTListProto := &HttpTask{
 		Timeout: httpTimeout,
 		CPolicy: ClientPolicy {
@@ -600,7 +601,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 		srvHandler:             launchHandler,	// always returns success
 	}
 
-	testConns(t, arg, 2)	// 2 ESTAB connections by default
+	testConns(t, arg)
 }
 
 func TestConnsWithHttpTxPolicy(t *testing.T) {
@@ -623,6 +624,7 @@ func TestConnsWithHttpTxPolicy(t *testing.T) {
 		(pcsStatusTimeout + pcsTimeToNextStatusPoll) * 15 / 10) * time.Second
 
 	// Default prototype to initialize each task in the task list with
+	// Can customize prior to each test
 	defaultTListProto := &HttpTask{
 		Timeout: httpTimeout,
 		CPolicy: ClientPolicy {
