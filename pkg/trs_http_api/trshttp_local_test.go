@@ -48,9 +48,9 @@ import (
 var svcName = "TestMe"
 
 const (
-	ERROR = iota
-	INFO
-	TRACE
+	ERROR = 3
+	INFO  = 2
+	TRACE = 1
 )
 var logLevel = ERROR
 
@@ -358,9 +358,7 @@ func TestLaunchTimeout(t *testing.T) {
 }
 
 // Test connection states using 'ss' utility
-func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
-	//pid := os.Getpid()
-	//cmd := exec.Command( "lsof", "-i", "-a", "-p", fmt.Sprint(pid))
+func testOpenConnections(t *testing.T, clientEstabExp int) {
 	cmd := exec.Command( "ss", "--tcp", "--resolve", "--processes", "--all")
 
 	output, err := cmd.CombinedOutput()
@@ -437,7 +435,7 @@ func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
 				 clientEstabExp, len(debugOutput["clientEstab"]), output)
 	}
 
-	if debug {
+	if logLevel <= INFO {
 		if len(debugOutput["header"]) > 0 {
 			t.Logf("")
 			for _,v := range(debugOutput["header"]) {
@@ -485,6 +483,8 @@ func testOpenConnections(t *testing.T, debug bool, clientEstabExp int) {
 			}
 			t.Logf("")
 		}
+	}
+	if logLevel <= TRACE {
 		if len(debugOutput["ignoredConn"]) > 0 {
 			sort.Strings(debugOutput["ignoredConn"])
 
@@ -642,7 +642,7 @@ func testSuccessfulRequests(t *testing.T, httpTimeout time.Duration, cPolicy Cli
 	// All connections should be in ESTAB(LISHED)
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after Launch")
-	testOpenConnections(t, true, (nTasks))
+	testOpenConnections(t, (nTasks))
 
 	t.Logf("Waiting for tasks to complete")
 	for i := 0; i < (nTasks); i++ {
@@ -655,13 +655,12 @@ func testSuccessfulRequests(t *testing.T, httpTimeout time.Duration, cPolicy Cli
 	// All connections should still be in ESTAB(LISHED)
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after tasks complete")
-	testOpenConnections(t, true, nTasks)
+	testOpenConnections(t, nTasks)
 
 	// Close the response bodies so connections stay open during ctx cancel
 	t.Logf("Closing response bodies")
 	for _, tsk := range(tList) {
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
-			t.Logf("Response headers: %s", tsk.Request.Response.Header)
 			// Must fully read the body in order to close the body so that
 			// the underlying libraries/modules don't close the connection.
 			// If body not fully conusmed they assume the connection had issues
@@ -669,13 +668,18 @@ func testSuccessfulRequests(t *testing.T, httpTimeout time.Duration, cPolicy Cli
 
 			tsk.Request.Response.Body.Close()
 			tsk.Request.Response.Body = nil
+
+			// Response headers can be  helpful for debug
+			if logLevel <= TRACE {
+				t.Logf("Response headers: %s", tsk.Request.Response.Header)
+			}
 		}
 	}
 
 	// Closing the body should not alter ESTAB(LISHED) connections
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after response bodies closed")
-	testOpenConnections(t, true, nTasks)
+	testOpenConnections(t, nTasks)
 
 	// Now cancel the task list
 	tloc.Cancel(&tList)
@@ -683,7 +687,7 @@ func testSuccessfulRequests(t *testing.T, httpTimeout time.Duration, cPolicy Cli
 	// Cancelling the task list should not alter ESTAB(LISHED) connections
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after task list cancelled")
-	testOpenConnections(t, true, nTasks)
+	testOpenConnections(t, nTasks)
 
 	t.Logf("Closing the task list")
 	tloc.Close(&tList)
@@ -696,7 +700,7 @@ func testSuccessfulRequests(t *testing.T, httpTimeout time.Duration, cPolicy Cli
 	// Closing the task list should not alter ESTAB(LISHED) connections
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after task list closed")
-	testOpenConnections(t, true, nTasks)
+	testOpenConnections(t, nTasks)
 
 	t.Logf("Cleaning up task system")
 	tloc.Cleanup()
@@ -704,7 +708,7 @@ func testSuccessfulRequests(t *testing.T, httpTimeout time.Duration, cPolicy Cli
 	// Cleaking up the task list system should close all connections
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after task list cleaned up")
-	testOpenConnections(t, true, 0)
+	testOpenConnections(t, 0)
 
 	t.Logf("Closing the server")
 	srv.Close()
@@ -881,7 +885,7 @@ tList := append(successList, retryList...)
 
 	// All connections should be in ESTABLISHED
 	t.Logf("Testing open connections after Launch")
-	testOpenConnections(t, true, (numSuccessTasks + numRetryTasks + numStallTasks))
+	testOpenConnections(t, (numSuccessTasks + numRetryTasks + numStallTasks))
 
 	t.Logf("Waiting for normally completing tasks to complete")
 	for i := 0; i < (numSuccessTasks + numRetryTasks); i++ {
@@ -891,7 +895,7 @@ tList := append(successList, retryList...)
 	// The only remaining connections should be for the stalled tasks
 	// which should still be in ESTABLISHED
 	t.Logf("Testing open connections after normally completing tasks completed")
-	testOpenConnections(t, true, numStallTasks)
+	testOpenConnections(t, numStallTasks)
 
 /*
 	t.Logf("Waiting for stalled tasks to time out")
@@ -919,13 +923,13 @@ for _, tsk := range(tList) {
 		time.Sleep(200 * time.Millisecond)
 		t.Logf("")
 		t.Logf("testing connections after close")
-		testOpenConnections(t, true, 0)
+		testOpenConnections(t, 0)
 	}
 }
 tloc.Cancel(&tList)
 	// All connections should now be closed
 	t.Logf("Testing open connections after stalled tasks completed")
-	testOpenConnections(t, true, 0)
+	testOpenConnections(t, 0)
 
 	t.Logf("Closing the task list channel")
 	close(taskListChannel)
