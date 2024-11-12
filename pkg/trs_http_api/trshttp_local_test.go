@@ -53,13 +53,13 @@ const (
 	INFO  = 2
 	TRACE = 1
 )
-var logLevel int
+var loglevel int
 
 func TestMain(m *testing.M) {
-	flag.IntVar(&logLevel, "loglevel", INFO, "set log level (3=ERROR, 2=INFO, 1=TRACE)")
+	flag.IntVar(&loglevel, "loglevel", INFO, "set log level (3=ERROR, 2=INFO, 1=TRACE)")
 	flag.Parse()
 
-	log.Printf("logLevel set to %v", logLevel)
+	log.Printf("loglevel set to %v", loglevel)
 
 	    // Debugging: print all flag values to confirm parsing
 		flag.VisitAll(func(f *flag.Flag) {
@@ -77,7 +77,7 @@ func TestMain(m *testing.M) {
 func createLogger() *logrus.Logger {
 	var level []logrus.Level
 
-	switch logLevel {
+	switch loglevel {
 	case ERROR:	level = []logrus.Level{logrus.ErrorLevel}
 	case INFO:	level = []logrus.Level{logrus.InfoLevel}
 	case TRACE:	level = []logrus.Level{logrus.TraceLevel}
@@ -450,7 +450,7 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 				 clientEstabExp, len(debugOutput["clientEstab"]), output)
 	}
 
-	if logLevel <= INFO {
+	if loglevel <= INFO {
 		if len(debugOutput["header"]) > 0 {
 			t.Logf("")
 			for _,v := range(debugOutput["header"]) {
@@ -499,7 +499,7 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 			t.Logf("")
 		}
 	}
-	if logLevel <= TRACE {
+	if loglevel <= TRACE {
 		if len(debugOutput["ignoredConn"]) > 0 {
 			sort.Strings(debugOutput["ignoredConn"])
 
@@ -535,7 +535,7 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 
 // CustomConnState logs changes to connection states - Useful for debugging
 func CustomConnState(conn net.Conn, state http.ConnState) {
-	if logLevel >= ERROR {
+	if loglevel >= ERROR {
 		return
 	}
 
@@ -690,7 +690,7 @@ func testSuccessfulRequests(t *testing.T, httpTimeout time.Duration, cPolicy Cli
 			tsk.Request.Response.Body = nil
 
 			// Response headers can be  helpful for debug
-			if logLevel <= TRACE {
+			if loglevel <= TRACE {
 				t.Logf("Response headers: %s", tsk.Request.Response.Header)
 			}
 		}
