@@ -236,6 +236,8 @@ func TestLaunch(t *testing.T) {
 }
 
 func TestSecureLaunch(t *testing.T) {
+	// TODO:  THIS NEEDS TO BE FIXED:
+	//			http: TLS handshake error from 127.0.0.1:54184: remote error: tls: bad certificate
 	testLaunch(t, 1, true)
 }
 
