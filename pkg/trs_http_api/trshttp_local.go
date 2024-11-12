@@ -180,16 +180,16 @@ func configureClient(client *retryablehttp.Client, task *HttpTask, tloc *TRSHTTP
 	// lived so this shouldn't be too spammy. Knowing this information can
 	// be pretty critical when debugging issues on site
 	tloc.Logger.Tracef("Created %s client with incoming policy %v", clientType, task.CPolicy)
-	tloc.Logger.Tracef("\tRetryMax:                                   %d\n", client.RetryMax)
-	tloc.Logger.Tracef("\tRetryWaitMax:                               %s\n", client.RetryWaitMax)
-	tloc.Logger.Tracef("\tHTTPClient.Timeout:                         %s\n", client.HTTPClient.Timeout)
-	tloc.Logger.Tracef("\tHTTPClient.Transport.MaxIdleConns:          %d\n", tr.MaxIdleConns)
-	tloc.Logger.Tracef("\tHTTPClient.Transport.MaxIdleConnsPerHost:   %d\n", tr.MaxIdleConnsPerHost)
-	tloc.Logger.Tracef("\tHTTPClient.Transport.IdleConnTimeout:       %s\n", tr.IdleConnTimeout)
-	tloc.Logger.Tracef("\tHTTPClient.Transport.ResponseHeaderTimeout: %s\n", tr.ResponseHeaderTimeout)
-	tloc.Logger.Tracef("\tHTTPClient.Transport.TLSHandshakeTimeout:   %s\n", tr.TLSHandshakeTimeout)
-	tloc.Logger.Tracef("\tHTTPClient.Transport.DisableKeepAlives:     %v\n", tr.DisableKeepAlives)
-	tloc.Logger.Tracef("\tGo runtime version:                         %s\n", runtime.Version())
+	tloc.Logger.Tracef("    RetryMax:                                   %d", client.RetryMax)
+	tloc.Logger.Tracef("    RetryWaitMax:                               %s", client.RetryWaitMax)
+	tloc.Logger.Tracef("    HTTPClient.Timeout:                         %s", client.HTTPClient.Timeout)
+	tloc.Logger.Tracef("    HTTPClient.Transport.MaxIdleConns:          %d", tr.MaxIdleConns)
+	tloc.Logger.Tracef("    HTTPClient.Transport.MaxIdleConnsPerHost:   %d", tr.MaxIdleConnsPerHost)
+	tloc.Logger.Tracef("    HTTPClient.Transport.IdleConnTimeout:       %s", tr.IdleConnTimeout)
+	tloc.Logger.Tracef("    HTTPClient.Transport.ResponseHeaderTimeout: %s", tr.ResponseHeaderTimeout)
+	tloc.Logger.Tracef("    HTTPClient.Transport.TLSHandshakeTimeout:   %s", tr.TLSHandshakeTimeout)
+	tloc.Logger.Tracef("    HTTPClient.Transport.DisableKeepAlives:     %v", tr.DisableKeepAlives)
+	tloc.Logger.Tracef("    Go runtime version:                         %s", runtime.Version())
 
 	// Write through to the client
 	client.HTTPClient.Transport = tr
@@ -256,7 +256,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 
 		//If the error is a TLS error, fall back to insecure and log it.
 		if (tmpError != nil) {
-			tloc.Logger.Warnf("TLS request failed, retrying without validation: %v", tmpError)
+			tloc.Logger.Warnf("TLS request failed, retrying using INSECURE client (TLS failure: '%v')", tmpError)
 			tct.task.Request.Response, tmpError = cpack.insecure.Do(req)
 		}
 	}

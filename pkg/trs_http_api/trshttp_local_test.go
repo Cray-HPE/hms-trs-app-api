@@ -746,28 +746,25 @@ func testConns(t *testing.T, a testConnsArg, expEstabAfterBodyClose int) {
 	t.Logf("Testing connections after response bodies closed")
 	testOpenConnections(t, expEstabAfterBodyClose + nSkipCloseBody)
 
-t.Logf("Checking for closed response bodies")
-for _, tsk := range(tList) {
-	if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
-		if !tsk.Request.Response.Body.(*CustomReadCloser).WasClosed() {
-			t.Errorf("Expected response body for %v to be closed, but it was not", tsk.GetID())
-		}
-	}
-}
-	// Now cancel the task list
+	// tloc.Cancel() cancels the contexts for all of the tasks in the task list
 	t.Logf("Calling tloc.Cancel() to cancel all tasks")
 	tloc.Cancel(&tList)
 
 	// Cancelling the task list should not alter existing ESTAB(LISHED)
 	// connections except for connections where a response body was not
-	// previously closed.  The lower level libraries assume there's an
-	// issue with the connection if the body is not closed.
+	// previously closed.  The lower level libraries assume this means
+	// that there's a problem with the connection if the body was not closed.
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after task list cancelled")
 	testOpenConnections(t, expEstabAfterBodyClose)
 
-	// Since we never closed all of the response bodies lets test that
-	// tloc.Cancel() did it for us
+	// tloc.Close() closes any reponse bodies left open and removes all
+	// of the tasks from the task list
+	t.Logf("Calling tloc.Close() to close out the task list")
+	tloc.Close(&tList)
+
+	// Verify that tloc.Close() did indeed close the response bodies that
+	// we left open to test it
 	t.Logf("Checking for closed response bodies")
 	for _, tsk := range(tList) {
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
@@ -776,9 +773,6 @@ for _, tsk := range(tList) {
 			}
 		}
 	}
-
-	t.Logf("Calling tloc.Close() to close out the task list")
-	tloc.Close(&tList)
 
 	t.Logf("Checking that the task list was closed")
 	if (len(tloc.taskMap) != 0) {
