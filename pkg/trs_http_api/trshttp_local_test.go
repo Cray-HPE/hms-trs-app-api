@@ -49,14 +49,14 @@ import (
 var svcName = "TestMe"
 
 const (
-	TRACE = 1
-	INFO  = 2
 	ERROR = 3
+	INFO  = 2
+	TRACE = 1
 )
 var logLevel int
 
 func TestMain(m *testing.M) {
-	flag.IntVar(&logLevel, "loglevel", ERROR, "set log level (0=ERROR, 1=INFO, 2=DEBUG)")
+	flag.IntVar(&logLevel, "loglevel", INFO, "set log level (0=ERROR, 1=INFO, 2=DEBUG)")
 	flag.Parse()
 
 	log.Printf("logLevel set to %v", logLevel)
