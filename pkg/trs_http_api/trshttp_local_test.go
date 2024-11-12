@@ -49,9 +49,9 @@ import (
 var svcName = "TestMe"
 
 const (
-	ERROR = 3
-	INFO  = 2
 	TRACE = 1
+	INFO  = 2
+	ERROR = 3
 )
 var logLevel int
 
