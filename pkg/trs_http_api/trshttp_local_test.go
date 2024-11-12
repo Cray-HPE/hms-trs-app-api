@@ -39,6 +39,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -148,13 +149,18 @@ func hasTRSAlwaysRetryHeader(r *http.Request) bool {
 }
 
 var handlerLogger *testing.T
+var nRetries int32 = 0
 
-var nRetries = 0
 func launchHandler(w http.ResponseWriter, req *http.Request) {
-	if nRetries > 0 || hasTRSAlwaysRetryHeader(req) {
+
+	singletonRetry := false
+	if !hasTRSAlwaysRetryHeader(req) {
+		singletonRetry = atomic.AddInt32(&nRetries, -1) >= 0
+	}
+	if singletonRetry || hasTRSAlwaysRetryHeader(req) {
 		handlerLogger.Logf("launchHandler 503 running...")
 
-		if !hasTRSAlwaysRetryHeader(req) {
+		if singletonRetry {
 			// Only update for tasks not retrying forever
 			nRetries--
 		}
