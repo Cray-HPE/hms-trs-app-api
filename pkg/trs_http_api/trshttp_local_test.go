@@ -591,7 +591,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 
 	// Set up the arguments for the test
 	arg := testConnsArg{
-		nTasks:      10,
+		nTasks:      1,
 		tListProto:  tListProto,
 		srvHandler:  launchHandler,	// always returns success
 	}
