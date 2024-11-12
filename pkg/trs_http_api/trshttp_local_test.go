@@ -684,24 +684,11 @@ func testSuccessfulRequests(t *testing.T, httpTimeout time.Duration, cPolicy Cli
 	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after task list cleaned up")
 	testOpenConnections(t, true, 0)
-/*
 
-	// Cancel the stalled server handlers so we can close the servers. We
-	// will need to do it once for the first set that timed out due to the
-	// HTTPClient.Timeout and once for the second set that timed out due to
-	// the context timeout.
-	t.Logf("Signaling stalled handlers ")
-	for i := 0; i < numStallTasks * 2; i++ {
-		stallCancel <- true
-	}
-	close(stallCancel)
-*/
-
-	t.Logf("Closing servers")
-	successSrv.Close()
-	retrySrv.Close()
-	stallSrv.Close()
+	t.Logf("Closing the server")
+	srv.Close()
 }
+
 func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
 /*
 	httpRetries           := 3
