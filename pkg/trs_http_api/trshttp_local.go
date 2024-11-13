@@ -28,7 +28,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -381,17 +380,18 @@ func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 		if (v.Ignore == false) {
 			// All tasks must be cancelled to prevent resource leaks.  The
 			// caller may have called Cancel() to prematurely cancel the
-			// operation, but that's probably not a common thing.  We will
-			// do it here as well.  There is no harm in cancelling twice.
+			// operation, but that's probably not a common thing so we will
+			// do it here.  There is no harm in cancelling twice.  We must
+			// do this before closing the response body.
 
 			v.contextCancel()
 
 			// The caller should have closed the response body, but we'll also
-			// do it here to both prevent resource leaks and prevent reusable
-			// connections from being closed prematurely
+			// do it here to both prevent resource leaks.  Note that if that
+			// was the case, that connection was closed by the above cancel.
 
 			if v.Request.Response != nil && v.Request.Response.Body != nil {
-				_, _ = io.Copy(io.Discard, v.Request.Response.Body)
+				// No need to drain response body as connection was closed
 				v.Request.Response.Body.Close()
 				v.Request.Response.Body = nil
 				tloc.Logger.Tracef("Response body for task %s closed", v.id)
