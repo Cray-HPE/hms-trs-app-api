@@ -630,7 +630,7 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 		   "       open after: start=%v tasksComplete=%v bodyClose=%v",
 		   "                   cancel=%v (skip = %v) close=%v",
 		   a.nTasks, a.nSkipCloseBody, a.nSuccessRetries,
-		   a.nFailRetries, a.nCtxTimeouts, a.runSecondTaskList
+		   a.nFailRetries, a.nCtxTimeouts, a.runSecondTaskList,
 		   a.openAtStart, a.openAfterTasksComplete, a.openAfterBodyClose,
 		   a.openAfterCancel, a.skipCancel, a.openAfterClose)
 
