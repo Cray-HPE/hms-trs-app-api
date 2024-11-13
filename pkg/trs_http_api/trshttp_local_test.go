@@ -1117,10 +1117,16 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 				}
 			}
 		}
+
+		// All non-retry connections should still be in ESTAB(LISHED)
+		time.Sleep(sleepTimeToStabilizeConns)
+		t.Logf("Testing connections after tasks complete")
+		testOpenConnections(t, a.openAfterTasksComplete) // ???
+
 		tasksToWaitFor--
 	}
 
-	t.Logf("Waiting for tasks to complete")
+	t.Logf("Waiting for %d tasks to complete", tasksToWaitFor)
 	for i := 0; i < tasksToWaitFor; i++ {
 		<-taskListChannel
 	}
