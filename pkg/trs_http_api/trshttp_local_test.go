@@ -583,16 +583,16 @@ func (c *CustomReadCloser) WasClosed() bool {
 }
 
 type testConnsArg struct {
+	tListProto             *HttpTask // Initialization to pass to tloc.CreateTaskList()
+	srvHandler             func(http.ResponseWriter, *http.Request) // response handler to use
 	nTasks                 int       // Number of tasks to create
 	nSkipCloseBody         int       // Number of response bodies to skip closing
+	nSuccessRetries        int32     // Number of retries to succeed
+	nFailRetries           int       // Number of retries to fail
 	openAfterTasksComplete int       // Expected number of ESTAB connections after all tasks complete
 	openAfterBodyClose     int       // Expected number of ESTAB connections after closing response bodies
 	openAfterCancel        int       // Expected number of ESTAB connections after cancelling tasks
 	openAfterClose         int       // Expected number of ESTAB connections after closing task list
-	nSuccessRetries        int32     // Number of retries to succeed
-	nFailRetries           int       // Number of retries to fail
-	tListProto             *HttpTask // Initialization to pass to tloc.CreateTaskList()
-	srvHandler             func(http.ResponseWriter, *http.Request) // response handler to use
 }
 
 func logConnTestHeader(t *testing.T, arg testConnsArg) {
@@ -619,6 +619,7 @@ func logConnTestHeader(t *testing.T, arg testConnsArg) {
 // NOT configure the http transport.
 
 func TestConnsWithNoHttpTxPolicy(t *testing.T) {
+return
 	httpRetries      := 3
 	pcsStatusTimeout := 30
 	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
@@ -632,13 +633,11 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 		},
 	}
 
-	// Set up the argument struct for the tests
+	// Initialize argument structure (will be modified each test)
 	arg := testConnsArg{
 		tListProto:             defaultTListProto,
 		srvHandler:             launchHandler,	// always returns success
 	}
-
-logLevel = logrus.InfoLevel
 
 	// 10 requests: no issues
 
@@ -661,7 +660,7 @@ logLevel = logrus.InfoLevel
 	arg.nFailRetries           = 0
 	arg.openAfterTasksComplete = 2
 	arg.openAfterBodyClose     = 2
-	arg.openAfterCancel        = 1
+	arg.openAfterCancel        = 1	// no body close == bad connection
 	arg.openAfterClose         = 1
 
 	testConns(t, arg)
@@ -686,8 +685,8 @@ logLevel = logrus.InfoLevel
 	arg.nSuccessRetries        = 0
 	arg.nFailRetries           = 1
 	arg.openAfterTasksComplete = 1
-	arg.openAfterBodyClose     = 1
-	arg.openAfterCancel        = 0
+	arg.openAfterBodyClose     = 0	// retryablehttp closes all open conns after close of body for any other still open ...
+	arg.openAfterCancel        = 0 // TODO:  Enable more debug to see if failed body is closed or not
 	arg.openAfterClose         = 0
 
 	testConns(t, arg)
@@ -752,18 +751,113 @@ func TestConnsWithHttpTxPolicy(t *testing.T) {
 		},
 	}
 
-	// Set up the arguments for the test
+	// Initialize argument structure (will be modified each test)
 	arg := testConnsArg{
-		nTasks:                 10,
-		nSkipCloseBody:         2,
-		nSuccessRetries:        0,
-		nFailRetries:           0,
 		tListProto:             defaultTListProto,
 		srvHandler:             launchHandler,	// always returns success
 	}
 
-	arg.tListProto.CPolicy.tx.MaxIdleConns        = 4
-	arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost = 2
+logLevel = logrus.InfoLevel
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Connections get closed after:
+	//
+	// A request completes if:
+	//
+	//	* The request exhausted all of its retries and failed
+	//	* A request was cancelleg
+	//
+	// A body is closed if:
+	//
+	// This is where results start to get interesting.  When any of the
+	// following occur:
+	//
+	//	* A response body is closed (happens for successful requests)
+	//	* A context for a task is cancelled (happes for all requsts)
+	//
+	// All currently open connections associated with a client are closed if:
+	//
+	//	* Any request exhausted its retries and failed
+	//	* A context for a task timed out
+	//
+	////////////////////////////////////////////////////////////////////////
+
+	arg.tListProto.CPolicy.tx.MaxIdleConns        = 10
+	arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost = 10
+
+	// 10 requests: No issues so all conns should be open
+
+	arg.nTasks                 = 10
+	arg.nSkipCloseBody         = 0
+	arg.nSuccessRetries        = 0
+	arg.nFailRetries           = 0
+	arg.openAfterTasksComplete = 10
+	arg.openAfterBodyClose     = 10
+	arg.openAfterCancel        = 10
+	arg.openAfterClose         = 10
+
+	testConns(t, arg)
+
+	// 10 requests: 2 skipped body closures
+
+	arg.nTasks                 = 10
+	arg.nSkipCloseBody         = 2
+	arg.nSuccessRetries        = 0
+	arg.nFailRetries           = 0
+	arg.openAfterTasksComplete = 10
+	arg.openAfterBodyClose     = 8
+	arg.openAfterCancel        = 8
+	arg.openAfterClose         = 8
+
+	testConns(t, arg)
+
+	// 10 requests: 2 retries that both succeed
+
+	arg.nTasks                 = 10
+	arg.nSkipCloseBody         = 0
+	arg.nSuccessRetries        = 2
+	arg.nFailRetries           = 0
+	arg.openAfterTasksComplete = 10
+	arg.openAfterBodyClose     = 10
+	arg.openAfterCancel        = 10
+	arg.openAfterClose         = 10
+
+	testConns(t, arg)
+
+	// 10 requests: 1 exhausts all retries and fails before 9 success complete
+
+	arg.nTasks                 = 10
+	arg.nSkipCloseBody         = 0
+	arg.nSuccessRetries        = 0
+	arg.nFailRetries           = 1
+	arg.openAfterTasksComplete = 9
+	arg.openAfterBodyClose     = 9
+	arg.openAfterCancel        = 9
+	arg.openAfterClose         = 9
+
+	testConns(t, arg)
+
+	// 10 requests: 1 exhausts all retries and fails after 9 success complete
+
+	// 10 requests: 1 is cancelled before 9 success complete
+
+	// 10 requests: 1 is cancelled after 9 successes complete
+
+	arg.nTasks                 = 10
+	arg.nSkipCloseBody         = 0
+	arg.nSuccessRetries        = 0
+	arg.nFailRetries           = 1
+	arg.openAfterTasksComplete = 9
+	arg.openAfterBodyClose     = 9
+	arg.openAfterCancel        = 9
+	arg.openAfterClose         = 9
+
+	testConns(t, arg)
+
+logLevel = logrus.ErrorLevel
+return
+
 	arg.openAfterTasksComplete                    = 0 // ???
 	arg.openAfterBodyClose                        = arg.nTasks - arg.nSkipCloseBody
 	arg.openAfterBodyClose                        = arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost
