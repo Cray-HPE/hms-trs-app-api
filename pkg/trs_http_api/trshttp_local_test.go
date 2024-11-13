@@ -175,11 +175,12 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 	// Distinguish between limited retries that will succeed and retries
 	// that should continually fail and exceed their retry limit
 	singletonRetry := false
-	if !hasTRSAlwaysRetryHeader(req) {
+	itHasTRSAlwaysRetryHeader := hasTRSAlwaysRetryHeader(req)
+	if !itHasTRSAlwaysRetryHeader {
 		singletonRetry = atomic.AddInt32(&nRetries, -1) >= 0
 	}
 
-	if singletonRetry || hasTRSAlwaysRetryHeader(req) {
+	if singletonRetry || itHasTRSAlwaysRetryHeader {
 		if (logLevel >= logrus.DebugLevel) {
 			handlerLogger.Logf("launchHandler 503 running...")
 		}
@@ -681,7 +682,7 @@ return
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
-	a.nCtxTimeouts           = 2
+	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 0
 	a.openAfterTasksComplete = 10
 	a.openAfterBodyClose     = 2 // MaxIdleConnsPerHost default is 2
@@ -690,12 +691,12 @@ return
 
 	testConns(t, a)
 
-	// 2 requests, 1 skipped body close
+	// 2 requests, 2 skipped body closes
 
 	a.nTasks                 = 2
 	a.nSkipCloseBody         = 1
 	a.nSuccessRetries        = 0
-	a.nCtxTimeouts           = 2
+	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 0
 	a.openAfterTasksComplete = 2
 	a.openAfterBodyClose     = 2
@@ -709,7 +710,7 @@ return
 	a.nTasks                 = 2
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 1
-	a.nCtxTimeouts           = 2
+	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 0
 	a.openAfterTasksComplete = 2
 	a.openAfterBodyClose     = 2
@@ -723,7 +724,7 @@ return
 	a.nTasks                 = 2
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
-	a.nCtxTimeouts           = 2
+	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 1
 	a.openAfterTasksComplete = 1
 	a.openAfterBodyClose     = 0	// retryablehttp closes all open conns after close of body for any other still open ...
@@ -737,7 +738,7 @@ return
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 2
 	a.nSuccessRetries        = 3
-	a.nCtxTimeouts           = 2
+	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 2
 	a.openAfterTasksComplete = 8
 	a.openAfterBodyClose     = 2
@@ -923,7 +924,6 @@ logLevel = logrus.InfoLevel
 	a.openAfterCancel        = 0 // CAN WE HACK httpretryable/http.Client??
 	a.openAfterClose         = 0 // CAN WE HACK httpretryable/http.Client??
 
-logLevel = logrus.TraceLevel
 	retrySleep = 0	// 0 seconds so retries complete first
 
 	testConns(t, a)
