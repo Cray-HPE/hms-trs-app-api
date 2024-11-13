@@ -591,6 +591,7 @@ type testConnsArg struct {
 	nFailRetries           int       // Number of retries to fail
 	openAfterTasksComplete int       // Expected number of ESTAB connections after all tasks complete
 	openAfterBodyClose     int       // Expected number of ESTAB connections after closing response bodies
+	skipCancel             bool      // Skip cancel and go directly to Close()
 	openAfterCancel        int       // Expected number of ESTAB connections after cancelling tasks
 	openAfterClose         int       // Expected number of ESTAB connections after closing task list
 }
@@ -602,10 +603,10 @@ func logConnTestHeader(t *testing.T, arg testConnsArg) {
 
 	t.Logf("============================================================")
 
-	t.Logf("=====> tasks=%v skipBC=%d retryS=%v retryF=%v oAfterTC=%v oAfterBC=%v oAfterCa=%v oAfterCl=%v",
+	t.Logf("=====> tasks=%v skipBC=%d retryS=%v retryF=%v oAfterTC=%v oAfterBC=%v skipCa=%v oAfterCa=%v oAfterCl=%v",
 		   arg.nTasks, arg.nSkipCloseBody, arg.nSuccessRetries,
 		   arg.nFailRetries, arg.openAfterTasksComplete,
-		   arg.openAfterBodyClose, arg.openAfterCancel,
+		   arg.openAfterBodyClose, arg.skipCancel, arg.openAfterCancel,
 		   arg.openAfterClose)
 
 	if arg.tListProto.CPolicy.tx.Enabled == true {
@@ -803,7 +804,6 @@ logLevel = logrus.InfoLevel
 
 	testConns(t, arg)
 
-logLevel = logrus.TraceLevel
 	// 10 requests: 2 skipped body closures
 
 	arg.nTasks                 = 10
@@ -817,6 +817,27 @@ logLevel = logrus.TraceLevel
 
 	testConns(t, arg)
 
+	// 10 requests: 2 skipped body closures but skip calling Cancel()
+	//
+	// It's a much more common pattern to call Close() without Cancel().
+	// This test will validate that Close() successfully cancels all
+	// contexts and closes any reponse bodies that were left open.
+
+	arg.nTasks                 = 10
+	arg.nSkipCloseBody         = 2
+	arg.nSuccessRetries        = 0
+	arg.nFailRetries           = 0
+	arg.openAfterTasksComplete = 10
+	arg.openAfterBodyClose     = 10
+	arg.skipCancel             = true
+	arg.openAfterCancel        = 8
+	arg.openAfterClose         = 8
+
+	testConns(t, arg)
+
+	arg.skipCancel             = false // this was the only test we set it
+
+logLevel = logrus.TraceLevel
 logLevel = logrus.InfoLevel
 
 	// 10 requests: 2 retries that both succeed
@@ -989,20 +1010,24 @@ func testConns(t *testing.T, a testConnsArg) {
 	t.Logf("Testing connections after response bodies closed")
 	testOpenConnections(t, a.openAfterBodyClose)
 
-	// tloc.Cancel() cancels the contexts for all of the tasks in the task list
-	t.Logf("Calling tloc.Cancel() to cancel all tasks")
-	tloc.Cancel(&tList)
+	if a.skipCancel {
+		t.Logf("Skipping tloc.Cancel()")
+	} else {
+		// tloc.Cancel() cancels the contexts for all of the tasks in the task list
+		t.Logf("Calling tloc.Cancel() to cancel all tasks")
+		tloc.Cancel(&tList)
 
-	// Cancelling the task list should not alter existing ESTAB(LISHED)
-	// connections except for connections where a response body was not
-	// previously closed.  The lower level libraries assume this means
-	// that there's a problem with the connection if the body was not closed.
-	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
-	t.Logf("Testing connections after task list cancelled")
-	testOpenConnections(t, a.openAfterCancel)
+		// Cancelling the task list should not alter existing ESTAB(LISHED)
+		// connections except for connections where a response body was not
+		// previously closed.  The lower level libraries assume this means
+		// that there's a problem with the connection if the body was not closed.
+		time.Sleep(200 * time.Millisecond)		// Give time to staiblize
+		t.Logf("Testing connections after task list cancelled")
+		testOpenConnections(t, a.openAfterCancel)
+	}
 
-	// tloc.Close() closes any reponse bodies left open and removes all
-	// of the tasks from the task list
+	// tloc.Close() cancels all contexts, closes any reponse bodies left
+	// open, and removes all of the tasks from the task list
 	t.Logf("Calling tloc.Close() to close out the task list")
 	tloc.Close(&tList)
 
