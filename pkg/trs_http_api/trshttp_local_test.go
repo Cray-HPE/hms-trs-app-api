@@ -592,6 +592,7 @@ type testConnsArg struct {
 	nSkipCloseBody         int       // Number of response bodies to skip closing
 	nSuccessRetries        int32     // Number of retries to succeed
 	nFailRetries           int       // Number of retries to fail
+	openAtStart            int       // Expected number of ESTAB connections at beginning
 	openAfterTasksComplete int       // Expected number of ESTAB connections after all tasks complete
 	openAfterBodyClose     int       // Expected number of ESTAB connections after closing response bodies
 	skipCancel             bool      // Skip cancel and go directly to Close()
@@ -607,9 +608,9 @@ func logConnTestHeader(t *testing.T, arg testConnsArg) {
 
 	t.Logf("============================================================")
 
-	t.Logf("=====> tasks=%v skipBC=%d retryS=%v retryF=%v oAfterTC=%v oAfterBC=%v skipCa=%v oAfterCa=%v oAfterCl=%v runSecTL=%v",
+	t.Logf("=====> tasks=%v skipBC=%d retryS=%v retryF=%v oAfterTC=%v oAfterBC=%v skipCa=%v oAtStart=%v oAfterCa=%v oAfterCl=%v runSecTL=%v",
 		   arg.nTasks, arg.nSkipCloseBody, arg.nSuccessRetries,
-		   arg.nFailRetries, arg.openAfterTasksComplete,
+		   arg.nFailRetries, arg.openAtStart, arg.openAfterTasksComplete,
 		   arg.openAfterBodyClose, arg.skipCancel, arg.openAfterCancel,
 		   arg.openAfterClose, arg.runSecondTaskList)
 
@@ -760,7 +761,7 @@ func TestConnsWithHttpTxPolicy(t *testing.T) {
 	}
 
 	// Initialize argument structure (will be modified each test)
-	arg := testConnsArg{
+	a := testConnsArg{
 		tListProto:             defaultTListProto,
 		srvHandler:             launchHandler,	// always returns success
 	}
@@ -769,18 +770,22 @@ logLevel = logrus.InfoLevel
 
 	////////////////////////////////////////////////////////////////////////
 	//
-	// Connections closed after A request completes:
+	// Open connections closed after A request completes:
 	//
 	//	1:   If any request exhausts all of its retries and fails
 	//
-	// Connections closed after A body is closed:
+	// Open connections closed when A body is closed:
 	//
-	//	0:   Never happens
+	//	ALL: If any OTHER requests failed due to retries exceeded
 	//
-	// Connections closed after A context is cancelled:
+	// Open connections closed after a context times out:
+	//
+	//  ?:   TBD
+	//
+	// Open connections closed after a context is cancelled:
 	//
 	//	1:   If a body was not closed
-	//	ALL: If any any request exhausted all of its retries and failed
+	//	?:   If a context deadline was exceeded
 	//
 	// Connections closed after A context is cancelled:
 	//
@@ -799,38 +804,40 @@ logLevel = logrus.InfoLevel
 	//
 	////////////////////////////////////////////////////////////////////////
 
-	arg.tListProto.CPolicy.tx.MaxIdleConns        = 10
-	arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost = 10
+	a.tListProto.CPolicy.tx.MaxIdleConns        = 10
+	a.tListProto.CPolicy.tx.MaxIdleConnsPerHost = 10
 
 	// 10 requests: No issues so all conns should be open
 
-	arg.nTasks                 = 10
-	arg.nSkipCloseBody         = 0
-	arg.nSuccessRetries        = 0
-	arg.nFailRetries           = 0
-	arg.openAfterTasksComplete = 10
-	arg.openAfterBodyClose     = 10
-	arg.openAfterCancel        = 10
-	arg.openAfterClose         = 10
+	a.nTasks                 = 10
+	a.nSkipCloseBody         = 0
+	a.nSuccessRetries        = 0
+	a.nFailRetries           = 0
+	a.openAtStart            = 0
+	a.openAfterTasksComplete = a.nTasks
+	a.openAfterBodyClose     = a.nTasks
+	a.openAfterCancel        = a.nTasks
+	a.openAfterClose         = a.nTasks
 
-arg.runSecondTaskList = true
-logLevel = logrus.DebugLevel
-	testConns(t, arg)
-logLevel = logrus.InfoLevel
-arg.runSecondTaskList = false
+	a.runSecondTaskList = true // second run should not open any new connections
+
+	testConns(t, a)
+
+	a.runSecondTaskList = false
 
 	// 10 requests: 2 skipped body closures
 
-	arg.nTasks                 = 10
-	arg.nSkipCloseBody         = 2
-	arg.nSuccessRetries        = 0
-	arg.nFailRetries           = 0
-	arg.openAfterTasksComplete = 10
-	arg.openAfterBodyClose     = 10
-	arg.openAfterCancel        = 8
-	arg.openAfterClose         = 8
+	a.nTasks                 = 10
+	a.nSkipCloseBody         = 2
+	a.nSuccessRetries        = 0
+	a.nFailRetries           = 0
+	a.openAtStart            = 0
+	a.openAfterTasksComplete = a.nTasks
+	a.openAfterBodyClose     = a.nTasks
+	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody
+	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody
 
-	testConns(t, arg)
+	testConns(t, a)
 
 	// 10 requests: 2 skipped body closures but skip calling Cancel()
 	//
@@ -838,73 +845,77 @@ arg.runSecondTaskList = false
 	// This test will validate that Close() successfully cancels all
 	// contexts and closes any reponse bodies that were left open.
 
-	arg.nTasks                 = 10
-	arg.nSkipCloseBody         = 2
-	arg.nSuccessRetries        = 0
-	arg.nFailRetries           = 0
-	arg.openAfterTasksComplete = 10
-	arg.openAfterBodyClose     = 10
-	arg.skipCancel             = true
-	arg.openAfterCancel        = 8
-	arg.openAfterClose         = 8
+	a.nTasks                 = 10
+	a.nSkipCloseBody         = 2
+	a.nSuccessRetries        = 0
+	a.nFailRetries           = 0
+	a.openAtStart            = 0
+	a.openAfterTasksComplete = a.nTasks
+	a.openAfterBodyClose     = a.nTasks
+	a.skipCancel             = true
+	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody
+	a.openAfterClose         = a.nTasks - a.nSkipCloseBody
 
-	testConns(t, arg)
+	testConns(t, a)
 
-	arg.skipCancel             = false // this was the only test we set it
+	a.skipCancel             = false // this was the only test we set it
 
 	// 10 requests: 2 retries that both succeed
 
-	arg.nTasks                 = 10
-	arg.nSkipCloseBody         = 0
-	arg.nSuccessRetries        = 2
-	arg.nFailRetries           = 0
-	arg.openAfterTasksComplete = 10
-	arg.openAfterBodyClose     = 10
-	arg.openAfterCancel        = 10
-	arg.openAfterClose         = 10
+	a.nTasks                 = 10
+	a.nSkipCloseBody         = 0
+	a.nSuccessRetries        = 2
+	a.nFailRetries           = 0
+	a.openAtStart            = 0
+	a.openAfterTasksComplete = a.nTasks
+	a.openAfterBodyClose     = a.nTasks
+	a.openAfterCancel        = a.nTasks
+	a.openAfterClose         = a.nTasks
 
-	testConns(t, arg)
+	testConns(t, a)
 
 	// 10 requests: 2 exhaust all retries and fail BEFORE 8 success complete
 
-	arg.nTasks                 = 10
-	arg.nSkipCloseBody         = 0
-	arg.nSuccessRetries        = 0
-	arg.nFailRetries           = 2
-	arg.openAfterTasksComplete = 8
-	arg.openAfterBodyClose     = 0 // <---- doesn't make sense
-	arg.openAfterCancel        = 0
-	arg.openAfterClose         = 0
+	a.nTasks                 = 10
+	a.nSkipCloseBody         = 0
+	a.nSuccessRetries        = 0
+	a.nFailRetries           = 2
+	a.openAtStart            = 0
+	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
+	a.openAfterBodyClose     = 0 // thank you httpretryable/http.Client
+	a.openAfterBodyClose     = 0 // thank you httpretryable/http.Client
+	a.openAfterBodyClose     = 0 // thank you httpretryable/http.Client
 
 	retrySleep = 0	// 0 seconds so retries complete first
 
-	testConns(t, arg)
+	testConns(t, a)
 
 	retrySleep = 0					// set back to default
 
 	// 10 requests: 2 exhaust all retries and fail AFTER 8 success complete
 
-	arg.nTasks                 = 10
-	arg.nSkipCloseBody         = 0
-	arg.nSuccessRetries        = 0
-	arg.nFailRetries           = 2
-	arg.openAfterTasksComplete = 8
-	arg.openAfterBodyClose     = 0
-	arg.openAfterCancel        = 0
-	arg.openAfterClose         = 0
+	a.nTasks                 = 10
+	a.nSkipCloseBody         = 0
+	a.nSuccessRetries        = 0
+	a.nFailRetries           = 2
+	a.openAtStart            = 0
+	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
+	a.openAfterBodyClose     = 0 // thank you httpretryable/http.Client
+	a.openAfterBodyClose     = 0 // thank you httpretryable/http.Client
+	a.openAfterBodyClose     = 0 // thank you httpretryable/http.Client
 
 	retrySleep = 4	// 4 seconds so retries complete last
 
 	// We want to run a 2nd task list with the same server to make sure that
 	// failures from prior task list don't impact future ones.  This second
 	// task list should succeed everything.
-	arg.runSecondTaskList = true
+	a.runSecondTaskList = true
 
 logLevel = logrus.DebugLevel
-	testConns(t, arg)
+	testConns(t, a)
 
 	retrySleep = 0					// set back to default
-	arg.runSecondTaskList = false	// set back to default
+	a.runSecondTaskList = false	// set back to default
 
 logLevel = logrus.InfoLevel
 
@@ -912,32 +923,35 @@ logLevel = logrus.InfoLevel
 
 	// 10 requests: 1 is cancelled after 9 successes complete
 
-	arg.nTasks                 = 10
-	arg.nSkipCloseBody         = 0
-	arg.nSuccessRetries        = 0
-	arg.nFailRetries           = 1
-	arg.openAfterTasksComplete = 9
-	arg.openAfterBodyClose     = 9
-	arg.openAfterCancel        = 9
-	arg.openAfterClose         = 9
+	a.nTasks                 = 10
+	a.nSkipCloseBody         = 0
+	a.nSuccessRetries        = 0
+	a.nFailRetries           = 1
+	a.openAtStart            = 0
+	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
+	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
+	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
+	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
 
-	testConns(t, arg)
+	testConns(t, a)
 
+	// test time spent in time-wait
 	// context times out
 	// http request times out (no context)
 
 logLevel = logrus.ErrorLevel
 return
 
-	arg.openAfterTasksComplete                    = 0 // ???
-	arg.openAfterBodyClose                        = arg.nTasks - arg.nSkipCloseBody
-	arg.openAfterBodyClose                        = arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost
-	arg.openAfterCancel                           = 0 // ???
-	arg.openAfterClose                            = 0 // ???
+	a.openAtStart            = 0
+	a.openAfterTasksComplete                    = 0 // ???
+	a.openAfterBodyClose                        = a.nTasks - a.nSkipCloseBody
+	a.openAfterBodyClose                        = a.tListProto.CPolicy.tx.MaxIdleConnsPerHost
+	a.openAfterCancel                           = 0 // ???
+	a.openAfterClose                            = 0 // ???
 
 //logLevel = logrus.DebugLevel
 
-	testConns(t, arg)
+	testConns(t, a)
 
 //logLevel = logrus.ErrorLevel
 }
@@ -964,15 +978,17 @@ func testConns(t *testing.T, a testConnsArg) {
 	// If a second task list is requested, run it
 	if (a.runSecondTaskList) {
 		// Overwrite args as a 2nd task list should always succeed everything
+		// The only impact might be open connections at the start (or not)
 
-		a.nTasks                 = 10
+		// a.nTasks stays the same
 		a.nSkipCloseBody         = 0
 		a.nSuccessRetries        = 0
 		a.nFailRetries           = 0
-		a.openAfterTasksComplete = 10
-		a.openAfterBodyClose     = 10
-		a.openAfterCancel        = 10
-		a.openAfterClose         = 10
+		a.openAtStart            = a.openAfterClose // carry forward at end of last run
+		a.openAfterTasksComplete = a.nTasks
+		a.openAfterBodyClose     = a.nTasks
+		a.openAfterCancel        = a.nTasks
+		a.openAfterClose         = a.nTasks
 
 		t.Logf("")
 		t.Logf("===================> RUNNING SECOND TASK LIST <===================")
@@ -997,6 +1013,9 @@ func testConns(t *testing.T, a testConnsArg) {
 // It assumes a server is already running
 
 func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest.Server) {
+
+	t.Logf("Testing connections at start")
+	testOpenConnections(t, a.openAtStart)
 
 	// Create an http request
 	req, err := http.NewRequest(http.MethodGet, srv.URL, nil)
