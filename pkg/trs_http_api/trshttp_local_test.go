@@ -1072,9 +1072,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	nRetries = a.nSuccessRetries
 	for i := 0; i < a.nFailRetries; i++ {
 		// Just choose the ones at the beginning
-		// tList[i].Request.Header.Set("Trs-Fail-All-Retries", "true")
-		tListLen := len(tList)
-		tList[tListLen - i - 1].Request.Header.Set("Trs-Fail-All-Retries", "true")
+		tList[i].Request.Header.Set("Trs-Fail-All-Retries", "true")
 
 		if (logLevel == logrus.DebugLevel) {
 			t.Errorf("ERROR: Set request header %v for task %v",
@@ -1093,6 +1091,27 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	time.Sleep(sleepTimeToStabilizeConns + (250 * time.Millisecond))
 	t.Logf("Testing connections after Launch")
 	testOpenConnections(t, (a.nTasks))
+
+	if a.nFailRetries > 0 && retrySleep > 0 {
+		time.Sleep(time.Duration(retrySleep/4) * time.Second)
+		t.Logf("Closing response bodies early before retry failures")
+		for _, tsk := range(tList) {
+			if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+				// Must fully read the body in order to close the body so that
+				// the underlying libraries/modules don't close the connection.
+				// If body not fully conusmed they assume the connection had issues
+				_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
+
+				tsk.Request.Response.Body.Close()
+				tsk.Request.Response.Body = nil
+
+				if logLevel == logrus.TraceLevel {
+					// Response headers can be  helpful for debug
+					t.Logf("Response headers: %s", tsk.Request.Response.Header)
+				}
+			}
+		}
+	}
 
 	t.Logf("Waiting for tasks to complete")
 	for i := 0; i < (a.nTasks); i++ {
