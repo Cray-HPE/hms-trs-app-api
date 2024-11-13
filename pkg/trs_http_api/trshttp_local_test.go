@@ -833,7 +833,7 @@ logLevel = logrus.InfoLevel
 	a.nFailRetries           = 0
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = a.nTasks
+	a.openAfterBodyClose     = a.nTasks - a.nSkipCloseBody
 	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody
 	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody
 
@@ -981,6 +981,7 @@ func testConns(t *testing.T, a testConnsArg) {
 		// The only impact might be open connections at the start (or not)
 
 		// a.nTasks stays the same
+
 		a.nSkipCloseBody         = 0
 		a.nSuccessRetries        = 0
 		a.nFailRetries           = 0
@@ -990,9 +991,7 @@ func testConns(t *testing.T, a testConnsArg) {
 		a.openAfterCancel        = a.nTasks
 		a.openAfterClose         = a.nTasks
 
-		t.Logf("")
 		t.Logf("===================> RUNNING SECOND TASK LIST <===================")
-		t.Logf("")
 
 		runTaskList(t, tloc, a, srv)
 	}
