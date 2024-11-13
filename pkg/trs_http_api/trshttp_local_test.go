@@ -54,7 +54,7 @@ var logLevel logrus.Level	// use this for more than logrus
 func TestMain(m *testing.M) {
 	var logLevelInt int
 
-	flag.IntVar(&logLevelInt, "logLevel", int(logrus.InfoLevel),
+	flag.IntVar(&logLevelInt, "logLevel", int(logrus.ErrorLevel),
 		"set log level (0=Panic, 1=Fatal, 2=Error 3=Warn, 4=Info, 5=Debug, 6=Trace)")
 	flag.Parse()
 
@@ -145,7 +145,7 @@ func hasTRSAlwaysRetryHeader(r *http.Request) bool {
     }
 
 	if (logLevel == logrus.TraceLevel) {
-		handlerLogger.Logf("Received header %v", r.Header)
+		handlerLogger.Logf("hasTRSAlwaysRetryHeader Received header %v", r.Header)
 	}
 
 	_,ok := r.Header["Trs-Fail-All-Retries"]
@@ -560,7 +560,7 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 
 // CustomConnState logs changes to connection states - Useful for debugging
 func CustomConnState(conn net.Conn, state http.ConnState) {
-	if logLevel >= logrus.InfoLevel {
+	if logLevel >= logrus.DebugLevel {
 		log.Printf("HTTP_SERVER %v Connection -> %v\t%v",
 				   conn.LocalAddr(), state, conn.RemoteAddr())
 	}
@@ -783,7 +783,7 @@ func testConns(t *testing.T, a testConnsArg) {
 		// Just choose the ones at the beginning
 		tList[i].Request.Header.Set("Trs-Fail-All-Retries", "true")
 
-		if (logLevel == logrus.TraceLevel) {
+		if (logLevel == logrus.DebugLevel) {
 			t.Errorf("Set request header %v for task %v",
 					 tList[i].Request.Header, tList[i].GetID())
 		}
