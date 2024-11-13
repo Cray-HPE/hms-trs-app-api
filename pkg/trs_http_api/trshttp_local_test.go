@@ -597,6 +597,7 @@ type testConnsArg struct {
 	skipCancel             bool      // Skip cancel and go directly to Close()
 	openAfterCancel        int       // Expected number of ESTAB connections after cancelling tasks
 	openAfterClose         int       // Expected number of ESTAB connections after closing task list
+	runSecondTaskList	   bool      // Run a second task list after the first with same server
 }
 
 func logConnTestHeader(t *testing.T, arg testConnsArg) {
@@ -606,14 +607,17 @@ func logConnTestHeader(t *testing.T, arg testConnsArg) {
 
 	t.Logf("============================================================")
 
-	t.Logf("=====> tasks=%v skipBC=%d retryS=%v retryF=%v oAfterTC=%v oAfterBC=%v skipCa=%v oAfterCa=%v oAfterCl=%v",
+	t.Logf("=====> tasks=%v skipBC=%d retryS=%v retryF=%v oAfterTC=%v oAfterBC=%v skipCa=%v oAfterCa=%v oAfterCl=%v runSecTL=%v",
 		   arg.nTasks, arg.nSkipCloseBody, arg.nSuccessRetries,
 		   arg.nFailRetries, arg.openAfterTasksComplete,
 		   arg.openAfterBodyClose, arg.skipCancel, arg.openAfterCancel,
-		   arg.openAfterClose)
+		   arg.openAfterClose, arg.runSecondTaskList)
 
 	if arg.tListProto.CPolicy.tx.Enabled == true {
-		t.Logf("=====> tbd")
+		t.Logf("=====> txPolicy: MaxIdleConns=%v MaxIdleConnsPerHost=%v IdleConnTimeout=%v",
+			   arg.tListProto.CPolicy.tx.MaxIdleConns,
+			   arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost,
+			   arg.tListProto.CPolicy.tx.IdleConnTimeout)
 	}
 
 	t.Logf("============================================================")
@@ -858,6 +862,30 @@ logLevel = logrus.InfoLevel
 	testConns(t, arg)
 
 	// 10 requests: 2 exhaust all retries and fail BEFORE 8 success complete
+
+	arg.nTasks                 = 10
+	arg.nSkipCloseBody         = 0
+	arg.nSuccessRetries        = 0
+	arg.nFailRetries           = 2
+	arg.openAfterTasksComplete = 8
+	arg.openAfterBodyClose     = 0 // <---- doesn't make sense
+	arg.openAfterCancel        = 0
+	arg.openAfterClose         = 0
+
+	retrySleep = 0	// 0 seconds so retries complete first
+
+	// We want to run a 2nd task list with the same server to make sure that
+	// failures from prior task list don't impact future ones.  This second
+	// task list should succeed everything.
+	arg.runSecondTaskList = true
+
+	testConns(t, arg)
+
+	retrySleep = 0					// set back to default
+	arg.runSecondTaskList = false	// set back to default
+
+	// 10 requests: 2 exhaust all retries and fail AFTER 8 success complete
+
 	arg.nTasks                 = 10
 	arg.nSkipCloseBody         = 0
 	arg.nSuccessRetries        = 0
@@ -867,26 +895,17 @@ logLevel = logrus.InfoLevel
 	arg.openAfterCancel        = 0
 	arg.openAfterClose         = 0
 
-	retrySleep = 0	// 0 seconds so retries complete first
+	retrySleep = 4	// 4 seconds so retries complete last
+
+	// We want to run a 2nd task list with the same server to make sure that
+	// failures from prior task list don't impact future ones.  This second
+	// task list should succeed everything.
+	arg.runSecondTaskList = true
 
 	testConns(t, arg)
 
-	// 10 requests: 2 exhaust all retries and fail AFTER 8 success complete
-
-	arg.nTasks                 = 10
-	arg.nSkipCloseBody         = 0
-	arg.nSuccessRetries        = 0
-	arg.nFailRetries           = 2
-	arg.openAfterTasksComplete = 8
-	arg.openAfterBodyClose     = 8
-	arg.openAfterCancel        = 8
-	arg.openAfterClose         = 8
-
-	retrySleep = 4	// 2 seconds so retries complete last
-
-	testConns(t, arg)
-
-	retrySleep = 0	// set back to default
+	retrySleep = 0					// set back to default
+	arg.runSecondTaskList = false	// set back to default
 
 logLevel = logrus.TraceLevel
 logLevel = logrus.InfoLevel
@@ -941,8 +960,44 @@ func testConns(t *testing.T, a testConnsArg) {
 	// Configure server to log changes to connection states
 	srv.Config.ConnState = CustomConnState
 
-	// Create an http request
+	// Run the primary task list test
+	runTaskList(t, tloc, a, srv)
 
+	// If a second task list is requested, run it
+	if (a.runSecondTaskList) {
+		// Overwrite args as a 2nd task list should always succeed everything
+
+		a.nTasks                 = 10
+		a.nSkipCloseBody         = 0
+		a.nSuccessRetries        = 0
+		a.nFailRetries           = 0
+		a.openAfterTasksComplete = 10
+		a.openAfterBodyClose     = 10
+		a.openAfterCancel        = 10
+		a.openAfterClose         = 10
+
+		t.Logf("")
+		t.Logf("===================> RUNNING SECOND TASK LIST <===================")
+		t.Logf("")
+
+		runTaskList(t, tloc, a, srv)
+	}
+
+	t.Logf("Calling tloc.Cleanup to clean up task system")
+	tloc.Cleanup()
+
+	// Cleaking up the task list system should close all connections
+	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
+	t.Logf("Testing connections after task list cleaned up")
+	testOpenConnections(t, 0)
+
+	t.Logf("Closing the server")
+	srv.Close()
+}
+
+func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest.Server) {
+
+	// Create an http request
 	req, err := http.NewRequest(http.MethodGet, srv.URL, nil)
 	if err != nil {
         t.Fatalf("ERROR: Failed to create request: %v", err)
@@ -950,7 +1005,6 @@ func testConns(t *testing.T, a testConnsArg) {
 	req.Header.Set("Accept", "*/*")
 
 	a.tListProto.Request = req
-
 	t.Logf("Calling tloc.CreateTaskList() to create %v tasks for URL %v", a.nTasks, srv.URL)
 	tList := tloc.CreateTaskList(a.tListProto, a.nTasks)
 
@@ -1075,16 +1129,6 @@ func testConns(t *testing.T, a testConnsArg) {
 		t.Errorf("ERROR: Expected task list map to be empty")
 	}
 
-	t.Logf("Calling tloc.Cleanup to clean up task system")
-	tloc.Cleanup()
-
-	// Cleaking up the task list system should close all connections
-	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
-	t.Logf("Testing connections after task list cleaned up")
-	testOpenConnections(t, 0)
-
-	t.Logf("Closing the server")
-	srv.Close()
 }
 
 func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
