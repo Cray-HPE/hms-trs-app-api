@@ -625,13 +625,13 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 
 	t.Logf("============================================================")
 
-	t.Logf("=====> nTasks=%v nSkipCloseBody=%d nSuccessRetries=%v",
-	       "       nFailRetries=%v nCtxTimeouts=%v runSecondTaskList=%v",
-		   "       open after: start=%v tasksComplete=%v bodyClose=%v",
-		   "                   cancel=%v (skip = %v) close=%v",
-		   a.nTasks, a.nSkipCloseBody, a.nSuccessRetries,
-		   a.nFailRetries, a.nCtxTimeouts, a.runSecondTaskList,
-		   a.openAtStart, a.openAfterTasksComplete, a.openAfterBodyClose,
+	t.Logf("=====> nTasks=%v nSkipCloseBody=%v nSuccessRetries=%v",
+		   a.nTasks, a.nSkipCloseBody, a.nSuccessRetries)
+	t.Logf("       nFailRetries=%v nCtxTimeouts=%v runSecondTaskList=%v",
+		   a.nFailRetries, a.nCtxTimeouts, a.runSecondTaskList)
+	t.Logf("       open after: start=%v tasksComplete=%v bodyClose=%v",
+		   a.openAtStart, a.openAfterTasksComplete, a.openAfterBodyClose)
+	t.Logf("                   cancel=%v (skip = %v) close=%v",
 		   a.openAfterCancel, a.skipCancel, a.openAfterClose)
 
 	if a.tListProto.CPolicy.tx.Enabled == true {
