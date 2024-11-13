@@ -653,6 +653,8 @@ logLevel = logrus.InfoLevel
 	arg.nFailRetries           = 0
 	arg.expEstabAfterBodyClose = 2 - arg.nSkipCloseBody
 
+	testConns(t, arg)
+
 	// TEST: 2 requests: 1 request retries once before success
 
 	arg.nTasks                 = 2
@@ -661,6 +663,8 @@ logLevel = logrus.InfoLevel
 	arg.nFailRetries           = 0
 	arg.expEstabAfterBodyClose = 2
 
+	testConns(t, arg)
+
 	// TEST: 2 requests, 1 request exhausts retries and fails
 
 	arg.nTasks                 = 2
@@ -668,6 +672,8 @@ logLevel = logrus.InfoLevel
 	arg.nSuccessRetries        = 0
 	arg.nFailRetries           = 1
 	arg.expEstabAfterBodyClose = 0
+
+	testConns(t, arg)
 
 	// TEST: 10 requests, 2 skipped body closes, 3 successful retries, 2 retry failures
 
@@ -829,7 +835,7 @@ func testConns(t *testing.T, a testConnsArg) {
 	for _, tsk := range(tList) {
 		if nSkipped < nSkipCloseBody {
 			nSkipped++
-			if logLevel == logrus.TraceLevel {
+			if logLevel == logrus.DebugLevel {
 				t.Logf("Skipping closing response body for task %v", tsk.GetID())
 			}
 			continue
