@@ -179,17 +179,17 @@ func configureClient(client *retryablehttp.Client, task *HttpTask, tloc *TRSHTTP
 	// Log the configuration we're going to use. Clients are generally long
 	// lived so this shouldn't be too spammy. Knowing this information can
 	// be pretty critical when debugging issues on site
-	tloc.Logger.Tracef("Created %s client with incoming policy %v", clientType, task.CPolicy)
-	tloc.Logger.Tracef("    RetryMax:                                   %d", client.RetryMax)
-	tloc.Logger.Tracef("    RetryWaitMax:                               %s", client.RetryWaitMax)
-	tloc.Logger.Tracef("    HTTPClient.Timeout (from %s):               %s", client.HTTPClient.Timeout, task.Timeout)
-	tloc.Logger.Tracef("    HTTPClient.Transport.MaxIdleConns:          %d", tr.MaxIdleConns)
-	tloc.Logger.Tracef("    HTTPClient.Transport.MaxIdleConnsPerHost:   %d", tr.MaxIdleConnsPerHost)
-	tloc.Logger.Tracef("    HTTPClient.Transport.IdleConnTimeout:       %s", tr.IdleConnTimeout)
-	tloc.Logger.Tracef("    HTTPClient.Transport.ResponseHeaderTimeout: %s", tr.ResponseHeaderTimeout)
-	tloc.Logger.Tracef("    HTTPClient.Transport.TLSHandshakeTimeout:   %s", tr.TLSHandshakeTimeout)
-	tloc.Logger.Tracef("    HTTPClient.Transport.DisableKeepAlives:     %v", tr.DisableKeepAlives)
-	tloc.Logger.Tracef("    Go runtime version:                         %s", runtime.Version())
+	tloc.Logger.Errorf("Created %s client with incoming policy %v", clientType, task.CPolicy)
+	tloc.Logger.Errorf("    RetryMax:                                   %d", client.RetryMax)
+	tloc.Logger.Errorf("    RetryWaitMax:                               %s", client.RetryWaitMax)
+	tloc.Logger.Errorf("    HTTPClient.Timeout (from %s):               %s", client.HTTPClient.Timeout, task.Timeout)
+	tloc.Logger.Errorf("    HTTPClient.Transport.MaxIdleConns:          %d", tr.MaxIdleConns)
+	tloc.Logger.Errorf("    HTTPClient.Transport.MaxIdleConnsPerHost:   %d", tr.MaxIdleConnsPerHost)
+	tloc.Logger.Errorf("    HTTPClient.Transport.IdleConnTimeout:       %s", tr.IdleConnTimeout)
+	tloc.Logger.Errorf("    HTTPClient.Transport.ResponseHeaderTimeout: %s", tr.ResponseHeaderTimeout)
+	tloc.Logger.Errorf("    HTTPClient.Transport.TLSHandshakeTimeout:   %s", tr.TLSHandshakeTimeout)
+	tloc.Logger.Errorf("    HTTPClient.Transport.DisableKeepAlives:     %v", tr.DisableKeepAlives)
+	tloc.Logger.Errorf("    Go runtime version:                         %s", runtime.Version())
 
 	// Write through to the client
 	client.HTTPClient.Transport = tr

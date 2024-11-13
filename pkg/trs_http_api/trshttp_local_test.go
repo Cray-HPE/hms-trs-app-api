@@ -164,8 +164,9 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if singletonRetry || hasTRSAlwaysRetryHeader(req) {
-		handlerLogger.Logf("launchHandler 503 running...")
-
+		if (logLevel >= logrus.DebugLevel) {
+			handlerLogger.Logf("launchHandler 503 running...")
+		}
 		if singletonRetry {
 			// Only update for tasks not retrying forever
 			nRetries--
@@ -180,9 +181,13 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(`{"Message":"Service Unavailable"}`))
 
-		handlerLogger.Logf("retryHandler returning Message Service Unavailable...")
+		if (logLevel >= logrus.DebugLevel) {
+			handlerLogger.Logf("retryHandler returning Message Service Unavailable...")
+		}
 	} else {
-		handlerLogger.Logf("launchHandler running...")
+		if (logLevel >= logrus.DebugLevel) {
+			handlerLogger.Logf("launchHandler running...")
+		}
 
 		time.Sleep(1 * time.Second) // Simulate network and BMC delay
 
@@ -190,7 +195,10 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 			w.Write([]byte(`{"Message":"No User-Agent Header"}`))
 //	w.Header().Set("Connection","keep-alive")
 			w.WriteHeader(http.StatusInternalServerError)
-			handlerLogger.Logf("launchHandler returning no User-Agent header...")
+
+			if (logLevel >= logrus.DebugLevel) {
+				handlerLogger.Logf("launchHandler returning no User-Agent header...")
+			}
 			return
 		}
 		w.Header().Set("Content-Type","application/json")
@@ -198,7 +206,9 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"Message":"OK"}`))
 
-		handlerLogger.Logf("launchHandler returning Message Ok...")
+		if (logLevel >= logrus.DebugLevel) {
+			handlerLogger.Logf("launchHandler returning Message Ok...")
+		}
 	}
 
 }
@@ -209,7 +219,9 @@ func stallHandler(w http.ResponseWriter, req *http.Request) {
 	// Wait for all connections to be established so output looks nice
 	time.Sleep(100 * time.Millisecond)
 
-	handlerLogger.Logf("stallHandler running...")
+	if (logLevel >= logrus.DebugLevel) {
+		handlerLogger.Logf("stallHandler running...")
+	}
 
 	<-stallCancel
 
@@ -218,7 +230,9 @@ func stallHandler(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"Message":"OK"}`))
 
-	handlerLogger.Logf("stallHandler returning Message Ok...")
+	if (logLevel >= logrus.DebugLevel) {
+		handlerLogger.Logf("stallHandler returning Message Ok...")
+	}
 }
 
 
@@ -578,11 +592,26 @@ type testConnsArg struct {
 	srvHandler             func(http.ResponseWriter, *http.Request) // response handler to use
 }
 
-// TestPCSUseCase tests the PCS use case of the TRS HTTP API.  It launches
-// a mix of tasks that make http requests that complete successfully,
-// requests that retry multiple times and fail to get good responses, and
-// requests that waiting for a server response and thus hit their task
-// timout which cancels their contexts.
+func logConnTestHeader(t *testing.T, arg testConnsArg) {
+	if logLevel <= logrus.ErrorLevel {
+		return
+	}
+
+	t.Logf("============================================================")
+
+	t.Logf("=====> tasks=%v skip=%d retryS=%v retryF=%v estabAfter=%v",
+		   arg.nTasks, arg.nSkipCloseBody, arg.nSuccessRetries,
+		   arg.nFailRetries, arg.expEstabAfterBodyClose)
+
+	if arg.tListProto.CPolicy.tx.Enabled == true {
+		t.Logf("=====> tbd")
+	}
+
+	t.Logf("============================================================")
+}
+
+// TestConnsWithHttpTxPolicy tests connection use by TRS callers that do
+// NOT configure the http transport.
 
 func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	httpRetries      := 3
@@ -598,24 +627,63 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 		},
 	}
 
-	// Set up the arguments for the test
+	// Set up the argument struct for the tests
 	arg := testConnsArg{
-		nTasks:                 4,
-		nSkipCloseBody:         1,
-		nSuccessRetries:        1,
-		nFailRetries:           1,
 		tListProto:             defaultTListProto,
 		srvHandler:             launchHandler,	// always returns success
 	}
 
-	arg.expEstabAfterBodyClose = arg.nTasks - arg.nSkipCloseBody
-
 logLevel = logrus.DebugLevel
+
+	// 10 requests: no issues
+
+	arg.nTasks                 = 10
+	arg.nSkipCloseBody         = 0
+	arg.nSuccessRetries        = 0
+	arg.nFailRetries           = 0
+	arg.expEstabAfterBodyClose = 2 // MaxIdleConnsPerHost default is 2
+
+	testConns(t, arg)
+
+	// 2 requests, 1 skipped body close
+
+	arg.nTasks                 = 2
+	arg.nSkipCloseBody         = 1
+	arg.nSuccessRetries        = 0
+	arg.nFailRetries           = 0
+	arg.expEstabAfterBodyClose = 2 - arg.nSkipCloseBody
+
+	// TEST: 2 requests: 1 request retries once before success
+
+	arg.nTasks                 = 2
+	arg.nSkipCloseBody         = 0
+	arg.nSuccessRetries        = 1
+	arg.nFailRetries           = 0
+	arg.expEstabAfterBodyClose = 2
+
+	// TEST: 2 requests, 1 request exhausts retries and fails
+
+	arg.nTasks                 = 2
+	arg.nSkipCloseBody         = 0
+	arg.nSuccessRetries        = 0
+	arg.nFailRetries           = 1
+	arg.expEstabAfterBodyClose = 0
+
+	// TEST: 10 requests, 2 skipped body closes, 3 successful retries, 2 retry failures
+
+	arg.nTasks                 = 10
+	arg.nSkipCloseBody         = 2
+	arg.nSuccessRetries        = 3
+	arg.nFailRetries           = 2
+	arg.expEstabAfterBodyClose = 0
 
 	testConns(t, arg)
 
 logLevel = logrus.ErrorLevel
 }
+
+// TestConnsWithHttpTxPolicy tests connection use by TRS callers that DO
+// configure the http transport.
 
 func TestConnsWithHttpTxPolicy(t *testing.T) {
 	httpRetries             := 3
@@ -681,6 +749,8 @@ logLevel = logrus.ErrorLevel
 }
 
 func testConns(t *testing.T, a testConnsArg) {
+	logConnTestHeader(t, a)
+
 	// Initialize the task system
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger())
