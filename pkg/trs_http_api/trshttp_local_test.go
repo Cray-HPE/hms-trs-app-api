@@ -625,7 +625,7 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 
 	t.Logf("============================================================")
 
-	t.Logf("=====> nTasks=%v nSkipCloseBody=%d nSuccessRetries=%v"
+	t.Logf("=====> nTasks=%v nSkipCloseBody=%d nSuccessRetries=%v",
 	       "       nFailRetries=%v nCtxTimeouts=%v runSecondTaskList=%v",
 		   "       open after: start=%v tasksComplete=%v bodyClose=%v",
 		   "                   cancel=%v (skip = %v) close=%v",
