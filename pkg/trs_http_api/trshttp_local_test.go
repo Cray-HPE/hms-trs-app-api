@@ -813,7 +813,11 @@ logLevel = logrus.InfoLevel
 	arg.openAfterCancel        = 10
 	arg.openAfterClose         = 10
 
+arg.runSecondTaskList = true
+logLevel = logrus.DebugLevel
 	testConns(t, arg)
+logLevel = logrus.InfoLevel
+arg.runSecondTaskList = false
 
 	// 10 requests: 2 skipped body closures
 
@@ -874,15 +878,9 @@ logLevel = logrus.InfoLevel
 
 	retrySleep = 0	// 0 seconds so retries complete first
 
-	// We want to run a 2nd task list with the same server to make sure that
-	// failures from prior task list don't impact future ones.  This second
-	// task list should succeed everything.
-	arg.runSecondTaskList = true
-
 	testConns(t, arg)
 
 	retrySleep = 0					// set back to default
-	arg.runSecondTaskList = false	// set back to default
 
 	// 10 requests: 2 exhaust all retries and fail AFTER 8 success complete
 
@@ -902,12 +900,12 @@ logLevel = logrus.InfoLevel
 	// task list should succeed everything.
 	arg.runSecondTaskList = true
 
+logLevel = logrus.DebugLevel
 	testConns(t, arg)
 
 	retrySleep = 0					// set back to default
 	arg.runSecondTaskList = false	// set back to default
 
-logLevel = logrus.TraceLevel
 logLevel = logrus.InfoLevel
 
 	// 10 requests: 1 is cancelled before 9 success complete
