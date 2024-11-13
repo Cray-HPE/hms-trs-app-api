@@ -154,6 +154,7 @@ func hasTRSAlwaysRetryHeader(r *http.Request) bool {
 
 var handlerLogger *testing.T
 var nRetries int32 = 0
+var retrySleep int = 0
 
 func launchHandler(w http.ResponseWriter, req *http.Request) {
 	// Distinguish between limited retries that will succeed and retries
@@ -172,8 +173,8 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 			nRetries--
 		}
 
-		// Let retries fly without a simulated delay
-		//time.Sleep(1 * time.Second) // Simulate network and BMC delay
+		// Delay retry based on test requirement
+		time.Sleep(time.Duration(retrySleep) * time.Second)
 
 		w.Header().Set("Content-Type","application/json")
 //	w.Header().Set("Connection","keep-alive")
@@ -854,20 +855,22 @@ logLevel = logrus.InfoLevel
 
 	testConns(t, arg)
 
-	// 10 requests: 2 exhaust all retries and fail AFTER 8 success complete
-
+	// 10 requests: 2 exhaust all retries and fail BEFORE 8 success complete
 	arg.nTasks                 = 10
 	arg.nSkipCloseBody         = 0
 	arg.nSuccessRetries        = 0
 	arg.nFailRetries           = 2
-	arg.openAfterTasksComplete = 0
+	arg.openAfterTasksComplete = 8
 	arg.openAfterBodyClose     = 0
 	arg.openAfterCancel        = 0
 	arg.openAfterClose         = 0
 
+	retrySleep = 0	// 0 seconds so retries complete first
+
 	testConns(t, arg)
 
-	// 10 requests: 2 exhaust all retries and fail BEFORE 8 success complete
+	// 10 requests: 2 exhaust all retries and fail AFTER 8 success complete
+
 	arg.nTasks                 = 10
 	arg.nSkipCloseBody         = 0
 	arg.nSuccessRetries        = 0
@@ -877,7 +880,11 @@ logLevel = logrus.InfoLevel
 	arg.openAfterCancel        = 8
 	arg.openAfterClose         = 8
 
+	retrySleep = 2	// 2 seconds so retries complete last
+
 	testConns(t, arg)
+
+	retrySleep = 0	// set back to default
 
 logLevel = logrus.TraceLevel
 logLevel = logrus.InfoLevel
