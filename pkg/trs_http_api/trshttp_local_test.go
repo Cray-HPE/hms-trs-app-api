@@ -770,6 +770,10 @@ logLevel = logrus.InfoLevel
 	//
 	// A body is closed if:
 	//
+	// A context is cancelled if:
+	//
+	//	* A body was not closed
+	//
 	// This is where results start to get interesting.  When any of the
 	// following occur:
 	//
@@ -806,9 +810,9 @@ logLevel = logrus.InfoLevel
 	arg.nSuccessRetries        = 0
 	arg.nFailRetries           = 0
 	arg.openAfterTasksComplete = 10
-	arg.openAfterBodyClose     = 8
-	arg.openAfterCancel        = 8
-	arg.openAfterClose         = 8
+	arg.openAfterBodyClose     = 10	// Close() closes the bodies for us
+	arg.openAfterCancel        = 10
+	arg.openAfterClose         = 10
 
 	testConns(t, arg)
 
@@ -854,6 +858,9 @@ logLevel = logrus.InfoLevel
 	arg.openAfterClose         = 9
 
 	testConns(t, arg)
+
+	// context times out
+	// http request times out (no context)
 
 logLevel = logrus.ErrorLevel
 return
@@ -943,6 +950,7 @@ func testConns(t *testing.T, a testConnsArg) {
 			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
 		}
 	}
+
 	// Now close the response bodies so connections stay open after we call
 	// tloc.Cancel().  We always skip at least one to test that tloc.Close()
 	// closes it for us and the connection associated with it
