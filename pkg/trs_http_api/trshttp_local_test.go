@@ -833,9 +833,9 @@ logLevel = logrus.InfoLevel
 	a.nFailRetries           = 0
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = a.nTasks - a.nSkipCloseBody
+	a.openAfterBodyClose     = a.nTasks
 	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody
-	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody
+	a.openAfterClose         = a.nTasks - a.nSkipCloseBody
 
 	testConns(t, a)
 
@@ -882,9 +882,9 @@ logLevel = logrus.InfoLevel
 	a.nFailRetries           = 2
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
-	a.openAfterBodyClose     = 0 // thank you httpretryable/http.Client
-	a.openAfterBodyClose     = 0 // thank you httpretryable/http.Client
-	a.openAfterBodyClose     = 0 // thank you httpretryable/http.Client
+	a.openAfterBodyClose     = 0 // CAN WE HACK httpretryable/http.Client??
+	a.openAfterCancel        = 0 // CAN WE HACK httpretryable/http.Client??
+	a.openAfterClose         = 0 // CAN WE HACK httpretryable/http.Client??
 
 	retrySleep = 0	// 0 seconds so retries complete first
 
@@ -900,9 +900,9 @@ logLevel = logrus.InfoLevel
 	a.nFailRetries           = 2
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
-	a.openAfterBodyClose     = 0 // thank you httpretryable/http.Client
-	a.openAfterBodyClose     = 0 // thank you httpretryable/http.Client
-	a.openAfterBodyClose     = 0 // thank you httpretryable/http.Client
+	a.openAfterBodyClose     = 0 // CAN WE HACK httpretryable/http.Client??
+	a.openAfterCancel        = 0 // CAN WE HACK httpretryable/http.Client??
+	a.openAfterClose         = 0 // CAN WE HACK httpretryable/http.Client??
 
 	retrySleep = 4	// 4 seconds so retries complete last
 
