@@ -873,7 +873,7 @@ logLevel = logrus.InfoLevel
 
 	testConns(t, a)
 
-	// 10 requests: 2 skipped body closures but skip calling Cancel()
+	// 10 requests: 2 skipped body closures and skip calling Cancel()
 	//
 	// It's a much more common pattern to call Close() without Cancel().
 	// This test will validate that Close() successfully cancels all
@@ -1088,7 +1088,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		t.Errorf("ERROR: tloc.Launch() failed: %v", err)
 	}
 
-	time.Sleep(sleepTimeToStabilizeConns)
+	time.Sleep(sleepTimeToStabilizeConns + (250 * time.Millisecond))
 	t.Logf("Testing connections after Launch")
 	testOpenConnections(t, (a.nTasks))
 
