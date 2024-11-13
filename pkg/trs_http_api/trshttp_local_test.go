@@ -1098,6 +1098,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		for i := 0; i < (a.nTasks - a.nFailRetries); i++ {
 			t.Logf("    task %v completed", i)
 			<-taskListChannel
+			tasksToWaitFor--
 		}
 
 		t.Logf("Closing non-retry response bodies early before retry failures")
@@ -1120,10 +1121,8 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 		// All non-retry connections should still be in ESTAB(LISHED)
 		time.Sleep(sleepTimeToStabilizeConns)
-		t.Logf("Testing connections after tasks complete")
+		t.Logf("Testing connections after non-retry tasks complete")
 		testOpenConnections(t, a.openAfterTasksComplete) // ???
-
-		tasksToWaitFor--
 	}
 
 	t.Logf("Waiting for %d tasks to complete", tasksToWaitFor)
