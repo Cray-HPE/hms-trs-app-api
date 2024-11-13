@@ -144,11 +144,25 @@ func hasTRSAlwaysRetryHeader(r *http.Request) bool {
         return false
     }
 
-	if (logLevel == logrus.TraceLevel) {
-		handlerLogger.Logf("hasTRSAlwaysRetryHeader Received header %v", r.Header)
+	_,ok := r.Header["Trs-Fail-All-Retries"]
+
+	if ok == true {
+		handlerLogger.Logf("Received Trs-Fail-All-Retries header")
+	}
+	return ok
+}
+
+func hasTRSStallHeader(r *http.Request) bool {
+    if (len(r.Header) == 0) {
+        return false
+    }
+
+	_,ok := r.Header["Trs-Stall"]
+
+	if ok == true {
+		handlerLogger.Logf("Received Trs-Stall header")
 	}
 
-	_,ok := r.Header["Trs-Fail-All-Retries"]
 	return ok
 }
 
@@ -186,6 +200,8 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 		if (logLevel >= logrus.DebugLevel) {
 			handlerLogger.Logf("retryHandler returning Message Service Unavailable...")
 		}
+	} else if hasTRSStallHeader(req) {
+		// tbd
 	} else {
 		if (logLevel >= logrus.DebugLevel) {
 			handlerLogger.Logf("launchHandler running...")
