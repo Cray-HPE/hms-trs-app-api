@@ -633,8 +633,6 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 		srvHandler:             launchHandler,	// always returns success
 	}
 
-logLevel = logrus.DebugLevel
-
 	// 10 requests: no issues
 
 	arg.nTasks                 = 10
@@ -679,6 +677,7 @@ logLevel = logrus.DebugLevel
 
 	testConns(t, arg)
 
+logLevel = logrus.DebugLevel
 logLevel = logrus.ErrorLevel
 }
 
