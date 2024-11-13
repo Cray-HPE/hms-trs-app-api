@@ -153,8 +153,9 @@ func hasTRSAlwaysRetryHeader(r *http.Request) bool {
 }
 
 var handlerLogger *testing.T
-var nRetries int32 = 0
-var retrySleep int = 0
+var handlerSleep int = 2 // time to sleep to simulate network/BMC delays
+var retrySleep int   = 0 // time to sleep before returning 503 for retry
+var nRetries int32   = 0 // how many retries before returning success
 
 func launchHandler(w http.ResponseWriter, req *http.Request) {
 	// Distinguish between limited retries that will succeed and retries
@@ -190,7 +191,8 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 			handlerLogger.Logf("launchHandler running...")
 		}
 
-		time.Sleep(1 * time.Second) // Simulate network and BMC delay
+		// Simulate network/BMC delays
+		time.Sleep(time.Duration(handlerSleep) * time.Second)
 
 		if (!hasUserAgentHeader(req)) {
 			w.Write([]byte(`{"Message":"No User-Agent Header"}`))
@@ -880,7 +882,7 @@ logLevel = logrus.InfoLevel
 	arg.openAfterCancel        = 8
 	arg.openAfterClose         = 8
 
-	retrySleep = 2	// 2 seconds so retries complete last
+	retrySleep = 4	// 2 seconds so retries complete last
 
 	testConns(t, arg)
 
