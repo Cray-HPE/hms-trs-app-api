@@ -956,6 +956,8 @@ return
 //logLevel = logrus.ErrorLevel
 }
 
+const sleepTimeToStabilizeConns = 250 * time.Millisecond
+
 func testConns(t *testing.T, a testConnsArg) {
 	logConnTestHeader(t, a)
 
@@ -1000,7 +1002,7 @@ func testConns(t *testing.T, a testConnsArg) {
 	tloc.Cleanup()
 
 	// Cleaking up the task list system should close all connections
-	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
+	time.Sleep(sleepTimeToStabilizeConns)
 	t.Logf("Testing connections after task list cleaned up")
 	testOpenConnections(t, 0)
 
@@ -1047,7 +1049,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		t.Errorf("ERROR: tloc.Launch() failed: %v", err)
 	}
 
-	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
+	time.Sleep(sleepTimeToStabilizeConns)
 	t.Logf("Testing connections after Launch")
 	testOpenConnections(t, (a.nTasks))
 
@@ -1060,7 +1062,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	close(taskListChannel)
 
 	// All connections should still be in ESTAB(LISHED)
-	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
+	time.Sleep(sleepTimeToStabilizeConns)
 	t.Logf("Testing connections after tasks complete")
 	testOpenConnections(t, a.openAfterTasksComplete)
 
@@ -1102,7 +1104,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 	// Closing the body affects the number of ESTAB(LISHED) connections
 	// based on the Transport configuration
-	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
+	time.Sleep(sleepTimeToStabilizeConns)
 	t.Logf("Testing connections after response bodies closed")
 	testOpenConnections(t, a.openAfterBodyClose)
 
@@ -1117,7 +1119,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		// connections except for connections where a response body was not
 		// previously closed.  The lower level libraries assume this means
 		// that there's a problem with the connection if the body was not closed.
-		time.Sleep(200 * time.Millisecond)		// Give time to staiblize
+		time.Sleep(sleepTimeToStabilizeConns)
 		t.Logf("Testing connections after task list cancelled")
 		testOpenConnections(t, a.openAfterCancel)
 	}
@@ -1128,7 +1130,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	tloc.Close(&tList)
 
 	// Closing the task list should not alter existing ESTAB(LISHED) connections
-	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
+	time.Sleep(sleepTimeToStabilizeConns)
 	t.Logf("Testing connections after task list closed")
 	testOpenConnections(t, a.openAfterClose)
 
@@ -1318,7 +1320,7 @@ tList := successList
 	}
 
 	// Wait for all connections to enter ESTABLISHED state so output looks nice
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(sleepTimeToStabilizeConns)
 
 	// All connections should be in ESTABLISHED
 	t.Logf("Testing open connections after Launch")
@@ -1344,7 +1346,7 @@ tList := successList
 	// sized to 90% of the task timeout.  These tasks will now retry so
 	// sleep for the other 10% of the task timeout to allow them to be
 	// cancelled due to their context timeing out.
-	time.Sleep(httpTimeout / 10)
+	time.Sleep(sleepTimeToStabilizeConns)
 */
 
 for _, tsk := range(tList) {
@@ -1357,7 +1359,7 @@ for _, tsk := range(tList) {
 		tsk.Request.Response.Body.Close()
 		tsk.Request.Response.Body = nil
 
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(sleepTimeToStabilizeConns)
 		t.Logf("")
 		t.Logf("testing connections after close")
 		testOpenConnections(t, 0)
