@@ -633,6 +633,8 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 		srvHandler:             launchHandler,	// always returns success
 	}
 
+logLevel = logrus.InfoLevel
+
 	// 10 requests: no issues
 
 	arg.nTasks                 = 10
@@ -677,7 +679,6 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 
 	testConns(t, arg)
 
-logLevel = logrus.DebugLevel
 logLevel = logrus.ErrorLevel
 }
 
@@ -740,11 +741,11 @@ func TestConnsWithHttpTxPolicy(t *testing.T) {
 	arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost = 2
 	arg.expEstabAfterBodyClose                    = arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost
 
-logLevel = logrus.DebugLevel
+//logLevel = logrus.DebugLevel
 
 	testConns(t, arg)
 
-logLevel = logrus.ErrorLevel
+//logLevel = logrus.ErrorLevel
 }
 
 func testConns(t *testing.T, a testConnsArg) {
