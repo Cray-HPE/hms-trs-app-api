@@ -762,18 +762,22 @@ logLevel = logrus.InfoLevel
 
 	////////////////////////////////////////////////////////////////////////
 	//
-	// Connections get closed after:
+	// Connections closed after A request completes:
 	//
-	// A request completes if:
+	//	1:   If any request exhausts all of its retries and fails
 	//
-	//	* The request exhausted all of its retries and failed
-	//	* A request was cancelleg
+	// Connections closed after A body is closed:
 	//
-	// A body is closed if:
+	//	0:   Never happens
 	//
-	// A context is cancelled if:
+	// Connections closed after A context is cancelled:
 	//
-	//	* A body was not closed
+	//	1:   If a body was not closed
+	//	ALL: If any any request exhausted all of its retries and failed
+	//
+	// Connections closed after A context is cancelled:
+	//
+	//	TBD: tbd
 	//
 	// This is where results start to get interesting.  When any of the
 	// following occur:
@@ -837,9 +841,6 @@ logLevel = logrus.InfoLevel
 
 	arg.skipCancel             = false // this was the only test we set it
 
-logLevel = logrus.TraceLevel
-logLevel = logrus.InfoLevel
-
 	// 10 requests: 2 retries that both succeed
 
 	arg.nTasks                 = 10
@@ -853,20 +854,23 @@ logLevel = logrus.InfoLevel
 
 	testConns(t, arg)
 
-	// 10 requests: 2 exhaust all retries and fail before 8 success complete
+	// 10 requests: 2 exhaust all retries and fail AFTER 8 success complete
 
 	arg.nTasks                 = 10
 	arg.nSkipCloseBody         = 0
 	arg.nSuccessRetries        = 0
 	arg.nFailRetries           = 2
-	arg.openAfterTasksComplete = 8
-	arg.openAfterBodyClose     = 8
-	arg.openAfterCancel        = 8
-	arg.openAfterClose         = 8
+	arg.openAfterTasksComplete = 0
+	arg.openAfterBodyClose     = 0
+	arg.openAfterCancel        = 0
+	arg.openAfterClose         = 0
 
 	testConns(t, arg)
 
-	// 10 requests: 2 exhaust all retries and fail after 8 success complete
+logLevel = logrus.TraceLevel
+logLevel = logrus.InfoLevel
+
+	// 10 requests: 2 exhaust all retries and fail BEFORE 8 success complete
 
 	// 10 requests: 1 is cancelled before 9 success complete
 
