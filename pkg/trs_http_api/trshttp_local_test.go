@@ -829,20 +829,20 @@ logLevel = logrus.InfoLevel
 
 	testConns(t, arg)
 
-	// 10 requests: 1 exhausts all retries and fails before 9 success complete
+	// 10 requests: 2 exhaust all retries and fail before 8 success complete
 
 	arg.nTasks                 = 10
 	arg.nSkipCloseBody         = 0
 	arg.nSuccessRetries        = 0
-	arg.nFailRetries           = 1
-	arg.openAfterTasksComplete = 9
-	arg.openAfterBodyClose     = 9
-	arg.openAfterCancel        = 9
-	arg.openAfterClose         = 9
+	arg.nFailRetries           = 2
+	arg.openAfterTasksComplete = 8
+	arg.openAfterBodyClose     = 8
+	arg.openAfterCancel        = 8
+	arg.openAfterClose         = 8
 
 	testConns(t, arg)
 
-	// 10 requests: 1 exhausts all retries and fails after 9 success complete
+	// 10 requests: 2 exhaust all retries and fail after 8 success complete
 
 	// 10 requests: 1 is cancelled before 9 success complete
 
