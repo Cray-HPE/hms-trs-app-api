@@ -613,6 +613,8 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 logLevel == logrus.DebugLevel
 
 	testConns(t, arg)
+
+logLevel == logrus.ErrorLevel
 }
 
 func TestConnsWithHttpTxPolicy(t *testing.T) {
@@ -671,7 +673,11 @@ func TestConnsWithHttpTxPolicy(t *testing.T) {
 	arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost = 2
 	arg.expEstabAfterBodyClose                    = arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost
 
+logLevel == logrus.DebugLevel
+
 	testConns(t, arg)
+
+logLevel == logrus.ErrorLevel
 }
 
 func testConns(t *testing.T, a testConnsArg) {
