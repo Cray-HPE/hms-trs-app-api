@@ -26,6 +26,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"net/http"
 	"sync"
 	"time"
 
@@ -133,7 +134,15 @@ func createHTTPTaskArray(source *HttpTask,
 	for ii := 0; ii < nitems; ii++ {
 		sarr[ii] = *source
 		if sarr[ii].Request != nil {
-			sarr[ii].Request = source.Request.Clone(context.Background())
+			//sarr[ii].Request = source.Request.Clone(context.Background())
+			// If this works change error handling
+			//var err error
+			//sarr[ii].Request, err = http.NewRequest(source.Request.Method, source.Request.URL.String(), nil)
+			sarr[ii].Request, _ = http.NewRequest(source.Request.Method, source.Request.URL.String(), nil)
+			//if err != nil {
+				// handle the error appropriately, e.g., log it or return it
+			//	sarr[ii].Request = nil
+			//}
 		}
 		sarr[ii].TimeStamp = time.Now().String()
 		sarr[ii].id = uuid.New()

@@ -995,6 +995,9 @@ func testConns(t *testing.T, a testConnsArg) {
 	srv.Close()
 }
 
+// runTaskList runs a task list from CreateTaskList() through Close()
+// It assumes a server is already running
+
 func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest.Server) {
 
 	// Create an http request
@@ -1128,7 +1131,6 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	if (len(tloc.taskMap) != 0) {
 		t.Errorf("ERROR: Expected task list map to be empty")
 	}
-
 }
 
 func TestPCSUseCaseWithHttpTxPolicy(t *testing.T) {
