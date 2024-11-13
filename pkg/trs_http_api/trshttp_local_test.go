@@ -803,6 +803,19 @@ logLevel = logrus.InfoLevel
 
 	testConns(t, arg)
 
+logLevel = logrus.TraceLevel
+	// 10 requests: 1 skipped body closures
+
+	arg.nTasks                 = 10
+	arg.nSkipCloseBody         = 1
+	arg.nSuccessRetries        = 0
+	arg.nFailRetries           = 0
+	arg.openAfterTasksComplete = 10
+	arg.openAfterBodyClose     = 9	// Close() closes the bodies for us
+	arg.openAfterCancel        = 9
+	arg.openAfterClose         = 9
+
+	testConns(t, arg)
 	// 10 requests: 2 skipped body closures
 
 	arg.nTasks                 = 10
@@ -814,7 +827,6 @@ logLevel = logrus.InfoLevel
 	arg.openAfterCancel        = 10
 	arg.openAfterClose         = 10
 
-logLevel = logrus.TraceLevel
 	testConns(t, arg)
 logLevel = logrus.InfoLevel
 
