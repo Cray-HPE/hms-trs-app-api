@@ -638,6 +638,9 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 	t.Logf("                      bodyClose:     %v", a.openAfterBodyClose)
 	t.Logf("                      cancel:        %v (skip = %v)", a.openAfterCancel, a.skipCancel)
 	t.Logf("                      close:         %v", a.openAfterClose)
+	t.Logf("")
+	t.Logf("   rtPolicy:          httpRetries:        %v", a.tListProto.CPolicy.retry.Retries)
+	t.Logf("")
 
 	if a.tListProto.CPolicy.tx.Enabled == true {
 		t.Logf("")
@@ -920,6 +923,7 @@ logLevel = logrus.InfoLevel
 	a.openAfterCancel        = 0 // CAN WE HACK httpretryable/http.Client??
 	a.openAfterClose         = 0 // CAN WE HACK httpretryable/http.Client??
 
+logLevel = logrus.DebugLevel
 	retrySleep = 0	// 0 seconds so retries complete first
 
 	testConns(t, a)
