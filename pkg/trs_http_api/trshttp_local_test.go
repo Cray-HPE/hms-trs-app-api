@@ -625,22 +625,24 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 
 	t.Logf("============================================================")
 
-	t.Logf("=====> nTasks            %v", a.nTasks)
-	t.Logf("       nSkipCloseBody    %v", a.nSkipCloseBody)
-	t.Logf("       nSuccessRetries   %v", a.nSuccessRetries)
-	t.Logf("       nFailRetries      %v", a.nFailRetries)
-	t.Logf("       nCtxTimeouts      %v", a.nCtxTimeouts)
-	t.Logf("       runSecondTaskList %v", a.runSecondTaskList)
-	t.Logf("       open after:       start         %v", a.openAtStart)
-	t.Logf("                         tasksComplete %v", a.openAfterTasksComplete)
-	t.Logf("                         bodyClose     %v", a.openAfterBodyClose)
-	t.Logf("                         cancel        %v (skip = %v)", a.openAfterCancel, a.skipCancel)
-	t.Logf("                         close         %v", a.openAfterClose)
+	t.Logf("   nTasks            %v", a.nTasks)
+	t.Logf("   nSkipCloseBody    %v", a.nSkipCloseBody)
+	t.Logf("   nSuccessRetries   %v", a.nSuccessRetries)
+	t.Logf("   nFailRetries      %v", a.nFailRetries)
+	t.Logf("   nCtxTimeouts      %v", a.nCtxTimeouts)
+	t.Logf("   runSecondTaskList %v", a.runSecondTaskList)
+	t.Logf("")
+	t.Logf("   open after:       start         %v", a.openAtStart)
+	t.Logf("                     tasksComplete %v", a.openAfterTasksComplete)
+	t.Logf("                     bodyClose     %v", a.openAfterBodyClose)
+	t.Logf("                     cancel        %v (skip = %v)", a.openAfterCancel, a.skipCancel)
+	t.Logf("                     close         %v", a.openAfterClose)
 
 	if a.tListProto.CPolicy.tx.Enabled == true {
-		t.Logf("       txPolicy:         MaxIdleConns        %v", a.tListProto.CPolicy.tx.MaxIdleConns)
-		t.Logf("                         MaxIdleConnsPerHost %v", a.tListProto.CPolicy.tx.MaxIdleConnsPerHost)
-		t.Logf("                         IdleConnTimeout     %v", a.tListProto.CPolicy.tx.IdleConnTimeout)
+		t.Logf("")
+		t.Logf("   txPolicy:         MaxIdleConns        %v", a.tListProto.CPolicy.tx.MaxIdleConns)
+		t.Logf("                     MaxIdleConnsPerHost %v", a.tListProto.CPolicy.tx.MaxIdleConnsPerHost)
+		t.Logf("                     IdleConnTimeout     %v", a.tListProto.CPolicy.tx.IdleConnTimeout)
 	}
 
 	t.Logf("============================================================")
