@@ -814,7 +814,9 @@ logLevel = logrus.InfoLevel
 	arg.openAfterCancel        = 10
 	arg.openAfterClose         = 10
 
+logLevel = logrus.TraceLevel
 	testConns(t, arg)
+logLevel = logrus.InfoLevel
 
 	// 10 requests: 2 retries that both succeed
 
