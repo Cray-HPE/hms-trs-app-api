@@ -923,7 +923,7 @@ logLevel = logrus.InfoLevel
 	a.openAfterCancel        = 0 // CAN WE HACK httpretryable/http.Client??
 	a.openAfterClose         = 0 // CAN WE HACK httpretryable/http.Client??
 
-logLevel = logrus.DebugLevel
+logLevel = logrus.TraceLevel
 	retrySleep = 0	// 0 seconds so retries complete first
 
 	testConns(t, a)
