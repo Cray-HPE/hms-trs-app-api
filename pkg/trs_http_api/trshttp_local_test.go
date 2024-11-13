@@ -811,9 +811,9 @@ logLevel = logrus.TraceLevel
 	arg.nSuccessRetries        = 0
 	arg.nFailRetries           = 0
 	arg.openAfterTasksComplete = 10
-	arg.openAfterBodyClose     = 9	// Close() closes the bodies for us
-	arg.openAfterCancel        = 9
-	arg.openAfterClose         = 9
+	arg.openAfterBodyClose     = 10	// Close() closes the bodies for us
+	arg.openAfterCancel        = 10
+	arg.openAfterClose         = 10
 
 	testConns(t, arg)
 	// 10 requests: 2 skipped body closures
@@ -828,6 +828,10 @@ logLevel = logrus.TraceLevel
 	arg.openAfterClose         = 10
 
 	testConns(t, arg)
+
+	// Be sure to test a MASSIVE Close() without a prior call to Cancel() as
+	// this will check race conditions with Body.Close() between the cancelled
+	// tasks and Close()
 logLevel = logrus.InfoLevel
 
 	// 10 requests: 2 retries that both succeed

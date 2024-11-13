@@ -379,9 +379,17 @@ func (tloc *TRSHTTPLocal) Cancel(taskList *[]HttpTask) {
 func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 	for _, v := range *taskList {
 		if (v.Ignore == false) {
+			// All tasks must be cancelled to prevent resource leaks.  The
+			// caller may have called Cancel() to prematurely cancel the
+			// operation, but that's probably not a common thing.  We will
+			// do it here as well.  There is no harm in cancelling twice.
+
+			v.contextCancel()
+
 			// The caller should have closed the response body, but we'll also
 			// do it here to both prevent resource leaks and prevent reusable
 			// connections from being closed prematurely
+
 			if v.Request.Response != nil && v.Request.Response.Body != nil {
 				_, _ = io.Copy(io.Discard, v.Request.Response.Body)
 				v.Request.Response.Body.Close()
@@ -395,33 +403,6 @@ func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 
 	}
 	tloc.Logger.Tracef("Close() completed")
-}
-
-// Optimization for callers that want to cancel and close in one call.
-// This reduces need to iterate through entire task list twice.
-//
-// taskList:  Ptr to a recently launched task list.
-
-func (tloc *TRSHTTPLocal) CancelAndClose(taskList *[]HttpTask) {
-	for _, v := range *taskList {
-		if (v.Ignore == false) {
-			// The caller should have closed the response body, but we'll also
-			// do it here to both prevent resource leaks and prevent reusable
-			// connections from being closed prematurely
-			if v.Request.Response != nil && v.Request.Response.Body != nil {
-				_, _ = io.Copy(io.Discard, v.Request.Response.Body)
-				v.Request.Response.Body.Close()
-				v.Request.Response.Body = nil
-				tloc.Logger.Tracef("Response body for task %s closed", v.id)
-			}
-			v.contextCancel()
-		}
-		tloc.taskMutex.Lock()
-		delete(tloc.taskMap, v.id)
-		tloc.taskMutex.Unlock()
-
-	}
-	tloc.Logger.Tracef("CancelAndClose() completed")
 }
 
 // Clean up a local HTTP task system.

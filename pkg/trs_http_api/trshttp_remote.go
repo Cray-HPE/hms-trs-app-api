@@ -1,6 +1,6 @@
 // MIT License
 // 
-// (C) Copyright [2020-2022,2024] Hewlett Packard Enterprise Development LP
+// (C) Copyright [2020-2022] Hewlett Packard Enterprise Development LP
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -288,20 +288,6 @@ func (tloc *TRSHTTPRemote) Close(taskList *[]HttpTask) {
 		tloc.taskMutex.Lock()
 		delete(tloc.taskMap, v.id)
 		tloc.taskMutex.Unlock()
-	}
-}
-
-// Optimization for callers that want to cancel and close in one call.
-// This reduces need to iterate through entire task list twice.
-//
-// taskList:  Ptr to a recently launched task list.
-
-func (tloc *TRSHTTPRemote) CancelAndClose(taskList *[]HttpTask) {
-	for _, v := range *taskList {
-		tloc.taskMutex.Lock()
-		delete(tloc.taskMap, v.id)
-		tloc.taskMutex.Unlock()
-		//TODO Mk3 -> send a messaage via Kafka to CANCEL a running task
 	}
 }
 
