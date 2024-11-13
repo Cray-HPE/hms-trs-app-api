@@ -585,6 +585,7 @@ func (c *CustomReadCloser) WasClosed() bool {
 type testConnsArg struct {
 	nTasks                 int       // Number of tasks to create
 	nSkipCloseBody         int       // Number of response bodies to skip closing
+	openAfterTasksComplete int       // Expected number of ESTAB connections after all tasks complete
 	openAfterBodyClose     int       // Expected number of ESTAB connections after closing response bodies
 	openAfterCancel        int       // Expected number of ESTAB connections after cancelling tasks
 	openAfterClose         int       // Expected number of ESTAB connections after closing task list
@@ -601,9 +602,11 @@ func logConnTestHeader(t *testing.T, arg testConnsArg) {
 
 	t.Logf("============================================================")
 
-	t.Logf("=====> tasks=%v skipBC=%d retryS=%v retryF=%v oAfterBC=%v oAfterCan=%v oAfterCl=%v",
-		   arg.nTasks, arg.nSkipCloseBody, arg.nSuccessRetries, arg.nFailRetries,
-		   arg.openAfterBodyClose, arg.openAfterCancel, arg.openAfterClose)
+	t.Logf("=====> tasks=%v skipBC=%d retryS=%v retryF=%v oAfterTC=%v oAfterBC=%v oAfterCa=%v oAfterCl=%v",
+		   arg.nTasks, arg.nSkipCloseBody, arg.nSuccessRetries,
+		   arg.nFailRetries, arg.openAfterTasksComplete,
+		   arg.openAfterBodyClose, arg.openAfterCancel,
+		   arg.openAfterClose)
 
 	if arg.tListProto.CPolicy.tx.Enabled == true {
 		t.Logf("=====> tbd")
@@ -643,6 +646,7 @@ logLevel = logrus.InfoLevel
 	arg.nSkipCloseBody         = 0
 	arg.nSuccessRetries        = 0
 	arg.nFailRetries           = 0
+	arg.openAfterTasksComplete = 10
 	arg.openAfterBodyClose     = 2 // MaxIdleConnsPerHost default is 2
 	arg.openAfterCancel        = 2
 	arg.openAfterClose         = 2
@@ -655,6 +659,7 @@ logLevel = logrus.InfoLevel
 	arg.nSkipCloseBody         = 1
 	arg.nSuccessRetries        = 0
 	arg.nFailRetries           = 0
+	arg.openAfterTasksComplete = 2
 	arg.openAfterBodyClose     = 2
 	arg.openAfterCancel        = 1
 	arg.openAfterClose         = 1
@@ -667,6 +672,7 @@ logLevel = logrus.InfoLevel
 	arg.nSkipCloseBody         = 0
 	arg.nSuccessRetries        = 1
 	arg.nFailRetries           = 0
+	arg.openAfterTasksComplete = 2
 	arg.openAfterBodyClose     = 2
 	arg.openAfterCancel        = 2
 	arg.openAfterClose         = 2
@@ -679,6 +685,7 @@ logLevel = logrus.InfoLevel
 	arg.nSkipCloseBody         = 0
 	arg.nSuccessRetries        = 0
 	arg.nFailRetries           = 1
+	arg.openAfterTasksComplete = 1
 	arg.openAfterBodyClose     = 1
 	arg.openAfterCancel        = 0
 	arg.openAfterClose         = 0
@@ -691,9 +698,10 @@ logLevel = logrus.InfoLevel
 	arg.nSkipCloseBody         = 2
 	arg.nSuccessRetries        = 3
 	arg.nFailRetries           = 2
-	arg.openAfterBodyClose     = 0
-	arg.openAfterCancel        = 0
-	arg.openAfterClose         = 0
+	arg.openAfterTasksComplete = 8
+	arg.openAfterBodyClose     = 2
+	arg.openAfterCancel        = 2
+	arg.openAfterClose         = 2
 
 	testConns(t, arg)
 
@@ -754,9 +762,10 @@ func TestConnsWithHttpTxPolicy(t *testing.T) {
 		srvHandler:             launchHandler,	// always returns success
 	}
 
-	arg.openAfterBodyClose                        = arg.nTasks - arg.nSkipCloseBody
 	arg.tListProto.CPolicy.tx.MaxIdleConns        = 4
 	arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost = 2
+	arg.openAfterTasksComplete                    = 0 // ???
+	arg.openAfterBodyClose                        = arg.nTasks - arg.nSkipCloseBody
 	arg.openAfterBodyClose                        = arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost
 	arg.openAfterCancel                           = 0 // ???
 	arg.openAfterClose                            = 0 // ???
@@ -832,7 +841,7 @@ func testConns(t *testing.T, a testConnsArg) {
 	// All connections should still be in ESTAB(LISHED)
 	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after tasks complete")
-	testOpenConnections(t, a.nTasks)
+	testOpenConnections(t, a.openAfterTasksComplete)
 
 	// Set up custom read closer to test if all response bodies get closed
 	for _, tsk := range(tList) {
