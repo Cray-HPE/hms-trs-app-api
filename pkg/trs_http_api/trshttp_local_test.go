@@ -640,7 +640,7 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 	t.Logf("                      cancel:        %v (skip = %v)", a.openAfterCancel, a.skipCancel)
 	t.Logf("                      close:         %v", a.openAfterClose)
 	t.Logf("")
-	t.Logf("   rtPolicy:          httpRetries:        %v", a.tListProto.CPolicy.retry.Retries)
+	t.Logf("   rtPolicy:          httpRetries:         %v", a.tListProto.CPolicy.retry.Retries)
 	t.Logf("")
 
 	if a.tListProto.CPolicy.tx.Enabled == true {
@@ -1072,7 +1072,9 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	nRetries = a.nSuccessRetries
 	for i := 0; i < a.nFailRetries; i++ {
 		// Just choose the ones at the beginning
-		tList[i].Request.Header.Set("Trs-Fail-All-Retries", "true")
+		// tList[i].Request.Header.Set("Trs-Fail-All-Retries", "true")
+		tListLen := len(tList)
+		tList[tListLen - i - 1].Request.Header.Set("Trs-Fail-All-Retries", "true")
 
 		if (logLevel == logrus.DebugLevel) {
 			t.Errorf("ERROR: Set request header %v for task %v",
