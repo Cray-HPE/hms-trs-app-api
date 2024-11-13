@@ -625,20 +625,22 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 
 	t.Logf("============================================================")
 
-	t.Logf("=====> nTasks=%v nSkipCloseBody=%v nSuccessRetries=%v",
-		   a.nTasks, a.nSkipCloseBody, a.nSuccessRetries)
-	t.Logf("       nFailRetries=%v nCtxTimeouts=%v runSecondTaskList=%v",
-		   a.nFailRetries, a.nCtxTimeouts, a.runSecondTaskList)
-	t.Logf("       open after: start=%v tasksComplete=%v bodyClose=%v",
-		   a.openAtStart, a.openAfterTasksComplete, a.openAfterBodyClose)
-	t.Logf("                   cancel=%v (skip = %v) close=%v",
-		   a.openAfterCancel, a.skipCancel, a.openAfterClose)
+	t.Logf("=====> nTasks            %v", a.nTasks)
+	t.Logf("       nSkipCloseBody    %v", a.nSkipCloseBody)
+	t.Logf("       nSuccessRetries   %v", a.nSuccessRetries)
+	t.Logf("       nFailRetries      %v", a.nFailRetries)
+	t.Logf("       nCtxTimeouts      %v", a.nCtxTimeouts)
+	t.Logf("       runSecondTaskList %v", a.runSecondTaskList)
+	t.Logf("       open after:       start         %v", a.openAtStart)
+	t.Logf("                         tasksComplete %v", a.openAfterTasksComplete)
+	t.Logf("                         bodyClose     %v", a.openAfterBodyClose)
+	t.Logf("                         cancel        %v (skip = %v)", a.openAfterCancel, a.skipCancel)
+	t.Logf("                         close         %v", a.openAfterClose)
 
 	if a.tListProto.CPolicy.tx.Enabled == true {
-		t.Logf("=====> txPolicy: MaxIdleConns=%v MaxIdleConnsPerHost=%v IdleConnTimeout=%v",
-			   a.tListProto.CPolicy.tx.MaxIdleConns,
-			   a.tListProto.CPolicy.tx.MaxIdleConnsPerHost,
-			   a.tListProto.CPolicy.tx.IdleConnTimeout)
+		t.Logf("       txPolicy:         MaxIdleConns        %v", a.tListProto.CPolicy.tx.MaxIdleConns)
+		t.Logf("                         MaxIdleConnsPerHost %v", a.tListProto.CPolicy.tx.MaxIdleConnsPerHost)
+		t.Logf("                         IdleConnTimeout     %v", a.tListProto.CPolicy.tx.IdleConnTimeout)
 	}
 
 	t.Logf("============================================================")
@@ -795,11 +797,11 @@ logLevel = logrus.InfoLevel
 
 	////////////////////////////////////////////////////////////////////////
 	//
-	// Open connections closed after A request completes:
+	// Open connections closed after a request completes:
 	//
 	//	1:   If any request exhausts all of its retries and fails
 	//
-	// Open connections closed when A body is closed:
+	// Open connections closed when a response body is closed:
 	//
 	//	ALL: If any OTHER requests failed due to retries exceeded
 	//
@@ -810,7 +812,6 @@ logLevel = logrus.InfoLevel
 	// Open connections closed after a context is cancelled:
 	//
 	//	1:   If a body was not closed
-	//	?:   If a context deadline was exceeded
 	//
 	// Connections closed after A context is cancelled:
 	//
