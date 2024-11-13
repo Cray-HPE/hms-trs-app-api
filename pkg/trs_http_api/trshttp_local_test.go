@@ -810,7 +810,7 @@ logLevel = logrus.InfoLevel
 	arg.nSuccessRetries        = 0
 	arg.nFailRetries           = 0
 	arg.openAfterTasksComplete = 10
-	arg.openAfterBodyClose     = 8
+	arg.openAfterBodyClose     = 10
 	arg.openAfterCancel        = 8
 	arg.openAfterClose         = 8
 
