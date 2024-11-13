@@ -474,7 +474,7 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 		if len(debugOutput["clientEstab"]) > 0 {
 			sort.Strings(debugOutput["clientEstab"])
 
-			t.Logf("Client ESTAB Connections: (%v)", len(debugOutput["clientEstab"]))
+			t.Logf("- Client ESTAB Connections: (%v)", len(debugOutput["clientEstab"]))
 
 			if logLevel > logrus.InfoLevel {
 				t.Logf("")
@@ -487,7 +487,7 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 		if len(debugOutput["clientOther"]) > 0 {
 			sort.Strings(debugOutput["clientOther"])
 
-			t.Logf("Client Other Connections: (%v)", len(debugOutput["clientOther"]))
+			t.Logf("- Client Other Connections: (%v)", len(debugOutput["clientOther"]))
 
 			if logLevel > logrus.InfoLevel {
 				t.Logf("")
@@ -500,7 +500,7 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 		if len(debugOutput["serverListen"]) > 0 {
 			sort.Strings(debugOutput["serverListen"])
 
-			t.Logf("Server LISTEN Connections: (%v)", len(debugOutput["serverListen"]))
+			t.Logf("- Server LISTEN Connections: (%v)", len(debugOutput["serverListen"]))
 
 			if logLevel > logrus.InfoLevel {
 				t.Logf("")
@@ -513,7 +513,7 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 		if len(debugOutput["serverOther"]) > 0 {
 			sort.Strings(debugOutput["serverOther"])
 
-			t.Logf("Server Other Connections: (%v)", len(debugOutput["serverOther"]))
+			t.Logf("- Server Other Connections: (%v)", len(debugOutput["serverOther"]))
 
 			if logLevel > logrus.InfoLevel {
 				t.Logf("")
@@ -528,7 +528,7 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 		if len(debugOutput["ignoredConn"]) > 0 {
 			sort.Strings(debugOutput["ignoredConn"])
 
-			t.Logf("Ignored Connections: (%v)", len(debugOutput["ignoredConn"]))
+			t.Logf("- Ignored Connections: (%v)", len(debugOutput["ignoredConn"]))
 			t.Logf("")
 			for _,v := range(debugOutput["ignoredConn"]) {
 				t.Log(v)
@@ -538,7 +538,7 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 		if len(debugOutput["ignoredListen"]) > 0 {
 			sort.Strings(debugOutput["ignoredListen"])
 
-			t.Logf("Ignored LISTEN Connections: (%v)", len(debugOutput["ignoredListen"]))
+			t.Logf("- Ignored LISTEN Connections: (%v)", len(debugOutput["ignoredListen"]))
 			t.Logf("")
 			for _,v := range(debugOutput["ignoredListen"]) {
 				t.Log(v)
@@ -548,7 +548,7 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 		if len(debugOutput["ignoredMisc"]) > 0 {
 			sort.Strings(debugOutput["ignoredMisc"])
 
-			t.Logf("Ignored Misc Output: (%v)", len(debugOutput["ignoredMisc"]))
+			t.Logf("- Ignored Misc Output: (%v)", len(debugOutput["ignoredMisc"]))
 			t.Logf("")
 			for _,v := range(debugOutput["ignoredMisc"]) {
 				t.Log(v)
