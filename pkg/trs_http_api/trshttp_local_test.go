@@ -1092,9 +1092,15 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	t.Logf("Testing connections after Launch")
 	testOpenConnections(t, (a.nTasks))
 
+	tasksToWaitFor := a.nTasks
 	if a.nFailRetries > 0 && retrySleep > 0 {
-		time.Sleep(time.Duration(retrySleep/4) * time.Second)
-		t.Logf("Closing response bodies early before retry failures")
+		t.Logf("Waiting for non-retry tasks to complete")
+		for i := 0; i < (a.nTasks - a.nFailRetries); i++ {
+			t.Logf("    task %v completed", i)
+			<-taskListChannel
+		}
+
+		t.Logf("Closing non-retry response bodies early before retry failures")
 		for _, tsk := range(tList) {
 			if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 				// Must fully read the body in order to close the body so that
@@ -1111,10 +1117,11 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 				}
 			}
 		}
+		tasksToWaitFor--
 	}
 
 	t.Logf("Waiting for tasks to complete")
-	for i := 0; i < (a.nTasks); i++ {
+	for i := 0; i < tasksToWaitFor; i++ {
 		<-taskListChannel
 	}
 
