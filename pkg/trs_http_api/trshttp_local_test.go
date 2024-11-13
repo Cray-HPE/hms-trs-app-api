@@ -586,6 +586,8 @@ type testConnsArg struct {
 	nTasks                 int       // Number of tasks to create
 	nSkipCloseBody         int       // Number of response bodies to skip closing
 	openAfterBodyClose     int       // Expected number of ESTAB connections after closing response bodies
+	openAfterCancel        int       // Expected number of ESTAB connections after cancelling tasks
+	openAfterClose         int       // Expected number of ESTAB connections after closing task list
 	nSuccessRetries        int32     // Number of retries to succeed
 	nFailRetries           int       // Number of retries to fail
 	tListProto             *HttpTask // Initialization to pass to tloc.CreateTaskList()
@@ -599,9 +601,9 @@ func logConnTestHeader(t *testing.T, arg testConnsArg) {
 
 	t.Logf("============================================================")
 
-	t.Logf("=====> tasks=%v skipBC=%d retryS=%v retryF=%v oAfterBC=%v",
-		   arg.nTasks, arg.nSkipCloseBody, arg.nSuccessRetries,
-		   arg.nFailRetries, arg.openAfterBodyClose)
+	t.Logf("=====> tasks=%v skipBC=%d retryS=%v retryF=%v oAfterBC=%v oAfterCan=%v oAfterCl=%v",
+		   arg.nTasks, arg.nSkipCloseBody, arg.nSuccessRetries, arg.nFailRetries,
+		   arg.openAfterBodyClose, arg.openAfterCancel, arg.openAfterClose)
 
 	if arg.tListProto.CPolicy.tx.Enabled == true {
 		t.Logf("=====> tbd")
@@ -642,6 +644,8 @@ logLevel = logrus.InfoLevel
 	arg.nSuccessRetries        = 0
 	arg.nFailRetries           = 0
 	arg.openAfterBodyClose     = 2 // MaxIdleConnsPerHost default is 2
+	arg.openAfterCancel        = 2
+	arg.openAfterClose         = 2
 
 	testConns(t, arg)
 
@@ -651,7 +655,9 @@ logLevel = logrus.InfoLevel
 	arg.nSkipCloseBody         = 1
 	arg.nSuccessRetries        = 0
 	arg.nFailRetries           = 0
-	arg.openAfterBodyClose     = 2 - arg.nSkipCloseBody
+	arg.openAfterBodyClose     = 2
+	arg.openAfterCancel        = 1
+	arg.openAfterClose         = 1
 
 	testConns(t, arg)
 
@@ -662,6 +668,8 @@ logLevel = logrus.InfoLevel
 	arg.nSuccessRetries        = 1
 	arg.nFailRetries           = 0
 	arg.openAfterBodyClose     = 2
+	arg.openAfterCancel        = 2
+	arg.openAfterClose         = 2
 
 	testConns(t, arg)
 
@@ -671,7 +679,9 @@ logLevel = logrus.InfoLevel
 	arg.nSkipCloseBody         = 0
 	arg.nSuccessRetries        = 0
 	arg.nFailRetries           = 1
-	arg.openAfterBodyClose     = 0
+	arg.openAfterBodyClose     = 1
+	arg.openAfterCancel        = 0
+	arg.openAfterClose         = 0
 
 	testConns(t, arg)
 
@@ -681,7 +691,9 @@ logLevel = logrus.InfoLevel
 	arg.nSkipCloseBody         = 2
 	arg.nSuccessRetries        = 3
 	arg.nFailRetries           = 2
-	arg.openAfterBodyClose = 0
+	arg.openAfterBodyClose     = 0
+	arg.openAfterCancel        = 0
+	arg.openAfterClose         = 0
 
 	testConns(t, arg)
 
@@ -746,6 +758,8 @@ func TestConnsWithHttpTxPolicy(t *testing.T) {
 	arg.tListProto.CPolicy.tx.MaxIdleConns        = 4
 	arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost = 2
 	arg.openAfterBodyClose                        = arg.tListProto.CPolicy.tx.MaxIdleConnsPerHost
+	arg.openAfterCancel                           = 0 // ???
+	arg.openAfterClose                            = 0 // ???
 
 //logLevel = logrus.DebugLevel
 
@@ -871,12 +885,17 @@ func testConns(t *testing.T, a testConnsArg) {
 	// that there's a problem with the connection if the body was not closed.
 	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after task list cancelled")
-	testOpenConnections(t, a.openAfterBodyClose)
+	testOpenConnections(t, a.openAfterCancel)
 
 	// tloc.Close() closes any reponse bodies left open and removes all
 	// of the tasks from the task list
 	t.Logf("Calling tloc.Close() to close out the task list")
 	tloc.Close(&tList)
+
+	// Closing the task list should not alter existing ESTAB(LISHED) connections
+	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
+	t.Logf("Testing connections after task list closed")
+	testOpenConnections(t, a.openAfterClose)
 
 	// Verify that tloc.Close() did indeed close the response bodies that
 	// we left open to test it
@@ -893,11 +912,6 @@ func testConns(t *testing.T, a testConnsArg) {
 	if (len(tloc.taskMap) != 0) {
 		t.Errorf("ERROR: Expected task list map to be empty")
 	}
-
-	// Closing the task list should not alter existing ESTAB(LISHED) connections
-	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
-	t.Logf("Testing connections after task list closed")
-	testOpenConnections(t, a.openAfterBodyClose)
 
 	t.Logf("Calling tloc.Cleanup to clean up task system")
 	tloc.Cleanup()
