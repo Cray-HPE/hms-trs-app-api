@@ -85,13 +85,13 @@ func TestInit(t *testing.T) {
 
 	tloc.Init(svcName, createLogger())
 	if (tloc.taskMap == nil) {
-		t.Errorf("Init() failed to create task map")
+		t.Errorf("ERROR: Init() failed to create task map")
 	}
 	if (tloc.clientMap == nil) {
-		t.Errorf("Init() failed to create client map")
+		t.Errorf("ERROR: Init() failed to create client map")
 	}
 	if (tloc.svcName != svcName) {
-		t.Errorf("Init() failed to set service name")
+		t.Errorf("ERROR: Init() failed to set service name")
 	}
 }
 
@@ -104,18 +104,18 @@ func TestCreateTaskList(t *testing.T) {
 	tList := tloc.CreateTaskList(&tproto,5)
 
 	if (len(tList) != 5) {
-		t.Errorf("CreateTaskList() didn't create a correct array.")
+		t.Errorf("ERROR: CreateTaskList() didn't create a correct array.")
 	}
 	for _,tsk := range(tList) {
 		if (tsk.Request == nil) {
-			t.Errorf("CreateTaskList() didn't create a proper Request.")
+			t.Errorf("ERROR: CreateTaskList() didn't create a proper Request.")
 		}
 		if (len(tsk.Request.Header) == 0) {
-			t.Errorf("CreateTaskList() didn't create a proper Request header.")
+			t.Errorf("ERROR: CreateTaskList() didn't create a proper Request header.")
 		}
 		vals,ok := tsk.Request.Header["User-Agent"]
 		if (!ok) {
-			t.Errorf("CreateTaskList() didn't copy User-Agent header.")
+			t.Errorf("ERROR: CreateTaskList() didn't copy User-Agent header.")
 		}
 		found := false
 		for _,vr := range(vals) {
@@ -125,7 +125,7 @@ func TestCreateTaskList(t *testing.T) {
 			}
 		}
 		if (!found) {
-			t.Errorf("CreateTaskList() didn't copy User-Agent header.")
+			t.Errorf("ERROR: CreateTaskList() didn't copy User-Agent header.")
 		}
 	}
 }
@@ -269,7 +269,7 @@ func testLaunch(t *testing.T, numTasks int, testSecureLaunch bool, useBadCert bo
 
 		err := tloc.SetSecurity(secInfo)
 		if err != nil {
-			t.Errorf("Error setting security info: %v", err)
+			t.Errorf("ERROR: tloc.SetSecurity() failed: %v", err)
 			return
 		}
 	} else {
@@ -285,7 +285,7 @@ func testLaunch(t *testing.T, numTasks int, testSecureLaunch bool, useBadCert bo
 
 	tch,err := tloc.Launch(&tList)
 	if (err != nil) {
-		t.Errorf("Launch ERROR: %v",err)
+		t.Errorf("ERROR: tloc.Launch failed: %v",err)
 	}
 
 	nDone := 0
@@ -294,35 +294,35 @@ func testLaunch(t *testing.T, numTasks int, testSecureLaunch bool, useBadCert bo
 		tdone := <-tch
 		nDone ++
 		if (tdone == nil) {
-			t.Errorf("Launch chan returned nil ptr.")
+			t.Errorf("ERROR: Launch chan returned nil ptr.")
 		}
 		if (tdone.Request == nil) {
-			t.Errorf("Launch chan returned nil Request.")
+			t.Errorf("ERROR: Launch chan returned nil Request.")
 		} else if (tdone.Request.Response == nil) {
-			t.Errorf("Launch chan returned nil Response.")
+			t.Errorf("ERROR: Launch chan returned nil Response.")
 		} else {
 			if (tdone.Request.Response.StatusCode != http.StatusOK) {
-				t.Errorf("Launch chan returned bad status: %v",tdone.Request.Response.StatusCode)
+				t.Errorf("ERROR: Launch chan returned bad status: %v",tdone.Request.Response.StatusCode)
 				nErr ++
 			}
 			if ((tdone.Err != nil) && ((*tdone.Err) != nil)) {
-				t.Errorf("Launch chan returned error: %v",*tdone.Err)
+				t.Errorf("ERROR: Launch chan returned error: %v",*tdone.Err)
 			}
 		}
 		running, err := tloc.Check(&tList)
 		if (err != nil) {
-			t.Errorf("ERROR with Check(): %v",err)
+			t.Errorf("ERROR: tloc.Check() failed: %v",err)
 		}
 		if (nDone == len(tList)) {
 			if (running) {
-				t.Errorf("ERROR, Check() says still running, but all tasks returned.")
+				t.Errorf("ERROR: tloc.Check() says still running, but all tasks returned.")
 			}
 			break
 		}
 	}
 
 	if (nErr != 0) {
-		t.Errorf("Got %d errors from Launch",nErr)
+		t.Errorf("ERROR: Got %d errors from Launch",nErr)
 	}
 }
 
@@ -349,7 +349,7 @@ func TestLaunchTimeout(t *testing.T) {
 
 	tch,err := tloc.Launch(&tList)
 	if (err != nil) {
-		t.Errorf("Launch ERROR: %v",err)
+		t.Errorf("ERROR: tloc.Launch() failed: %v",err)
 	}
 	time.Sleep(100 * time.Millisecond)
 
@@ -359,23 +359,23 @@ func TestLaunchTimeout(t *testing.T) {
 		tdone := <-tch
 		nDone ++
 		if (tdone == nil) {
-			t.Errorf("Launch chan returned nil ptr.")
+			t.Errorf("ERROR: Launch chan returned nil ptr.")
 		}
 		stallCancel <- true
 		running, err := tloc.Check(&tList)
 		if (err != nil) {
-			t.Errorf("ERROR with Check(): %v",err)
+			t.Errorf("ERROR: tloc.Check() failed: %v",err)
 		}
 		if (nDone == len(tList)) {
 			if (running) {
-				t.Errorf("ERROR, Check() says still running, but all tasks returned.")
+				t.Errorf("ERROR: Check() says still running, but all tasks returned.")
 			}
 			break
 		}
 	}
 
 	if (nErr != 0) {
-		t.Errorf("Got %d errors from Launch",nErr)
+		t.Errorf("ERROR: Got %d errors from Launch",nErr)
 	}
 	close(stallCancel)
 }
@@ -419,7 +419,7 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 			if len(match) > 1 {
 				srvrPorts[match[1]] = true
 			} else {
-				t.Errorf("Failed to find port in LISTEN line: %v", line)
+				t.Errorf("ERROR: Failed to find port in LISTEN line: %v", line)
 			}
 		} else {
 			// Distinguish client connections from server connections
@@ -454,10 +454,10 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 	}
 
 	if (len(debugOutput["clientEstab"]) != clientEstabExp) {
-		t.Errorf("Expected %v ESTABLISHED connections, but got %v",
+		t.Errorf("ERROR: Expected %v ESTABLISH(ED) connections, but got %v",
 				 clientEstabExp, len(debugOutput["clientEstab"]))
 		if logLevel == logrus.TraceLevel {
-			t.Errorf("Full 'ss' output:\n%s", output)
+			t.Errorf("ERROR: Full 'ss' output:\n%s", output)
 		}
 	}
 
@@ -774,7 +774,7 @@ func testConns(t *testing.T, a testConnsArg) {
 
 	req, err := http.NewRequest(http.MethodGet, srv.URL, nil)
 	if err != nil {
-        t.Fatalf("Failed to create request: %v", err)
+        t.Fatalf("ERROR: Failed to create request: %v", err)
     }
 	req.Header.Set("Accept", "*/*")
 
@@ -790,7 +790,7 @@ func testConns(t *testing.T, a testConnsArg) {
 		tList[i].Request.Header.Set("Trs-Fail-All-Retries", "true")
 
 		if (logLevel == logrus.DebugLevel) {
-			t.Errorf("Set request header %v for task %v",
+			t.Errorf("ERROR: Set request header %v for task %v",
 					 tList[i].Request.Header, tList[i].GetID())
 		}
 	}
@@ -800,10 +800,10 @@ func testConns(t *testing.T, a testConnsArg) {
 	t.Logf("Calling tloc.Launch() to launch all tasks")
 	taskListChannel, err := tloc.Launch(&tList)
 	if (err != nil) {
-		t.Errorf("Launch ERROR: %v", err)
+		t.Errorf("ERROR: tloc.Launch() failed: %v", err)
 	}
 
-	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
+	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after Launch")
 	testOpenConnections(t, (a.nTasks))
 
@@ -816,7 +816,7 @@ func testConns(t *testing.T, a testConnsArg) {
 	close(taskListChannel)
 
 	// All connections should still be in ESTAB(LISHED)
-	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
+	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after tasks complete")
 	testOpenConnections(t, a.nTasks)
 
@@ -857,7 +857,7 @@ func testConns(t *testing.T, a testConnsArg) {
 
 	// Closing the body affects the number of ESTAB(LISHED) connections
 	// based on the Transport configuration
-	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
+	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after response bodies closed")
 	testOpenConnections(t, a.openAfterBodyClose)
 
@@ -869,7 +869,7 @@ func testConns(t *testing.T, a testConnsArg) {
 	// connections except for connections where a response body was not
 	// previously closed.  The lower level libraries assume this means
 	// that there's a problem with the connection if the body was not closed.
-	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
+	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after task list cancelled")
 	testOpenConnections(t, a.openAfterBodyClose)
 
@@ -884,18 +884,18 @@ func testConns(t *testing.T, a testConnsArg) {
 	for _, tsk := range(tList) {
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 			if !tsk.Request.Response.Body.(*CustomReadCloser).WasClosed() {
-				t.Errorf("Expected response body for %v to be closed, but it was not", tsk.GetID())
+				t.Errorf("ERROR: Expected response body for %v to be closed, but it was not", tsk.GetID())
 			}
 		}
 	}
 
 	t.Logf("Checking that the task list was closed")
 	if (len(tloc.taskMap) != 0) {
-		t.Errorf("Expected task list map to be empty")
+		t.Errorf("ERROR: Expected task list map to be empty")
 	}
 
 	// Closing the task list should not alter existing ESTAB(LISHED) connections
-	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
+	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after task list closed")
 	testOpenConnections(t, a.openAfterBodyClose)
 
@@ -903,7 +903,7 @@ func testConns(t *testing.T, a testConnsArg) {
 	tloc.Cleanup()
 
 	// Cleaking up the task list system should close all connections
-	time.Sleep(100 * time.Millisecond)		// Give time to staiblize
+	time.Sleep(200 * time.Millisecond)		// Give time to staiblize
 	t.Logf("Testing connections after task list cleaned up")
 	testOpenConnections(t, 0)
 
