@@ -707,7 +707,6 @@ func testConns(t *testing.T, a testConnsArg) {
 	t.Logf("Calling tloc.CreateTaskList() to create %v tasks for URL %v", a.nTasks, srv.URL)
 	tList := tloc.CreateTaskList(a.tListProto, a.nTasks)
 
-Set log level in makefile to error then control in my code
 	// Configure any requested retries
 	nRetries = a.nSuccessRetries
 	for i := 0; i < a.nFailRetries; i++ {
