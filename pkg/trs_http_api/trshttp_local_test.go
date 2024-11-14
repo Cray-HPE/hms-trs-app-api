@@ -622,6 +622,10 @@ type testConnsArg struct {
 func logConnTestHeader(t *testing.T, a testConnsArg) {
 	t.Logf("============================================================")
 
+	if logLevel < logrus.ErrorLevel {
+		return 
+	}
+
 	t.Logf("   nTasks:              %v", a.nTasks)
 	t.Logf("   nSkipCloseBody:      %v", a.nSkipCloseBody)
 	t.Logf("   nSuccessRetries:     %v", a.nSuccessRetries)
@@ -995,7 +999,6 @@ func TestBasicConnectionBehavior(t *testing.T) {
 
 	a.runSecondTaskList = true // second run should not open any new connections
 
-logLevel = logrus.DebugLevel
 	testConns(t, a)
 
 	a.runSecondTaskList    = true	// set back to default
@@ -1085,7 +1088,7 @@ req.Header.Set("Connection","keep-alive")
 		tList[i].Request.Header.Set("Trs-Fail-All-Retries", "true")
 
 		if (logLevel == logrus.DebugLevel) {
-			t.Errorf("Set request header %v for task %v",
+			t.Logf("Set request header %v for task %v",
 					 tList[i].Request.Header, tList[i].GetID())
 		}
 	}
@@ -1097,7 +1100,7 @@ req.Header.Set("Connection","keep-alive")
 		tList[i].Request.Header.Set("Trs-Context-Timeout", "true")
 
 		if (logLevel == logrus.DebugLevel) {
-			t.Errorf("Set request header %v for task %v",
+			t.Logf("Set request header %v for task %v",
 					 tList[i].Request.Header, tList[i].GetID())
 		}
 
