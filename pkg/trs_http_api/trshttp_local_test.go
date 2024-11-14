@@ -818,7 +818,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	//
 	// Number of open connections that close after an http request times out:
 	//
-	//  ?:   TBD
+	//  All: If any request times out
 	//
 	// Number of open connections that close after a context is cancelled:
 	//
@@ -995,17 +995,12 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.openAfterCancel        = 0
 	a.openAfterClose         = 0
 
-logLevel = logrus.DebugLevel
-
 	a.runSecondTaskList = true // second run should not open any new connections
 
 	testConns(t, a)
 
 	a.runSecondTaskList    = true	// set back to default
 	a.testIdleConnTimeout  = false	// set back to default
-
-
-logLevel = logrus.ErrorLevel
 }
 
 const sleepTimeToStabilizeConns = 250 * time.Millisecond
@@ -1035,12 +1030,12 @@ func testConns(t *testing.T, a testConnsArg) {
 		// The only impact might be open connections at the start (or not)
 
 		// a.nTasks stays the same
+		// a.testIdleConnTimeout stays the same
 
 		a.nSkipCloseBody         = 0
 		a.nSuccessRetries        = 0
 		a.nHttpTimeouts          = 0
 		a.nFailRetries           = 0
-		a.testIdleConnTimeout    = false
 		a.openAtStart            = a.openAfterClose // carry forward at end of last run
 		a.openAfterTasksComplete = a.nTasks
 		a.openAfterBodyClose     = a.nTasks
@@ -1118,7 +1113,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		t.Errorf("ERROR: tloc.Launch() failed: %v", err)
 	}
 
-	time.Sleep(sleepTimeToStabilizeConns + (250 * time.Millisecond))
+	time.Sleep(1 * time.Second)	// Can take some time for all to get established
 	t.Logf("Testing connections after Launch")
 	testOpenConnections(t, (a.nTasks))
 
