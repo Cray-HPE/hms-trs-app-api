@@ -622,10 +622,6 @@ type testConnsArg struct {
 }
 
 func logConnTestHeader(t *testing.T, a testConnsArg) {
-	if logLevel <= logrus.ErrorLevel {
-		return
-	}
-
 	t.Logf("============================================================")
 
 	t.Logf("   nTasks:              %v", a.nTasks)
@@ -975,14 +971,17 @@ func TestBasicConnectionBehavior(t *testing.T) {
 
 	testConns(t, a)
 
-logLevel = logrus.DebugLevel
-
-	// test time spent in time-wait / fin-wait-2 after tloc.Close() to
-	//     ensure those connections don't stay open forever.  They should
-	//     close after http time out (90% of context timeout)
-
-	// 10 requests: No issues but we pause at end of test for the full
+	// 10 requests that we run these twice to test IdleConnTimeout:
+	// 
+	//	* 1st run with 2 http timeouts so that all connections close and go
+	//	  into CLOSE-WAIT or FIN-WAIT-2.  After IdleConnTimeout we verify
+	//	  that those connections are closed.
+	//
+	//	* 2nd run with 10 successful requests so that all connections are
+	//	  in ESTAB(LISHED).  After IdleConnTimeout we verify that those
 	//  		    idleConnTimeout to ensure all connections get closed
+	//
+	// THESE TESTS WILL TAKE TIME TO COMPLETE!!!!
 
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
@@ -991,14 +990,19 @@ logLevel = logrus.DebugLevel
 	a.nFailRetries           = 0
 	a.testIdleConnTimeout    = true
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = a.nTasks
-	a.openAfterCancel        = a.nTasks
-	a.openAfterClose         = a.nTasks
+	a.openAfterTasksComplete = 0
+	a.openAfterBodyClose     = 0
+	a.openAfterCancel        = 0
+	a.openAfterClose         = 0
+
+logLevel = logrus.DebugLevel
+
+	a.runSecondTaskList = true // second run should not open any new connections
 
 	testConns(t, a)
 
-	a.testIdleConnTimeout    = false	// set back to default
+	a.runSecondTaskList    = true	// set back to default
+	a.testIdleConnTimeout  = false	// set back to default
 
 
 logLevel = logrus.ErrorLevel
@@ -1034,6 +1038,7 @@ func testConns(t *testing.T, a testConnsArg) {
 
 		a.nSkipCloseBody         = 0
 		a.nSuccessRetries        = 0
+		a.nHttpTimeouts          = 0
 		a.nFailRetries           = 0
 		a.testIdleConnTimeout    = false
 		a.openAtStart            = a.openAfterClose // carry forward at end of last run
