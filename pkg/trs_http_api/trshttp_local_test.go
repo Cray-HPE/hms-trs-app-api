@@ -358,7 +358,7 @@ func TestLaunchTimeout(t *testing.T) {
 			Request: req,
 			Timeout: 3*time.Second,
 			CPolicy: ClientPolicy{
-				retry: RetryPolicy{
+				Retry: RetryPolicy{
 						Retries: 1,
 						BackoffTimeout: 3 * time.Second},
 				},
@@ -668,7 +668,7 @@ return
 	defaultTListProto := &HttpTask{
 		Timeout: httpTimeout,
 		CPolicy: ClientPolicy {
-			retry: RetryPolicy{Retries: httpRetries},
+			Retry: RetryPolicy{Retries: httpRetries},
 		},
 	}
 
