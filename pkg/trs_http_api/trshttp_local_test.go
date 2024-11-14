@@ -1265,5 +1265,4 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		time.Sleep(a.tListProto.CPolicy.tx.IdleConnTimeout)
 		testOpenConnections(t, 0)
 	}
-	// DONE
 }

@@ -439,4 +439,5 @@ func (tloc *TRSHTTPLocal) Cleanup() {
 	}
 	tloc.Logger.Tracef("Cleanup() completed")
 	// this really just a big red button to STOP ALL? b/c im not clearing any memory
+	// TEST
 }
