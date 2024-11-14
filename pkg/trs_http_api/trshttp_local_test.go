@@ -192,7 +192,7 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 		time.Sleep(time.Duration(retrySleep) * time.Second)
 
 		w.Header().Set("Content-Type","application/json")
-//	w.Header().Set("Connection","keep-alive")
+w.Header().Set("Connection","keep-alive")
 		w.Header().Set("Retry-After","1")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(`{"Message":"Service Unavailable"}`))
@@ -212,7 +212,7 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 
 		if (!hasUserAgentHeader(req)) {
 			w.Write([]byte(`{"Message":"No User-Agent Header"}`))
-//	w.Header().Set("Connection","keep-alive")
+w.Header().Set("Connection","keep-alive")
 			w.WriteHeader(http.StatusInternalServerError)
 
 			if (logLevel >= logrus.DebugLevel) {
@@ -221,7 +221,7 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		w.Header().Set("Content-Type","application/json")
-//	w.Header().Set("Connection","keep-alive")
+w.Header().Set("Connection","keep-alive")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"Message":"OK"}`))
 
@@ -245,7 +245,7 @@ func stallHandler(w http.ResponseWriter, req *http.Request) {
 	<-stallCancel
 
 	w.Header().Set("Content-Type","application/json")
-//	w.Header().Set("Connection","keep-alive")
+w.Header().Set("Connection","keep-alive")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"Message":"OK"}`))
 
@@ -826,7 +826,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 
 	a.tListProto.CPolicy.tx.MaxIdleConns        = 10
 	a.tListProto.CPolicy.tx.MaxIdleConnsPerHost = 10
-/*
+
 	// 10 requests: No issues so all conns should be open
 
 	a.nTasks                 = 10
@@ -969,7 +969,6 @@ func TestBasicConnectionBehavior(t *testing.T) {
 
 	testConns(t, a)
 
-*/
 	// 10 requests that we run these twice to test IdleConnTimeout:
 	//
 	//	* 1st run with 2 http timeouts so that all connections close and go
@@ -1073,6 +1072,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
         t.Fatalf("===> ERROR: Failed to create request: %v", err)
     }
 	req.Header.Set("Accept", "*/*")
+req.Header.Set("Connection","keep-alive")
 
 	a.tListProto.Request = req
 	t.Logf("Calling tloc.CreateTaskList() to create %v tasks for URL %v", a.nTasks, srv.URL)
