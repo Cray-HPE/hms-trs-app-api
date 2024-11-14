@@ -610,6 +610,7 @@ type testConnsArg struct {
 	nSkipCloseBody         int       // Number of response bodies to skip closing
 	nSuccessRetries        int32     // Number of retries to succeed
 	nFailRetries           int       // Number of retries to fail
+	testIdleConnTimeout    bool 	 // Test idle connection timeout
 	nCtxTimeouts           int       // Number of context timeouts
 	openAtStart            int       // Expected number of ESTAB connections at beginning
 	openAfterTasksComplete int       // Expected number of ESTAB connections after all tasks complete
@@ -627,28 +628,29 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 
 	t.Logf("============================================================")
 
-	t.Logf("   nTasks:            %v", a.nTasks)
-	t.Logf("   nSkipCloseBody:    %v", a.nSkipCloseBody)
-	t.Logf("   nSuccessRetries:   %v", a.nSuccessRetries)
-	t.Logf("   nFailRetries:      %v", a.nFailRetries)
-	t.Logf("   nCtxTimeouts:      %v", a.nCtxTimeouts)
+	t.Logf("   nTasks:              %v", a.nTasks)
+	t.Logf("   nSkipCloseBody:      %v", a.nSkipCloseBody)
+	t.Logf("   nSuccessRetries:     %v", a.nSuccessRetries)
+	t.Logf("   nFailRetries:        %v", a.nFailRetries)
+	t.Logf("   testIdleConnTimeout: %v", a.testIdleConnTimeout)
+	t.Logf("   nCtxTimeouts:        %v", a.nCtxTimeouts)
 	t.Logf("")
-	t.Logf("   runSecondTaskList: %v", a.runSecondTaskList)
+	t.Logf("   runSecondTaskList:   %v", a.runSecondTaskList)
 	t.Logf("")
-	t.Logf("   Conns open after:  start:         %v", a.openAtStart)
-	t.Logf("                      tasksComplete: %v", a.openAfterTasksComplete)
-	t.Logf("                      bodyClose:     %v", a.openAfterBodyClose)
-	t.Logf("                      cancel:        %v (skip = %v)", a.openAfterCancel, a.skipCancel)
-	t.Logf("                      close:         %v", a.openAfterClose)
+	t.Logf("   Conns open after:    start:         %v", a.openAtStart)
+	t.Logf("                        tasksComplete: %v", a.openAfterTasksComplete)
+	t.Logf("                        bodyClose:     %v", a.openAfterBodyClose)
+	t.Logf("                        cancel:        %v (skip = %v)", a.openAfterCancel, a.skipCancel)
+	t.Logf("                        close:         %v", a.openAfterClose)
 	t.Logf("")
-	t.Logf("   rtPolicy:          httpRetries:         %v", a.tListProto.CPolicy.retry.Retries)
+	t.Logf("   rtPolicy:            httpRetries:         %v", a.tListProto.CPolicy.retry.Retries)
 	t.Logf("")
 
 	if a.tListProto.CPolicy.tx.Enabled == true {
 		t.Logf("")
-		t.Logf("   txPolicy:          MaxIdleConns:        %v", a.tListProto.CPolicy.tx.MaxIdleConns)
-		t.Logf("                      MaxIdleConnsPerHost: %v", a.tListProto.CPolicy.tx.MaxIdleConnsPerHost)
-		t.Logf("                      IdleConnTimeout:     %v", a.tListProto.CPolicy.tx.IdleConnTimeout)
+		t.Logf("   txPolicy:            MaxIdleConns:        %v", a.tListProto.CPolicy.tx.MaxIdleConns)
+		t.Logf("                        MaxIdleConnsPerHost: %v", a.tListProto.CPolicy.tx.MaxIdleConnsPerHost)
+		t.Logf("                        IdleConnTimeout:     %v", a.tListProto.CPolicy.tx.IdleConnTimeout)
 	}
 
 	t.Logf("============================================================")
@@ -685,6 +687,7 @@ return
 	a.nSuccessRetries        = 0
 	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 0
+	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = 10
 	a.openAfterBodyClose     = 2 // MaxIdleConnsPerHost default is 2
 	a.openAfterCancel        = 2
@@ -699,6 +702,7 @@ return
 	a.nSuccessRetries        = 0
 	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 0
+	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = 2
 	a.openAfterBodyClose     = 2
 	a.openAfterCancel        = 1	// no body close == bad connection
@@ -713,6 +717,7 @@ return
 	a.nSuccessRetries        = 1
 	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 0
+	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = 2
 	a.openAfterBodyClose     = 2
 	a.openAfterCancel        = 2
@@ -727,6 +732,7 @@ return
 	a.nSuccessRetries        = 0
 	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 1
+	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = 1
 	a.openAfterBodyClose     = 0	// retryablehttp closes all open conns after close of body for any other still open ...
 	a.openAfterCancel        = 0 // TODO:  Enable more debug to see if failed body is closed or not
@@ -741,6 +747,7 @@ return
 	a.nSuccessRetries        = 3
 	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 2
+	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = 8
 	a.openAfterBodyClose     = 2
 	a.openAfterCancel        = 2
@@ -751,10 +758,11 @@ return
 logLevel = logrus.ErrorLevel
 }
 
-// TestConnsWithHttpTxPolicy tests connection use by TRS callers that DO
-// configure the http transport.
+// TestBasicConnectionBehavior tests the the connection behavior that
+// we code TRS to use.  This includes the use of the http transport
+// and the retryablehttp library.
 
-func TestConnsWithHttpTxPolicy(t *testing.T) {
+func TestBasicConnectionBehavior(t *testing.T) {
 	httpRetries             := 3
 	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
 	pcsStatusTimeout        := 30
@@ -801,8 +809,6 @@ func TestConnsWithHttpTxPolicy(t *testing.T) {
 		srvHandler:             launchHandler,	// always returns success
 	}
 
-logLevel = logrus.InfoLevel
-
 	////////////////////////////////////////////////////////////////////////
 	//
 	// Open connections closed after a request completes:
@@ -834,6 +840,7 @@ logLevel = logrus.InfoLevel
 	a.nSuccessRetries        = 0
 	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 0
+	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = a.nTasks
@@ -853,6 +860,7 @@ logLevel = logrus.InfoLevel
 	a.nSuccessRetries        = 0
 	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 0
+	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = a.nTasks
@@ -872,6 +880,7 @@ logLevel = logrus.InfoLevel
 	a.nSuccessRetries        = 0
 	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 0
+	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = a.nTasks
@@ -890,6 +899,7 @@ logLevel = logrus.InfoLevel
 	a.nSuccessRetries        = 2
 	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 0
+	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = a.nTasks
@@ -905,11 +915,12 @@ logLevel = logrus.InfoLevel
 	a.nSuccessRetries        = 0
 	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 2
+	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
-	a.openAfterBodyClose     = 0 // (FIX?)
-	a.openAfterCancel        = 0 // (FIX?)
-	a.openAfterClose         = 0 // (FIX?)
+	a.openAfterBodyClose     = 0 // FIX??
+	a.openAfterCancel        = 0 // FIX??
+	a.openAfterClose         = 0 // FIX??
 
 	retrySleep = 0	// 0 seconds so retries complete first
 
@@ -926,11 +937,12 @@ logLevel = logrus.InfoLevel
 	a.nSuccessRetries        = 0
 	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 2
+	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = 0 // Even though 8 prior bodies closed (FIX?)
-	a.openAfterBodyClose     = 0 // (FIX?)
-	a.openAfterCancel        = 0 // (FIX?)
-	a.openAfterClose         = 0 // (FIX?)
+	a.openAfterBodyClose     = 0 // FIX??
+	a.openAfterCancel        = 0 // FIX??
+	a.openAfterClose         = 0 // FIX??
 
 	retrySleep = 4	// 4 seconds so retries complete last
 
@@ -944,7 +956,10 @@ logLevel = logrus.InfoLevel
 	a.runSecondTaskList = false	// set back to default
 	retrySleep = 0				// set back to default
 
-	// 10 requests: 2 context timeouts after 8 successes complete
+	// 10 requests: 2 http timeouts after 8 successes complete.  Note that
+	//              http requests time out at 90% of the context timeout.
+	//              Those requests will then retry before getting caught by
+	//              the context timeout, 10% of that time later
 
 logLevel = logrus.DebugLevel
 
@@ -953,36 +968,42 @@ logLevel = logrus.DebugLevel
 	a.nSuccessRetries        = 0
 	a.nCtxTimeouts           = 2
 	a.nFailRetries           = 0
+	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
-	//a.openAfterTasksComplete = a.nTasks - a.nFailRetries
-	a.openAfterTasksComplete = 0
-	a.openAfterBodyClose     = 0 // (FIX?)
-	a.openAfterCancel        = 0 // (FIX?)
-	a.openAfterClose         = 0 // (FIX?)
+	a.openAfterTasksComplete = 0 // FIX??
+	a.openAfterBodyClose     = 0 // FIX??
+	a.openAfterCancel        = 0 // FIX??
+	a.openAfterClose         = 0 // FIX??
 
 	testConns(t, a)
 
 logLevel = logrus.InfoLevel
 
-	// test time spent in time-wait
-	// context times out
-	// http request times out (no context)
+	// test time spent in time-wait / fin-wait-2 after tloc.Close() to
+	//     ensure those connections don't stay open forever.  They should
+	//     close after http time out (90% of context timeout)
 
-logLevel = logrus.ErrorLevel
-return
+	// 10 requests: No issues but we pause at end of test for the full
+	//  		    idleConnTimeout to ensure all connections get closed
 
+	a.nTasks                 = 10
+	a.nSkipCloseBody         = 0
+	a.nSuccessRetries        = 0
+	a.nCtxTimeouts           = 0
+	a.nFailRetries           = 0
+	a.testIdleConnTimeout    = true
 	a.openAtStart            = 0
-	a.openAfterTasksComplete                    = 0 // ???
-	a.openAfterBodyClose                        = a.nTasks - a.nSkipCloseBody
-	a.openAfterBodyClose                        = a.tListProto.CPolicy.tx.MaxIdleConnsPerHost
-	a.openAfterCancel                           = 0 // ???
-	a.openAfterClose                            = 0 // ???
-
-//logLevel = logrus.DebugLevel
+	a.openAfterTasksComplete = a.nTasks
+	a.openAfterBodyClose     = a.nTasks
+	a.openAfterCancel        = a.nTasks
+	a.openAfterClose         = a.nTasks
 
 	testConns(t, a)
 
-//logLevel = logrus.ErrorLevel
+	a.testIdleConnTimeout    = false	// set back to default
+
+
+logLevel = logrus.ErrorLevel
 }
 
 const sleepTimeToStabilizeConns = 250 * time.Millisecond
@@ -1016,6 +1037,7 @@ func testConns(t *testing.T, a testConnsArg) {
 		a.nSkipCloseBody         = 0
 		a.nSuccessRetries        = 0
 		a.nFailRetries           = 0
+		a.testIdleConnTimeout    = false
 		a.openAtStart            = a.openAfterClose // carry forward at end of last run
 		a.openAfterTasksComplete = a.nTasks
 		a.openAfterBodyClose     = a.nTasks
@@ -1065,7 +1087,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		tList[i].Request.Header.Set("Trs-Fail-All-Retries", "true")
 
 		if (logLevel == logrus.DebugLevel) {
-			t.Errorf("ERROR: Set request header %v for task %v",
+			t.Errorf("Set request header %v for task %v",
 					 tList[i].Request.Header, tList[i].GetID())
 		}
 	}
@@ -1077,12 +1099,12 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		tList[i].Request.Header.Set("Trs-Context-Timeout", "true")
 
 		if (logLevel == logrus.DebugLevel) {
-			t.Errorf("ERROR: Set request header %v for task %v",
+			t.Errorf("Set request header %v for task %v",
 					 tList[i].Request.Header, tList[i].GetID())
 		}
 
 		// Create a channel to signal the stalled server handlers to complete
-		stallCancel = make(chan bool, a.nCtxTimeouts)
+		stallCancel = make(chan bool, a.nCtxTimeouts * 2)
 	}
 
 	// All connections should be in ESTAB(LISHED) and should stay there
@@ -1127,8 +1149,8 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 			}
 		}
 
-		// All non-retry connections should still be in ESTAB(LISHED)
-		time.Sleep(sleepTimeToStabilizeConns)
+		// All connections should still be in ESTAB(LISHED)
+		time.Sleep(time.Duration(a.nTasks) * time.Millisecond)
 		t.Logf("Testing connections after non-retry tasks complete")
 		testOpenConnections(t, a.openAfterTasksComplete) // ???
 	}
@@ -1235,6 +1257,12 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		for i := 0; i < a.nCtxTimeouts * 2; i++ {
 			stallCancel <- true
 		}
+	}
+
+	if (a.testIdleConnTimeout) {
+		t.Logf("Testing connections after idleConnTimeout")
+		time.Sleep(a.tListProto.CPolicy.tx.IdleConnTimeout)
+		testOpenConnections(t, 0)
 	}
 }
 
