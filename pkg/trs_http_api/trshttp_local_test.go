@@ -1260,6 +1260,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	}
 
 	if (a.testIdleConnTimeout) {
+		// TODO: Should also comfirm no client "other" connections as well
 		t.Logf("Testing connections after idleConnTimeout")
 		time.Sleep(a.tListProto.CPolicy.tx.IdleConnTimeout)
 		testOpenConnections(t, 0)
