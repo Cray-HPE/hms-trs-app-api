@@ -811,20 +811,20 @@ func TestBasicConnectionBehavior(t *testing.T) {
 
 	////////////////////////////////////////////////////////////////////////
 	//
-	// Open connections closed after a request completes:
+	// Number of open connections that close after a request completes:
 	//
 	//	1:   If any request exhausts all of its retries and fails
 	//	X:   Above + any prior X successful requests with closed bodies
 	//
-	// Open connections closed when a response body is closed:
+	// Number of open connections that close when a response body is closed:
 	//
-	//	ALL: If any OTHER requests failed due to retries exceeded
+	//	ALL: If any of the OTHER requests failed due to retries exceeded
 	//
-	// Open connections closed after a context times out:
+	// Number of open connections that close after an http request times out:
 	//
 	//  ?:   TBD
 	//
-	// Open connections closed after a context is cancelled:
+	// Number of open connections that close after a context is cancelled:
 	//
 	//	1:   If a body was not closed
 	//
@@ -961,8 +961,6 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	//              Those requests will then retry before getting caught by
 	//              the context timeout, 10% of that time later
 
-logLevel = logrus.DebugLevel
-
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
@@ -977,7 +975,7 @@ logLevel = logrus.DebugLevel
 
 	testConns(t, a)
 
-logLevel = logrus.InfoLevel
+logLevel = logrus.DebugLevel
 
 	// test time spent in time-wait / fin-wait-2 after tloc.Close() to
 	//     ensure those connections don't stay open forever.  They should
@@ -1124,9 +1122,8 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	// to test if the completed tasks have their connections closed
 	tasksToWaitFor := a.nTasks
 	if a.nFailRetries > 0 && retrySleep > 0 {
-		t.Logf("Waiting for non-retry tasks to complete")
+		t.Logf("Waiting for %v non-retry tasks to complete", a.nTasks - a.nFailRetries)
 		for i := 0; i < (a.nTasks - a.nFailRetries); i++ {
-			t.Logf("    task %v completed", i)
 			<-taskListChannel
 			tasksToWaitFor--
 		}
@@ -1151,8 +1148,8 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 		// All connections should still be in ESTAB(LISHED)
 		time.Sleep(time.Duration(a.nTasks) * time.Millisecond)
-		t.Logf("Testing connections after non-retry tasks complete")
-		testOpenConnections(t, a.openAfterTasksComplete) // ???
+		t.Logf("Testing connections after non-retry request bodies closed")
+		testOpenConnections(t, a.nTasks)
 	}
 
 	t.Logf("Waiting for %d tasks to complete", tasksToWaitFor)
