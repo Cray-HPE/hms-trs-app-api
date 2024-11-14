@@ -641,14 +641,14 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 	t.Logf("                        cancel:        %v (skip = %v)", a.openAfterCancel, a.skipCancel)
 	t.Logf("                        close:         %v", a.openAfterClose)
 	t.Logf("")
-	t.Logf("   rtPolicy:            httpRetries:         %v", a.tListProto.CPolicy.retry.Retries)
+	t.Logf("   rtPolicy:            httpRetries:         %v", a.tListProto.CPolicy.Retry.Retries)
 	t.Logf("")
 
-	if a.tListProto.CPolicy.tx.Enabled == true {
+	if a.tListProto.CPolicy.Tx.Enabled == true {
 		t.Logf("")
-		t.Logf("   txPolicy:            MaxIdleConns:        %v", a.tListProto.CPolicy.tx.MaxIdleConns)
-		t.Logf("                        MaxIdleConnsPerHost: %v", a.tListProto.CPolicy.tx.MaxIdleConnsPerHost)
-		t.Logf("                        IdleConnTimeout:     %v", a.tListProto.CPolicy.tx.IdleConnTimeout)
+		t.Logf("   txPolicy:            MaxIdleConns:        %v", a.tListProto.CPolicy.Tx.MaxIdleConns)
+		t.Logf("                        MaxIdleConnsPerHost: %v", a.tListProto.CPolicy.Tx.MaxIdleConnsPerHost)
+		t.Logf("                        IdleConnTimeout:     %v", a.tListProto.CPolicy.Tx.IdleConnTimeout)
 	}
 
 	t.Logf("============================================================")
@@ -784,11 +784,11 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	defaultTListProto := &HttpTask{
 		Timeout: httpTimeout,
 		CPolicy: ClientPolicy {
-			retry:
+			Retry:
 				RetryPolicy {
 					Retries: httpRetries,
 				},
-			tx:
+			Tx:
 				HttpTxPolicy {
 					Enabled:                  true,
 					MaxIdleConns:             pcsMaxIdleConns,
@@ -828,8 +828,8 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	//
 	////////////////////////////////////////////////////////////////////////
 
-	a.tListProto.CPolicy.tx.MaxIdleConns        = 10
-	a.tListProto.CPolicy.tx.MaxIdleConnsPerHost = 10
+	a.tListProto.CPolicy.Tx.MaxIdleConns        = 10
+	a.tListProto.CPolicy.Tx.MaxIdleConnsPerHost = 10
 
 	// 10 requests: No issues so all conns should be open
 
@@ -1262,7 +1262,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	if (a.testIdleConnTimeout) {
 		// TODO: Should also comfirm no client "other" connections as well
 		t.Logf("Testing connections after idleConnTimeout")
-		time.Sleep(a.tListProto.CPolicy.tx.IdleConnTimeout)
+		time.Sleep(a.tListProto.CPolicy.Tx.IdleConnTimeout)
 		testOpenConnections(t, 0)
 	}
 }
