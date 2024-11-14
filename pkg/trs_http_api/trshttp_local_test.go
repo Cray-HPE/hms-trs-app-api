@@ -157,19 +157,20 @@ func hasTRSStallHeader(r *http.Request) bool {
         return false
     }
 
-	_,ok := r.Header["Trs-Stall"]
+	_,ok := r.Header["Trs-Context-Timeout"]
 
 	if ok == true {
-		handlerLogger.Logf("Received Trs-Stall header")
+		handlerLogger.Logf("Received Trs-Context-Timeout header")
 	}
 
 	return ok
 }
 
 var handlerLogger *testing.T
-var handlerSleep int = 2 // time to sleep to simulate network/BMC delays
-var retrySleep int   = 0 // time to sleep before returning 503 for retry
-var nRetries int32   = 0 // how many retries before returning success
+var handlerSleep int    = 2 // time to sleep to simulate network/BMC delays
+var retrySleep int      = 0 // time to sleep before returning 503 for retry
+var nRetries int32      = 0 // how many retries before returning success
+var nCtxTimeouts int    = 0 // how many context timeouts
 
 func launchHandler(w http.ResponseWriter, req *http.Request) {
 	// Distinguish between limited retries that will succeed and retries
@@ -202,7 +203,7 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 			handlerLogger.Logf("retryHandler returning Message Service Unavailable...")
 		}
 	} else if hasTRSStallHeader(req) {
-		// tbd
+		stallHandler(w, req)
 	} else {
 		if (logLevel >= logrus.DebugLevel) {
 			handlerLogger.Logf("launchHandler running...")
@@ -807,6 +808,7 @@ logLevel = logrus.InfoLevel
 	// Open connections closed after a request completes:
 	//
 	//	1:   If any request exhausts all of its retries and fails
+	//	X:   Above + any prior X successful requests with closed bodies
 	//
 	// Open connections closed when a response body is closed:
 	//
@@ -819,21 +821,6 @@ logLevel = logrus.InfoLevel
 	// Open connections closed after a context is cancelled:
 	//
 	//	1:   If a body was not closed
-	//
-	// Connections closed after A context is cancelled:
-	//
-	//	TBD: tbd
-	//
-	// This is where results start to get interesting.  When any of the
-	// following occur:
-	//
-	//	* A response body is closed (happens for successful requests)
-	//	* A context for a task is cancelled (happes for all requsts)
-	//
-	// All currently open connections associated with a client are closed if:
-	//
-	//	* Any request exhausted its retries and failed
-	//	* A context for a task timed out
 	//
 	////////////////////////////////////////////////////////////////////////
 
@@ -920,9 +907,9 @@ logLevel = logrus.InfoLevel
 	a.nFailRetries           = 2
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
-	a.openAfterBodyClose     = 0 // CAN WE HACK httpretryable/http.Client??
-	a.openAfterCancel        = 0 // CAN WE HACK httpretryable/http.Client??
-	a.openAfterClose         = 0 // CAN WE HACK httpretryable/http.Client??
+	a.openAfterBodyClose     = 0 // (FIX?)
+	a.openAfterCancel        = 0 // (FIX?)
+	a.openAfterClose         = 0 // (FIX?)
 
 	retrySleep = 0	// 0 seconds so retries complete first
 
@@ -931,6 +918,8 @@ logLevel = logrus.InfoLevel
 	retrySleep = 0					// set back to default
 
 	// 10 requests: 2 exhaust all retries and fail AFTER 8 success complete
+	//              We close the successful tasks response bodies before the
+	//              failed retry tasks complete
 
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
@@ -938,10 +927,10 @@ logLevel = logrus.InfoLevel
 	a.nCtxTimeouts           = 0
 	a.nFailRetries           = 2
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
-	a.openAfterBodyClose     = 0 // CAN WE HACK httpretryable/http.Client??
-	a.openAfterCancel        = 0 // CAN WE HACK httpretryable/http.Client??
-	a.openAfterClose         = 0 // CAN WE HACK httpretryable/http.Client??
+	a.openAfterTasksComplete = 0 // Even though 8 prior bodies closed (FIX?)
+	a.openAfterBodyClose     = 0 // (FIX?)
+	a.openAfterCancel        = 0 // (FIX?)
+	a.openAfterClose         = 0 // (FIX?)
 
 	retrySleep = 4	// 4 seconds so retries complete last
 
@@ -952,10 +941,10 @@ logLevel = logrus.InfoLevel
 
 	testConns(t, a)
 
-	retrySleep = 0					// set back to default
 	a.runSecondTaskList = false	// set back to default
+	retrySleep = 0				// set back to default
 
-	// 10 requests: 2 context timeouts after 8 successes complese
+	// 10 requests: 2 context timeouts after 8 successes complete
 
 logLevel = logrus.DebugLevel
 
@@ -963,12 +952,13 @@ logLevel = logrus.DebugLevel
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
 	a.nCtxTimeouts           = 2
-	a.nFailRetries           = 1
+	a.nFailRetries           = 0
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
-	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
-	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
-	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
+	//a.openAfterTasksComplete = a.nTasks - a.nFailRetries
+	a.openAfterTasksComplete = 0
+	a.openAfterBodyClose     = 0 // (FIX?)
+	a.openAfterCancel        = 0 // (FIX?)
+	a.openAfterClose         = 0 // (FIX?)
 
 	testConns(t, a)
 
@@ -1068,7 +1058,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	t.Logf("Calling tloc.CreateTaskList() to create %v tasks for URL %v", a.nTasks, srv.URL)
 	tList := tloc.CreateTaskList(a.tListProto, a.nTasks)
 
-	// Configure any requested retries
+	// Configure any requested retries (put at beginning of list)
 	nRetries = a.nSuccessRetries
 	for i := 0; i < a.nFailRetries; i++ {
 		// Just choose the ones at the beginning
@@ -1078,6 +1068,21 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 			t.Errorf("ERROR: Set request header %v for task %v",
 					 tList[i].Request.Header, tList[i].GetID())
 		}
+	}
+
+	// Configure any requested context timeouts (put at end of list)
+	nCtxTimeouts = a.nCtxTimeouts
+	for i := len(tList) - 1; i > len(tList) - 1 - a.nCtxTimeouts; i-- {
+		// Just choose the ones at the beginning
+		tList[i].Request.Header.Set("Trs-Context-Timeout", "true")
+
+		if (logLevel == logrus.DebugLevel) {
+			t.Errorf("ERROR: Set request header %v for task %v",
+					 tList[i].Request.Header, tList[i].GetID())
+		}
+
+		// Create a channel to signal the stalled server handlers to complete
+		stallCancel = make(chan bool, a.nCtxTimeouts)
 	}
 
 	// All connections should be in ESTAB(LISHED) and should stay there
@@ -1092,6 +1097,9 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	t.Logf("Testing connections after Launch")
 	testOpenConnections(t, (a.nTasks))
 
+	// If asked, here we attempt to close task bodies for tasks that have
+	// already completed, prior to tasks that will fail retries.  We do this
+	// to test if the completed tasks have their connections closed
 	tasksToWaitFor := a.nTasks
 	if a.nFailRetries > 0 && retrySleep > 0 {
 		t.Logf("Waiting for non-retry tasks to complete")
@@ -1220,6 +1228,13 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	t.Logf("Checking that the task list was closed")
 	if (len(tloc.taskMap) != 0) {
 		t.Errorf("ERROR: Expected task list map to be empty")
+	}
+
+	if (a.nCtxTimeouts > 0) {
+		t.Logf("Signaling stalled handlers ")
+		for i := 0; i < a.nCtxTimeouts * 2; i++ {
+			stallCancel <- true
+		}
 	}
 }
 
