@@ -192,8 +192,8 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 		time.Sleep(time.Duration(retrySleep) * time.Second)
 
 		w.Header().Set("Content-Type","application/json")
-w.Header().Set("Connection","keep-alive")
 		w.Header().Set("Retry-After","1")
+		//w.Header().Set("Connection","keep-alive")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(`{"Message":"Service Unavailable"}`))
 
@@ -212,7 +212,7 @@ w.Header().Set("Connection","keep-alive")
 
 		if (!hasUserAgentHeader(req)) {
 			w.Write([]byte(`{"Message":"No User-Agent Header"}`))
-w.Header().Set("Connection","keep-alive")
+			//w.Header().Set("Connection","keep-alive")
 			w.WriteHeader(http.StatusInternalServerError)
 
 			if (logLevel >= logrus.DebugLevel) {
@@ -221,7 +221,7 @@ w.Header().Set("Connection","keep-alive")
 			return
 		}
 		w.Header().Set("Content-Type","application/json")
-w.Header().Set("Connection","keep-alive")
+		//w.Header().Set("Connection","keep-alive")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"Message":"OK"}`))
 
@@ -245,7 +245,7 @@ func stallHandler(w http.ResponseWriter, req *http.Request) {
 	<-stallCancel
 
 	w.Header().Set("Content-Type","application/json")
-w.Header().Set("Connection","keep-alive")
+	//w.Header().Set("Connection","keep-alive")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"Message":"OK"}`))
 
@@ -1075,7 +1075,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
         t.Fatalf("===> ERROR: Failed to create request: %v", err)
     }
 	req.Header.Set("Accept", "*/*")
-req.Header.Set("Connection","keep-alive")
+	//req.Header.Set("Connection","keep-alive")
 
 	a.tListProto.Request = req
 	t.Logf("Calling tloc.CreateTaskList() to create %v tasks for URL %v", a.nTasks, srv.URL)

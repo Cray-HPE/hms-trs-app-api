@@ -99,7 +99,7 @@ type HttpTask struct {
 	Request       *http.Request
 	TimeStamp     string // Time the request was created/sent RFC3339Nano
 	Err           *error
-	Timeout       time.Duration
+	Timeout       time.Duration	// task's context timeout
 	CPolicy       ClientPolicy
 	Ignore        bool
 	context       context.Context
