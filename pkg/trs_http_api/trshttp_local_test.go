@@ -170,7 +170,7 @@ var handlerLogger *testing.T
 var handlerSleep int    = 2 // time to sleep to simulate network/BMC delays
 var retrySleep int      = 0 // time to sleep before returning 503 for retry
 var nRetries int32      = 0 // how many retries before returning success
-var nCtxTimeouts int    = 0 // how many context timeouts
+var nHttpTimeouts int   = 0 // how many context timeouts
 
 func launchHandler(w http.ResponseWriter, req *http.Request) {
 	// Distinguish between limited retries that will succeed and retries
@@ -611,7 +611,7 @@ type testConnsArg struct {
 	nSuccessRetries        int32     // Number of retries to succeed
 	nFailRetries           int       // Number of retries to fail
 	testIdleConnTimeout    bool 	 // Test idle connection timeout
-	nCtxTimeouts           int       // Number of context timeouts
+	nHttpTimeouts          int       // Number of context timeouts
 	openAtStart            int       // Expected number of ESTAB connections at beginning
 	openAfterTasksComplete int       // Expected number of ESTAB connections after all tasks complete
 	openAfterBodyClose     int       // Expected number of ESTAB connections after closing response bodies
@@ -632,9 +632,9 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 	t.Logf("   nSkipCloseBody:      %v", a.nSkipCloseBody)
 	t.Logf("   nSuccessRetries:     %v", a.nSuccessRetries)
 	t.Logf("   nFailRetries:        %v", a.nFailRetries)
-	t.Logf("   testIdleConnTimeout: %v", a.testIdleConnTimeout)
-	t.Logf("   nCtxTimeouts:        %v", a.nCtxTimeouts)
+	t.Logf("   nHttpTimeouts:       %v", a.nHttpTimeouts)
 	t.Logf("")
+	t.Logf("   testIdleConnTimeout: %v", a.testIdleConnTimeout)
 	t.Logf("   runSecondTaskList:   %v", a.runSecondTaskList)
 	t.Logf("")
 	t.Logf("   Conns open after:    start:         %v", a.openAtStart)
@@ -685,7 +685,7 @@ return
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
-	a.nCtxTimeouts           = 0
+	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 0
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = 10
@@ -700,7 +700,7 @@ return
 	a.nTasks                 = 2
 	a.nSkipCloseBody         = 1
 	a.nSuccessRetries        = 0
-	a.nCtxTimeouts           = 0
+	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 0
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = 2
@@ -715,7 +715,7 @@ return
 	a.nTasks                 = 2
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 1
-	a.nCtxTimeouts           = 0
+	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 0
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = 2
@@ -730,7 +730,7 @@ return
 	a.nTasks                 = 2
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
-	a.nCtxTimeouts           = 0
+	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 1
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = 1
@@ -745,7 +745,7 @@ return
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 2
 	a.nSuccessRetries        = 3
-	a.nCtxTimeouts           = 0
+	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 2
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = 8
@@ -838,7 +838,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
-	a.nCtxTimeouts           = 0
+	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 0
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
@@ -858,7 +858,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 2
 	a.nSuccessRetries        = 0
-	a.nCtxTimeouts           = 0
+	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 0
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
@@ -878,7 +878,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 2
 	a.nSuccessRetries        = 0
-	a.nCtxTimeouts           = 0
+	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 0
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
@@ -897,7 +897,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 2
-	a.nCtxTimeouts           = 0
+	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 0
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
@@ -913,14 +913,14 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
-	a.nCtxTimeouts           = 0
+	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 2
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
-	a.openAfterBodyClose     = 0 // FIX??
-	a.openAfterCancel        = 0 // FIX??
-	a.openAfterClose         = 0 // FIX??
+	a.openAfterBodyClose     = 0 // FIND WORKAROUND???
+	a.openAfterCancel        = 0 // FIND WORKAROUND???
+	a.openAfterClose         = 0 // FIND WORKAROUND???
 
 	retrySleep = 0	// 0 seconds so retries complete first
 
@@ -935,14 +935,14 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
-	a.nCtxTimeouts           = 0
+	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 2
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = 0 // Even though 8 prior bodies closed (FIX?)
-	a.openAfterBodyClose     = 0 // FIX??
-	a.openAfterCancel        = 0 // FIX??
-	a.openAfterClose         = 0 // FIX??
+	a.openAfterTasksComplete = 0 // Even though 8 prior bodies closed (WORKAROUND???)
+	a.openAfterBodyClose     = 0 // FIND WORKAROUND???
+	a.openAfterCancel        = 0 // FIND WORKAROUND???
+	a.openAfterClose         = 0 // FIND WORKAROUND???
 
 	retrySleep = 4	// 4 seconds so retries complete last
 
@@ -964,14 +964,14 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
-	a.nCtxTimeouts           = 2
+	a.nHttpTimeouts          = 2
 	a.nFailRetries           = 0
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = 0 // FIX??
-	a.openAfterBodyClose     = 0 // FIX??
-	a.openAfterCancel        = 0 // FIX??
-	a.openAfterClose         = 0 // FIX??
+	a.openAfterTasksComplete = 0 // FIND WORKAROUND???
+	a.openAfterBodyClose     = 0 // FIND WORKAROUND???
+	a.openAfterCancel        = 0 // FIND WORKAROUND???
+	a.openAfterClose         = 0 // FIND WORKAROUND???
 
 	testConns(t, a)
 
@@ -987,7 +987,7 @@ logLevel = logrus.DebugLevel
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
-	a.nCtxTimeouts           = 0
+	a.nHttpTimeouts          = 2 // so we can look at CLOSE-WAIT and FIN-WAIT-2 in traces
 	a.nFailRetries           = 0
 	a.testIdleConnTimeout    = true
 	a.openAtStart            = 0
@@ -1090,9 +1090,9 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		}
 	}
 
-	// Configure any requested context timeouts (put at end of list)
-	nCtxTimeouts = a.nCtxTimeouts
-	for i := len(tList) - 1; i > len(tList) - 1 - a.nCtxTimeouts; i-- {
+	// Configure any requested http timeouts (put at end of list)
+	nHttpTimeouts = a.nHttpTimeouts
+	for i := len(tList) - 1; i > len(tList) - 1 - a.nHttpTimeouts; i-- {
 		// Just choose the ones at the beginning
 		tList[i].Request.Header.Set("Trs-Context-Timeout", "true")
 
@@ -1102,7 +1102,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		}
 
 		// Create a channel to signal the stalled server handlers to complete
-		stallCancel = make(chan bool, a.nCtxTimeouts * 2)
+		stallCancel = make(chan bool, a.nHttpTimeouts * 2)
 	}
 
 	// All connections should be in ESTAB(LISHED) and should stay there
@@ -1249,9 +1249,9 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		t.Errorf("ERROR: Expected task list map to be empty")
 	}
 
-	if (a.nCtxTimeouts > 0) {
+	if (a.nHttpTimeouts > 0) {
 		t.Logf("Signaling stalled handlers ")
-		for i := 0; i < a.nCtxTimeouts * 2; i++ {
+		for i := 0; i < a.nHttpTimeouts * 2; i++ {
 			stallCancel <- true
 		}
 	}
