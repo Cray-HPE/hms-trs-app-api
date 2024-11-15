@@ -56,10 +56,8 @@ const (
 func (tloc *TRSHTTPLocal) Init(serviceName string, logger *logrus.Logger) error {
 	if logger != nil {
 		tloc.Logger = logger
-		tloc.Logger.Errorf("JW_DEBUG: Reusing passed in logger")
 	} else {
 		tloc.Logger = logrus.New()
-		tloc.Logger.Errorf("JW_DEBUG: using new logger")
 	}
 
 	tloc.ctx, tloc.ctxCancelFunc = context.WithCancel(context.Background())
