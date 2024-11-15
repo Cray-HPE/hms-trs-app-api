@@ -131,6 +131,39 @@ func (tloc *TRSHTTPLocal) CreateTaskList(source *HttpTask, numTasks int) []HttpT
 	return createHTTPTaskArray(source, numTasks)
 }
 
+// LeveledLogrus implements the LeveledLogger interface in retryablehttp so
+// we can control the logging levels there as well.  This avoids spamming our
+// logs with debug output if we set it at the same level as typical HMS
+// services.  This comes from the community as a recommended workaround for
+// https://github.com/hashicorp/go-retryablehttp/issues/93
+
+type LeveledLogrus struct {
+	*logrus.Logger
+}
+
+func (l *LeveledLogrus) fields(keysAndValues ...interface{}) map[string]interface{} {
+	fields := make(map[string]interface{})
+
+	for i := 0; i < len(keysAndValues) - 1; i += 2 {
+		fields[keysAndValues[i].(string)] = keysAndValues[i+1]
+	}
+
+	return fields
+}
+
+func (l *LeveledLogrus) Error(msg string, keysAndValues ...interface{}) {
+	l.WithFields(l.fields(keysAndValues...)).Error(msg)
+}
+func (l *LeveledLogrus) Info(msg string, keysAndValues ...interface{}) {
+	l.WithFields(l.fields(keysAndValues...)).Info(msg)
+}
+func (l *LeveledLogrus) Debug(msg string, keysAndValues ...interface{}) {
+	l.WithFields(l.fields(keysAndValues...)).Debug(msg)
+}
+func (l *LeveledLogrus) Warn(msg string, keysAndValues ...interface{}) {
+	l.WithFields(l.fields(keysAndValues...)).Warn(msg)
+}
+
 // Create and configure a new client transport for use with HTTP clients.
 
 func configureClient(client *retryablehttp.Client, task *HttpTask, tloc *TRSHTTPLocal, clientType string) {
@@ -184,13 +217,15 @@ func configureClient(client *retryablehttp.Client, task *HttpTask, tloc *TRSHTTP
 	client.HTTPClient.Transport = tr
 }
 
+//	Reference:  https://pkg.go.dev/github.com/hashicorp/go-retryablehttp
+
 func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	//Find a client or make one!
 	var cpack *clientPack
 	tloc.clientMutex.Lock()
 	if _, ok := tloc.clientMap[tct.task.CPolicy]; !ok {
-		httpLogger := logrus.New()
-		httpLogger.SetLevel(logrus.ErrorLevel)
+		log := logrus.New()
+		httpLogger := retryablehttp.LeveledLogger(&LeveledLogrus{log})
 
 		cpack = new(clientPack)
 
