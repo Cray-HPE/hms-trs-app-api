@@ -28,6 +28,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -428,7 +429,7 @@ func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 			// was the case, that connection was closed by the above cancel.
 
 			if v.Request.Response != nil && v.Request.Response.Body != nil {
-				// No need to drain response body as connection was closed
+				_, _ = io.Copy(io.Discard, v.Request.Response.Body)
 				v.Request.Response.Body.Close()
 				v.Request.Response.Body = nil
 				tloc.Logger.Tracef("Response body for task %s closed", v.id)
