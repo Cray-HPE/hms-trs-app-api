@@ -211,8 +211,8 @@ func configureClient(client *retryablehttp.Client, task *HttpTask, tloc *TRSHTTP
 	// Log the configuration we're going to use. Clients are generally long
 	// lived so this shouldn't be too spammy. Knowing this information can
 	// be pretty critical when debugging issues on site
-	tloc.Logger.Errorf("Created %s client with incoming policy %v (to's %s and %s)",
-					   clientType, task.CPolicy, task.Timeout, client.HTTPClient.Timeout)
+	tloc.Logger.Errorf("Created %s client with incoming policy %v (to's %s and %s) (ll %v)",
+					   clientType, task.CPolicy, task.Timeout, client.HTTPClient.Timeout, tloc.Logger.GetLevel())
 
 	// Write through to the client
 	client.HTTPClient.Transport = tr
