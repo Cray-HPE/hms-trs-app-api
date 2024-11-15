@@ -153,23 +153,23 @@ func (l *LeveledLogrus) fields(keysAndValues ...interface{}) map[string]interfac
 
 func (l *LeveledLogrus) Error(msg string, keysAndValues ...interface{}) {
 	l.WithFields(l.fields("foo", "bar",)).Error("-----------------------> ERROR")
-	l.WithFields(l.fields("foo", "bar",)).Error(msg)
 	l.WithFields(l.fields(keysAndValues...)).Error(msg)
+	l.WithFields(l.fields("foo", "bar",)).Error("------------------------> " + msg)
 }
 func (l *LeveledLogrus) Info(msg string, keysAndValues ...interface{}) {
 	l.WithFields(l.fields("foo", "bar",)).Error("-----------------------> INFO")
-	l.WithFields(l.fields("foo", "bar",)).Error(msg)
 	l.WithFields(l.fields(keysAndValues...)).Info(msg)
+	l.WithFields(l.fields("foo", "bar",)).Error("-----------------------> " + msg)
 }
 func (l *LeveledLogrus) Debug(msg string, keysAndValues ...interface{}) {
 	l.WithFields(l.fields("foo", "bar",)).Error("-----------------------> DEBUG")
-	l.WithFields(l.fields("foo", "bar",)).Error(msg)
 	l.WithFields(l.fields(keysAndValues...)).Debug(msg)
+	l.WithFields(l.fields("foo", "bar",)).Error("-----------------------> " + msg)
 }
 func (l *LeveledLogrus) Warn(msg string, keysAndValues ...interface{}) {
 	l.WithFields(l.fields("foo", "bar",)).Error("-----------------------> WARN")
-	l.WithFields(l.fields("foo", "bar",)).Error(msg)
 	l.WithFields(l.fields(keysAndValues...)).Warn(msg)
+	l.WithFields(l.fields("foo", "bar",)).Error("-----------------------> " + msg)
 }
 
 // Create and configure a new client transport for use with HTTP clients.
