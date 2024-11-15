@@ -152,15 +152,19 @@ func (l *LeveledLogrus) fields(keysAndValues ...interface{}) map[string]interfac
 }
 
 func (l *LeveledLogrus) Error(msg string, keysAndValues ...interface{}) {
+	//l.Error("---------------> LEVELEDLOGRUS: Error")
 	l.WithFields(l.fields(keysAndValues...)).Error(msg)
 }
 func (l *LeveledLogrus) Info(msg string, keysAndValues ...interface{}) {
+	//l.Error("---------------> LEVELEDLOGRUS: Info")
 	l.WithFields(l.fields(keysAndValues...)).Info(msg)
 }
 func (l *LeveledLogrus) Debug(msg string, keysAndValues ...interface{}) {
+	//l.Error("---------------> LEVELEDLOGRUS: Debug")
 	l.WithFields(l.fields(keysAndValues...)).Debug(msg)
 }
 func (l *LeveledLogrus) Warn(msg string, keysAndValues ...interface{}) {
+	//l.Error("---------------> LEVELEDLOGRUS: Warn")
 	l.WithFields(l.fields(keysAndValues...)).Warn(msg)
 }
 

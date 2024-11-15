@@ -80,7 +80,7 @@ type clientPack struct {
 }
 
 type TRSHTTPLocal struct {
-	Logger        *logrus.Logger
+	Logger        *retryablehttp.LeveledLogger
 	svcName       string
 	ctx           context.Context
 	ctxCancelFunc context.CancelFunc
