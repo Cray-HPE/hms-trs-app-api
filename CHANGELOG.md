@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ExecuteTask(): Reworked for easier readability and maintainability
 - ExecuteTask(): Return immediately when errors are encountered
 - ExecuteTask(): Cancel contexts immediatly after successful responses
+- ExecuteTask(): Pass thru log level to retryablehttp to match TRS's
 - Enable TRS logging from inside unit tests to aid in debugging
 - Created TestPCSUseCase() unit test for full testing of PCS use case
 

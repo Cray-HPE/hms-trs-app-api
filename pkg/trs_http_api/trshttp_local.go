@@ -132,9 +132,10 @@ func (tloc *TRSHTTPLocal) CreateTaskList(source *HttpTask, numTasks int) []HttpT
 }
 
 // LeveledLogrus implements the LeveledLogger interface in retryablehttp so
-// we can control the logging levels there as well.  This avoids spamming our
-// logs with debug output if we set it at the same level as typical HMS
-// services.  This comes from the community as a recommended workaround for
+// we can control its log levels.  We match TRS's log level as this is what
+// TRS's caller wants to see.  Without doing this, retryablehttp spams the
+// logs with debug messages.  The code for this comes from the community as
+// a recommended workaround for working around the following issue:
 // https://github.com/hashicorp/go-retryablehttp/issues/93
 
 type LeveledLogrus struct {
