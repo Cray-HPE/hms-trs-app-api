@@ -132,18 +132,18 @@ func (tloc *TRSHTTPLocal) CreateTaskList(source *HttpTask, numTasks int) []HttpT
 	return createHTTPTaskArray(source, numTasks)
 }
 
-// LeveledLogrus implements the LeveledLogger interface in retryablehttp so
+// leveledLogrus implements the leveledLogger interface in retryablehttp so
 // we can control its log levels.  We match TRS's log level as this is what
 // TRS's caller wants to see.  Without doing this, retryablehttp spams the
 // logs with debug messages.  The code for this comes from the community as
 // a recommended workaround for working around the following issue:
 // https://github.com/hashicorp/go-retryablehttp/issues/93
 
-type LeveledLogrus struct {
+type leveledLogrus struct {
 	*logrus.Logger
 }
 
-func (l *LeveledLogrus) fields(keysAndValues ...interface{}) map[string]interface{} {
+func (l *leveledLogrus) fields(keysAndValues ...interface{}) map[string]interface{} {
 	fields := make(map[string]interface{})
 
 	for i := 0; i < len(keysAndValues) - 1; i += 2 {
@@ -153,16 +153,16 @@ func (l *LeveledLogrus) fields(keysAndValues ...interface{}) map[string]interfac
 	return fields
 }
 
-func (l *LeveledLogrus) Error(msg string, keysAndValues ...interface{}) {
+func (l *leveledLogrus) Error(msg string, keysAndValues ...interface{}) {
 	l.WithFields(l.fields(keysAndValues...)).Error(msg)
 }
-func (l *LeveledLogrus) Info(msg string, keysAndValues ...interface{}) {
+func (l *leveledLogrus) Info(msg string, keysAndValues ...interface{}) {
 	l.WithFields(l.fields(keysAndValues...)).Info(msg)
 }
-func (l *LeveledLogrus) Debug(msg string, keysAndValues ...interface{}) {
+func (l *leveledLogrus) Debug(msg string, keysAndValues ...interface{}) {
 	l.WithFields(l.fields(keysAndValues...)).Debug(msg)
 }
-func (l *LeveledLogrus) Warn(msg string, keysAndValues ...interface{}) {
+func (l *leveledLogrus) Warn(msg string, keysAndValues ...interface{}) {
 	l.WithFields(l.fields(keysAndValues...)).Warn(msg)
 }
 
@@ -232,7 +232,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	if _, ok := tloc.clientMap[tct.task.CPolicy]; !ok {
 		log := logrus.New()
 		log.SetLevel(tloc.Logger.GetLevel())
-		httpLogger := retryablehttp.LeveledLogger(&LeveledLogrus{log})
+		httpLogger := retryablehttp.leveledLogger(&leveledLogrus{log})
 
 		cpack = new(clientPack)
 
