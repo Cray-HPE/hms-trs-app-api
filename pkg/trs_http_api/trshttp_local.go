@@ -132,7 +132,7 @@ func (tloc *TRSHTTPLocal) CreateTaskList(source *HttpTask, numTasks int) []HttpT
 	return createHTTPTaskArray(source, numTasks)
 }
 
-// leveledLogrus implements the leveledLogger interface in retryablehttp so
+// leveledLogrus implements the LeveledLogger interface in retryablehttp so
 // we can control its log levels.  We match TRS's log level as this is what
 // TRS's caller wants to see.  Without doing this, retryablehttp spams the
 // logs with debug messages.  The code for this comes from the community as
@@ -232,7 +232,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	if _, ok := tloc.clientMap[tct.task.CPolicy]; !ok {
 		log := logrus.New()
 		log.SetLevel(tloc.Logger.GetLevel())
-		httpLogger := retryablehttp.leveledLogger(&leveledLogrus{log})
+		httpLogger := retryablehttp.LeveledLogger(&leveledLogrus{log})
 
 		cpack = new(clientPack)
 
