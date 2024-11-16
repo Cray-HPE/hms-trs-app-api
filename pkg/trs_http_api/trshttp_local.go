@@ -44,6 +44,7 @@ const (
 	DFLT_BACKOFF_MAX = 5	//default max seconds per retry
 )
 
+var TESTLOGGER *logrus.Logger
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 //                   L O C A L  I N T E R F A C E
@@ -62,6 +63,7 @@ func (tloc *TRSHTTPLocal) Init(serviceName string, logger *logrus.Logger) error 
 		tloc.Logger = logrus.New()
 	}
 
+TESTLOGGER = tloc.Logger
 	tloc.ctx, tloc.ctxCancelFunc = context.WithCancel(context.Background())
 
 	if tloc.taskMap == nil {
@@ -181,13 +183,16 @@ type avoidClosingConnsRoundTripper struct {
 func (c *avoidClosingConnsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp, err := c.transport.RoundTrip(req)
 
+TESTLOGGER.Tracef("-----------------> RoundTrip: err=%v", err)
 	// Context timeouts
 	if errors.Is(err, context.DeadlineExceeded) {
+TESTLOGGER.Tracef("-----------------> RoundTrip: returning: context deadline exceeded")
 		return nil, err
 	}
 
 	// Lower level HTTPClient.Timeout triggered timeouts
 	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+TESTLOGGER.Tracef("-----------------> RoundTrip: returning: http.Timeout")
 		return nil, err
 	}
 
@@ -198,6 +203,7 @@ func (c *avoidClosingConnsRoundTripper) RoundTrip(req *http.Request) (*http.Resp
 	//	return nil, err
 	//}
 
+TESTLOGGER.Tracef("-----------------> RoundTrip: returning: no error")
 	return resp, err
 }
 
