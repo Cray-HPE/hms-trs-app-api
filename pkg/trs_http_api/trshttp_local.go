@@ -229,7 +229,7 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 		tr = &http.Transport{TLSClientConfig: tlsConfig,}
 	}
 
-	// Configure the client't http transport policy
+	// Configure the client's other http transport policies if requested
 	if httpTxPolicy.Enabled {
 		tr.MaxIdleConns          = httpTxPolicy.MaxIdleConns          // if 0 defaults to 2
 		tr.MaxIdleConnsPerHost   = httpTxPolicy.MaxIdleConnsPerHost   // if 0 defaults to 100
@@ -239,14 +239,13 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 		tr.DisableKeepAlives	 = httpTxPolicy.DisableKeepAlives     // if 0 defaults to false
 	}
 
+	client.HTTPClient.Transport = &avoidClosingConnsRoundTripper{transport: tr}
+
 	// Log the configuration we're going to use. Clients are generally long
 	// lived so this shouldn't be too spammy. Knowing this information can
 	// be pretty critical when debugging issues on site
 	tloc.Logger.Errorf("Created %s client with incoming policy %v (to's %s and %s) (ll %v)",
 					   clientType, task.CPolicy, task.Timeout, client.HTTPClient.Timeout, tloc.Logger.GetLevel())
-
-	// Write through to the client
-	client.HTTPClient.Transport = &avoidClosingConnsRoundTripper{transport: tr}
 
 	return client
 }
@@ -264,18 +263,12 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 
 		cpack = new(clientPack)
 
-		//cpack.insecure = retryablehttp.NewClient()
 		cpack.insecure = createClient(tct.task, tloc, "insecure")
 		cpack.insecure.Logger = httpLogger
 
-		//configureClient(cpack.insecure, tct.task, tloc, "insecure")
-
 		if (tloc.CACertPool != nil) {
-			//cpack.secure = retryablehttp.NewClient()
 			cpack.secure = createClient(tct.task, tloc, "secure")
 			cpack.secure.Logger = httpLogger
-
-			//configureClient(cpack.secure, tct.task, tloc, "secure")
 
 			tloc.Logger.Tracef("Created secure client with policy %v", tct.task.CPolicy)
 		}
