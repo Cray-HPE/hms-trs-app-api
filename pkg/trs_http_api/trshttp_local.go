@@ -183,16 +183,16 @@ type avoidClosingConnsRoundTripper struct {
 func (c *avoidClosingConnsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp, err := c.transport.RoundTrip(req)
 
-TESTLOGGER.Tracef("-----------------> RoundTrip: err=%v", err)
+TESTLOGGER.Debugf("-----------------> RoundTrip: err=%v", err)
 	// Context timeouts
 	if errors.Is(err, context.DeadlineExceeded) {
-TESTLOGGER.Tracef("-----------------> RoundTrip: returning: context deadline exceeded")
+TESTLOGGER.Debugf("-----------------> RoundTrip: returning: context deadline exceeded")
 		return nil, err
 	}
 
 	// Lower level HTTPClient.Timeout triggered timeouts
 	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-TESTLOGGER.Tracef("-----------------> RoundTrip: returning: http.Timeout")
+TESTLOGGER.Debugf("-----------------> RoundTrip: returning: http.Timeout")
 		return nil, err
 	}
 
@@ -203,7 +203,7 @@ TESTLOGGER.Tracef("-----------------> RoundTrip: returning: http.Timeout")
 	//	return nil, err
 	//}
 
-TESTLOGGER.Tracef("-----------------> RoundTrip: returning: no error")
+TESTLOGGER.Debugf("-----------------> RoundTrip: returning: no error")
 	return resp, err
 }
 
