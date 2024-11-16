@@ -751,8 +751,6 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.openAfterClose         = 2
 
 	testConns(t, a)
-
-logLevel = logrus.ErrorLevel
 }
 
 // TestBasicConnectionBehavior tests the the connection behavior that
