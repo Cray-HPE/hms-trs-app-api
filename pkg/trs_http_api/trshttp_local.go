@@ -168,7 +168,9 @@ func (l *LeveledLogrus) Warn(msg string, keysAndValues ...interface{}) {
 
 // Create and configure a new client transport for use with HTTP clients.
 
-func configureClient(client *retryablehttp.Client, task *HttpTask, tloc *TRSHTTPLocal, clientType string) {
+func configureClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client *retryablehttp.Client) {
+	client = retryablehttp.NewClient()
+
 	retryPolicy := task.CPolicy.Retry
 	httpTxPolicy := task.CPolicy.Tx
 
@@ -217,6 +219,8 @@ func configureClient(client *retryablehttp.Client, task *HttpTask, tloc *TRSHTTP
 
 	// Write through to the client
 	client.HTTPClient.Transport = tr
+
+	return client
 }
 
 //	Reference:  https://pkg.go.dev/github.com/hashicorp/go-retryablehttp
@@ -232,16 +236,12 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 
 		cpack = new(clientPack)
 
-		cpack.insecure = retryablehttp.NewClient()
+		cpack.insecure = configureClient(tct.task, tloc, "insecure")
 		cpack.insecure.Logger = httpLogger
 
-		configureClient(cpack.insecure, tct.task, tloc, "insecure")
-
 		if (tloc.CACertPool != nil) {
-			cpack.secure = retryablehttp.NewClient()
+			cpack.secure = configureClient(tct.task, tloc, "secure")
 			cpack.secure.Logger = httpLogger
-
-			configureClient(cpack.secure, tct.task, tloc, "secure")
 
 			tloc.Logger.Tracef("Created secure client with policy %v", tct.task.CPolicy)
 		}
