@@ -170,9 +170,9 @@ func (l *leveledLogrus) Warn(msg string, keysAndValues ...interface{}) {
 // The retryablehttp module closes idle connections in an overly aggressive
 // manner.  If a single request experiences a timeout, all idle connections
 // are closed.  The following RoundTripper wrapper catches context
-// timeouts and cancellations, as well as http transport timeouts, and
-// avoids returning a response if one of these are detected.  Returning
-// only the error will signal retryablehttp not to close all connections.
+// timeouts and http transport timeouts, and avoids returning a response if
+// either are detected.  Returning only the error will signal retryablehttp
+// not to close all connections.
 
 type avoidClosingConnsRoundTripper struct {
 	transport http.RoundTripper
@@ -181,8 +181,8 @@ type avoidClosingConnsRoundTripper struct {
 func (c *avoidClosingConnsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp, err := c.transport.RoundTrip(req)
 
-	// Context timeouts or cancellations
-	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+	// Context timeouts
+	if errors.Is(err, context.DeadlineExceeded) {
 		return nil, err
 	}
 
@@ -190,6 +190,13 @@ func (c *avoidClosingConnsRoundTripper) RoundTrip(req *http.Request) (*http.Resp
 	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 		return nil, err
 	}
+
+	// Note that we DO want to honor closing all idle connections when a
+	// context cancellation has arrived. 
+	// Context cancellations
+	//if errors.Is(err, context.Canceled) {
+	//	return nil, err
+	//}
 
 	return resp, err
 }
