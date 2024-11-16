@@ -247,6 +247,8 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 
 	// Write through to the client
 	client.HTTPClient.Transport = &avoidClosingConnsRoundTripper{transport: tr}
+
+	return client
 }
 
 //	Reference:  https://pkg.go.dev/github.com/hashicorp/go-retryablehttp
