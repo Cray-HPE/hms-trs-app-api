@@ -29,7 +29,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"time"
 
@@ -44,7 +43,6 @@ const (
 	DFLT_BACKOFF_MAX = 5	//default max seconds per retry
 )
 
-var TESTLOGGER *logrus.Logger
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 //                   L O C A L  I N T E R F A C E
@@ -63,7 +61,6 @@ func (tloc *TRSHTTPLocal) Init(serviceName string, logger *logrus.Logger) error 
 		tloc.Logger = logrus.New()
 	}
 
-TESTLOGGER = tloc.Logger
 	tloc.ctx, tloc.ctxCancelFunc = context.WithCancel(context.Background())
 
 	if tloc.taskMap == nil {
@@ -135,18 +132,18 @@ func (tloc *TRSHTTPLocal) CreateTaskList(source *HttpTask, numTasks int) []HttpT
 	return createHTTPTaskArray(source, numTasks)
 }
 
-// leveledLogrus implements the LeveledLogger interface in retryablehttp so
+// LeveledLogrus implements the LeveledLogger interface in retryablehttp so
 // we can control its log levels.  We match TRS's log level as this is what
 // TRS's caller wants to see.  Without doing this, retryablehttp spams the
 // logs with debug messages.  The code for this comes from the community as
 // a recommended workaround for working around the following issue:
 // https://github.com/hashicorp/go-retryablehttp/issues/93
 
-type leveledLogrus struct {
+type LeveledLogrus struct {
 	*logrus.Logger
 }
 
-func (l *leveledLogrus) fields(keysAndValues ...interface{}) map[string]interface{} {
+func (l *LeveledLogrus) fields(keysAndValues ...interface{}) map[string]interface{} {
 	fields := make(map[string]interface{})
 
 	for i := 0; i < len(keysAndValues) - 1; i += 2 {
@@ -156,61 +153,22 @@ func (l *leveledLogrus) fields(keysAndValues ...interface{}) map[string]interfac
 	return fields
 }
 
-func (l *leveledLogrus) Error(msg string, keysAndValues ...interface{}) {
+func (l *LeveledLogrus) Error(msg string, keysAndValues ...interface{}) {
 	l.WithFields(l.fields(keysAndValues...)).Error(msg)
 }
-func (l *leveledLogrus) Info(msg string, keysAndValues ...interface{}) {
+func (l *LeveledLogrus) Info(msg string, keysAndValues ...interface{}) {
 	l.WithFields(l.fields(keysAndValues...)).Info(msg)
 }
-func (l *leveledLogrus) Debug(msg string, keysAndValues ...interface{}) {
+func (l *LeveledLogrus) Debug(msg string, keysAndValues ...interface{}) {
 	l.WithFields(l.fields(keysAndValues...)).Debug(msg)
 }
-func (l *leveledLogrus) Warn(msg string, keysAndValues ...interface{}) {
+func (l *LeveledLogrus) Warn(msg string, keysAndValues ...interface{}) {
 	l.WithFields(l.fields(keysAndValues...)).Warn(msg)
-}
-
-// The retryablehttp module closes idle connections in an overly aggressive
-// manner.  If a single request experiences a timeout, all idle connections
-// are closed.  The following RoundTripper wrapper catches context
-// timeouts and http transport timeouts, and avoids returning a response if
-// either are detected.  Returning only the error will signal retryablehttp
-// not to close all connections.
-
-type avoidClosingConnsRoundTripper struct {
-	transport http.RoundTripper
-}
-
-func (c *avoidClosingConnsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	resp, err := c.transport.RoundTrip(req)
-
-	// Context timeouts
-	if errors.Is(err, context.DeadlineExceeded) {
-TESTLOGGER.Debugf("-----------------> RoundTrip: err=%v (CDE)", err)
-		return nil, err
-	}
-
-	// Lower level HTTPClient.Timeout triggered timeouts
-	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-TESTLOGGER.Debugf("-----------------> RoundTrip: err=%v (HCT)", err)
-		return nil, err
-	}
-
-	// Note that we DO want to honor closing all idle connections when a
-	// context cancellation has arrived. 
-	// Context cancellations
-	//if errors.Is(err, context.Canceled) {
-	//	return nil, err
-	//}
-
-TESTLOGGER.Debugf("-----------------> RoundTrip: err=%v (other)", err)
-	return resp, err
 }
 
 // Create and configure a new client transport for use with HTTP clients.
 
-func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client *retryablehttp.Client) {
-	client = retryablehttp.NewClient()
-
+func configureClient(client *retryablehttp.Client, task *HttpTask, tloc *TRSHTTPLocal, clientType string) {
 	retryPolicy := task.CPolicy.Retry
 	httpTxPolicy := task.CPolicy.Tx
 
@@ -241,7 +199,7 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 		tr = &http.Transport{TLSClientConfig: tlsConfig,}
 	}
 
-	// Configure the client's other http transport policies if requested
+	// Configure the client't http transport policy
 	if httpTxPolicy.Enabled {
 		tr.MaxIdleConns          = httpTxPolicy.MaxIdleConns          // if 0 defaults to 2
 		tr.MaxIdleConnsPerHost   = httpTxPolicy.MaxIdleConnsPerHost   // if 0 defaults to 100
@@ -251,15 +209,14 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 		tr.DisableKeepAlives	 = httpTxPolicy.DisableKeepAlives     // if 0 defaults to false
 	}
 
-	//client.HTTPClient.Transport = &avoidClosingConnsRoundTripper{transport: tr}
-
 	// Log the configuration we're going to use. Clients are generally long
 	// lived so this shouldn't be too spammy. Knowing this information can
 	// be pretty critical when debugging issues on site
 	tloc.Logger.Errorf("Created %s client with incoming policy %v (to's %s and %s) (ll %v)",
 					   clientType, task.CPolicy, task.Timeout, client.HTTPClient.Timeout, tloc.Logger.GetLevel())
 
-	return client
+	// Write through to the client
+	client.HTTPClient.Transport = tr
 }
 
 //	Reference:  https://pkg.go.dev/github.com/hashicorp/go-retryablehttp
@@ -271,16 +228,20 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	if _, ok := tloc.clientMap[tct.task.CPolicy]; !ok {
 		log := logrus.New()
 		log.SetLevel(tloc.Logger.GetLevel())
-		httpLogger := retryablehttp.LeveledLogger(&leveledLogrus{log})
+		httpLogger := retryablehttp.LeveledLogger(&LeveledLogrus{log})
 
 		cpack = new(clientPack)
 
-		cpack.insecure = createClient(tct.task, tloc, "insecure")
+		cpack.insecure = retryablehttp.NewClient()
 		cpack.insecure.Logger = httpLogger
 
+		configureClient(cpack.insecure, tct.task, tloc, "insecure")
+
 		if (tloc.CACertPool != nil) {
-			cpack.secure = createClient(tct.task, tloc, "secure")
+			cpack.secure = retryablehttp.NewClient()
 			cpack.secure.Logger = httpLogger
+
+			configureClient(cpack.secure, tct.task, tloc, "secure")
 
 			tloc.Logger.Tracef("Created secure client with policy %v", tct.task.CPolicy)
 		}
