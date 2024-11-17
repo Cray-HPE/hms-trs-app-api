@@ -185,7 +185,8 @@ func (c *avoidClosingConnectionsRoundTripper) RoundTrip(req *http.Request) (*htt
 	// Context timeouts
 	if errors.Is(err, context.DeadlineExceeded) {
 TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v (CDE)", err)
-		return nil, err
+		//return nil, err
+		return nil, context.DeadlineExceeded
 	}
 
 	// Lower level HTTPClient.Timeout triggered timeouts
