@@ -175,7 +175,6 @@ var nRetries int32      = 0 // how many retries before returning success
 var nHttpTimeouts int   = 0 // how many context timeouts
 
 func launchHandler(w http.ResponseWriter, req *http.Request) {
-handlerLogger.Logf("launchHandler received an HTTP %v.%v request", req.ProtoMajor, req.ProtoMinor)
 	if (logLevel >= logrus.TraceLevel) {
 		handlerLogger.Logf("launchHandler received an HTTP %v.%v request",
 						   req.ProtoMajor, req.ProtoMinor)
