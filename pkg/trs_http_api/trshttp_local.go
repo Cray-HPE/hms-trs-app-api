@@ -170,10 +170,10 @@ func (l *leveledLogrus) Debug(msg string, keysAndValues ...interface{}) {
 
 // The retryablehttp module closes idle connections in an overly aggressive
 // manner.  If a single request experiences a timeout, all idle connections
-// are closed.  The following RoundTripper wrapper catches context
-// timeouts and http transport timeouts, and avoids returning a response if
-// either are detected.  Returning only the error will signal retryablehttp
-// not to close all connections.
+// are closed.  The following RoundTrip wrapper catches context timeouts
+// and http transport timeouts, and avoids returning a response if either
+// are detected.  Returning only the error will signal retryablehttp not
+// to close all connections.
 
 type avoidClosingConnectionsRoundTripper struct {
 	transport http.RoundTripper
