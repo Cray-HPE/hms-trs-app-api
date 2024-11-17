@@ -263,6 +263,13 @@ baseTransport := &http.Transport{
 		TLSHandshakeTimeout   : httpTxPolicy.TLSHandshakeTimeout,
 		DisableKeepAlives	  : httpTxPolicy.DisableKeepAlives,
 }
+if clientType == "insecure" {
+	baseTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true,}
+} else {
+	tlsConfig := &tls.Config{RootCAs: tloc.CACertPool,}
+	tlsConfig.BuildNameToCertificate()
+	baseTransport.TLSClientConfig = tlsConfig
+}
 
 tr := &avoidClosingConnectionsRoundTripper{
 	transport: baseTransport, // Use the configured http.Transport
