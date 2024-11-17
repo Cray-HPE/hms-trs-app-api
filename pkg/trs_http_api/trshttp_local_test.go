@@ -145,7 +145,9 @@ func hasTRSAlwaysRetryHeader(r *http.Request) bool {
 	_,ok := r.Header["Trs-Fail-All-Retries"]
 
 	if ok == true {
-		handlerLogger.Logf("Received Trs-Fail-All-Retries header")
+		if (logLevel >= logrus.DebugLevel) {
+			handlerLogger.Logf("Received Trs-Fail-All-Retries header")
+		}
 	}
 	return ok
 }
@@ -158,7 +160,9 @@ func hasTRSStallHeader(r *http.Request) bool {
 	_,ok := r.Header["Trs-Context-Timeout"]
 
 	if ok == true {
-		handlerLogger.Logf("Received Trs-Context-Timeout header")
+		if (logLevel >= logrus.DebugLevel) {
+			handlerLogger.Logf("Received Trs-Context-Timeout header")
+		}
 	}
 
 	return ok
@@ -181,7 +185,7 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 
 	if singletonRetry || itHasTRSAlwaysRetryHeader {
 		if (logLevel >= logrus.DebugLevel) {
-			handlerLogger.Logf("launchHandler 503 running...")
+			handlerLogger.Logf("launchHandler 503 running (sleep for %vs)...", retrySleep)
 		}
 		if singletonRetry {
 			// Only update for tasks not retrying forever
@@ -194,6 +198,7 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type","application/json")
 		w.Header().Set("Retry-After","1")
 		//w.Header().Set("Connection","keep-alive")
+		req.Header.Set("Connection", "close")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(`{"Message":"Service Unavailable"}`))
 
@@ -204,7 +209,7 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 		stallHandler(w, req)
 	} else {
 		if (logLevel >= logrus.DebugLevel) {
-			handlerLogger.Logf("launchHandler running...")
+			handlerLogger.Logf("launchHandler running (sleep for %vs)...", handlerSleep)
 		}
 
 		// Simulate network/BMC delays
@@ -239,7 +244,7 @@ func stallHandler(w http.ResponseWriter, req *http.Request) {
 	time.Sleep(100 * time.Millisecond)
 
 	if (logLevel >= logrus.DebugLevel) {
-		handlerLogger.Logf("stallHandler running...")
+		handlerLogger.Logf("stallHandler running (sleep for %vms)...", 100)
 	}
 
 	<-stallCancel
@@ -692,7 +697,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 
 	testConns(t, a)
 
-	// 2 requests, 2 skipped body closes
+	// 2 requests, 1 skipped body closes
 
 	a.nTasks                 = 2
 	a.nSkipCloseBody         = 1
