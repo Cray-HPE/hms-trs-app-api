@@ -175,6 +175,12 @@ var nRetries int32      = 0 // how many retries before returning success
 var nHttpTimeouts int   = 0 // how many context timeouts
 
 func launchHandler(w http.ResponseWriter, req *http.Request) {
+handlerLogger.Logf("launchHandler received an HTTP %v.%v request", req.ProtoMajor, req.ProtoMinor)
+	if (logLevel >= logrus.TraceLevel) {
+		handlerLogger.Logf("launchHandler received an HTTP %v.%v request",
+						   req.ProtoMajor, req.ProtoMinor)
+	}
+
 	// Distinguish between limited retries that will succeed and retries
 	// that should continually fail and exceed their retry limit
 	singletonRetry := false
@@ -198,7 +204,7 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type","application/json")
 		w.Header().Set("Retry-After","1")
 		//w.Header().Set("Connection","keep-alive")
-		w.Header().Set("Connection", "close")
+		//w.Header().Set("Connection", "close")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(`{"Message":"Service Unavailable"}`))
 
