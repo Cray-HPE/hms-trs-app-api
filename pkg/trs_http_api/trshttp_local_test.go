@@ -203,7 +203,7 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type","application/json")
 		w.Header().Set("Retry-After","1")
 		//w.Header().Set("Connection","keep-alive")
-		w.Header().Set("Connection", "close")
+		//w.Header().Set("Connection", "close")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(`{"Message":"Service Unavailable"}`))
 
@@ -740,9 +740,12 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 1
 	a.testIdleConnTimeout    = false
-	a.openAfterTasksComplete = 1
-	a.openAfterBodyClose     = 0	// retryablehttp closes all open conns after close of body for any other still open ...
-	a.openAfterCancel        = 0 // TODO:  Enable more debug to see if failed body is closed or not
+	a.openAfterTasksComplete = 2	// it would close if we added Connection:close header
+	a.openAfterBodyClose     = 2
+	a.openAfterCancel        = 2
+//	a.openAfterTasksComplete = 1
+//	a.openAfterBodyClose     = 0	// retryablehttp closes all open conns after close of body for any other still open ...
+//	a.openAfterCancel        = 0 // TODO:  Enable more debug to see if failed body is closed or not
 	a.openAfterClose         = 0
 
 	testConns(t, a)
@@ -756,8 +759,11 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.nFailRetries           = 2
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = 8
-	a.openAfterBodyClose     = 0
-	a.openAfterCancel        = 0
+	a.openAfterBodyClose     = 8
+	a.openAfterCancel        = 8
+//	a.openAfterTasksComplete = 8
+//	a.openAfterBodyClose     = 0
+//	a.openAfterCancel        = 0
 	a.openAfterClose         = 0
 
 	testConns(t, a)
