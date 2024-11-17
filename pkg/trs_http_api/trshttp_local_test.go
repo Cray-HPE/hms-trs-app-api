@@ -198,7 +198,7 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type","application/json")
 		w.Header().Set("Retry-After","1")
 		//w.Header().Set("Connection","keep-alive")
-		req.Header.Set("Connection", "close")
+		w.Header().Set("Connection", "close")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(`{"Message":"Service Unavailable"}`))
 
