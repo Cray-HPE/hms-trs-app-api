@@ -158,14 +158,14 @@ func (l *leveledLogrus) fields(keysAndValues ...interface{}) map[string]interfac
 func (l *leveledLogrus) Error(msg string, keysAndValues ...interface{}) {
 	l.WithFields(l.fields(keysAndValues...)).Error(msg)
 }
+func (l *leveledLogrus) Warn(msg string, keysAndValues ...interface{}) {
+	l.WithFields(l.fields(keysAndValues...)).Warn(msg)
+}
 func (l *leveledLogrus) Info(msg string, keysAndValues ...interface{}) {
 	l.WithFields(l.fields(keysAndValues...)).Info(msg)
 }
 func (l *leveledLogrus) Debug(msg string, keysAndValues ...interface{}) {
 	l.WithFields(l.fields(keysAndValues...)).Debug(msg)
-}
-func (l *leveledLogrus) Warn(msg string, keysAndValues ...interface{}) {
-	l.WithFields(l.fields(keysAndValues...)).Warn(msg)
 }
 
 // The retryablehttp module closes idle connections in an overly aggressive
@@ -271,7 +271,8 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	tloc.clientMutex.Lock()
 	if _, ok := tloc.clientMap[tct.task.CPolicy]; !ok {
 		log := logrus.New()
-		log.SetLevel(tloc.Logger.GetLevel())
+		log.SetLevel(logrus.DebugLevel)
+		//log.SetLevel(tloc.Logger.GetLevel())
 		httpLogger := retryablehttp.LeveledLogger(&leveledLogrus{log})
 
 		cpack = new(clientPack)
