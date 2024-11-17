@@ -177,6 +177,7 @@ func (l *leveledLogrus) Debug(msg string, keysAndValues ...interface{}) {
 
 type avoidClosingConnectionsRoundTripper struct {
 	transport http.RoundTripper
+	closeIdleConnectionsFn func()
 }
 
 func (c *avoidClosingConnectionsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -185,8 +186,9 @@ func (c *avoidClosingConnectionsRoundTripper) RoundTrip(req *http.Request) (*htt
 	// Context timeouts
 	if errors.Is(err, context.DeadlineExceeded) {
 TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v (CDE)", err)
-		//return nil, err
-		return nil, fmt.Errorf("context deadline exceeded: TRS is marking connection as reusable: %w", context.DeadlineExceeded)
+		//newCtx := context.WithValue(req.Context(), preventCloseIdleConnectionsKey, true)
+		//*req = req.WithContext(newCtx)
+		return nil, err
 	}
 
 	// Lower level HTTPClient.Timeout triggered timeouts
@@ -206,6 +208,40 @@ TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v (other)", err)
 
 	return resp, err
 }
+
+//type ctxKey string
+//const preventCloseIdleConnectionsKey ctxKey = "doNotCloseIdleConnections"
+
+func (c *avoidClosingConnectionsRoundTripper) CloseIdleConnections(ctx context.Context) {
+	// Check if this request explicitly prevents closing idle connections
+	if ctx.Err() == context.DeadlineExceeded {
+TESTLOGGER.Warnf("-----------------> CloseIdleConnections: NOT CLOSING")
+		return
+	}
+
+TESTLOGGER.Warnf("-----------------> CloseIdleConnections: closing")
+	// Default behavior: close idle connections
+	if c.closeIdleConnectionsFn != nil {
+		c.closeIdleConnectionsFn()
+	}
+}
+
+/*
+func CustomCheckRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {
+	// Skip retries for context deadline exceeded
+	if errors.Is(err, context.DeadlineExceeded) {
+TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v (HCT)", err)
+		fmt.Println("Custom CheckRetry: Skipping retries for context deadline exceeded.")
+		// Set flag on this request's context to not close connections later
+		ctx = context.WithValue(ctx, preventCloseIdleConnectionsKey, true)
+
+		return false, nil
+	}
+
+	// Default retry policy for other errors and responses
+	return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+}
+*/
 
 // Create and configure a new client transport for use with HTTP clients.
 
