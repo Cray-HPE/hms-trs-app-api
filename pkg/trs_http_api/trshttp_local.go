@@ -186,7 +186,7 @@ func (c *avoidClosingConnectionsRoundTripper) RoundTrip(req *http.Request) (*htt
 	if errors.Is(err, context.DeadlineExceeded) {
 TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v (CDE)", err)
 		//return nil, err
-		return nil, context.DeadlineExceeded
+		return nil, fmt.Errorf("context deadline exceeded: TRS is marking connection as reusable: %w", context.DeadlineExceeded)
 	}
 
 	// Lower level HTTPClient.Timeout triggered timeouts
