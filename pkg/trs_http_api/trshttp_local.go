@@ -231,6 +231,7 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 	// HTTPClient timeout should be 90% of the task's context timeout
 	client.HTTPClient.Timeout = task.Timeout * 9 / 10
 
+/*
 	// Configure TLS for the client transport
 	var tr *http.Transport
 	if clientType == "insecure" {
@@ -252,7 +253,24 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 	}
 
 	client.HTTPClient.Transport = tr
-	//client.HTTPClient.Transport = &avoidClosingConnectionsRoundTripper{transport: tr,}
+*/
+
+baseTransport := &http.Transport{
+		MaxIdleConns          : httpTxPolicy.MaxIdleConns,
+		MaxIdleConnsPerHost   : httpTxPolicy.MaxIdleConnsPerHost,
+		IdleConnTimeout       : httpTxPolicy.IdleConnTimeout,
+		ResponseHeaderTimeout : httpTxPolicy.ResponseHeaderTimeout,
+		TLSHandshakeTimeout   : httpTxPolicy.TLSHandshakeTimeout,
+		DisableKeepAlives	  : httpTxPolicy.DisableKeepAlives,
+}
+
+tr := &avoidClosingConnectionsRoundTripper{
+	transport: baseTransport, // Use the configured http.Transport
+}
+
+client.HTTPClient.Transport = tr
+
+//////
 
 	// Log the configuration we're going to use. Clients are generally long
 	// lived so this shouldn't be too spammy. Knowing this information can
