@@ -251,8 +251,8 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 		tr.DisableKeepAlives	 = httpTxPolicy.DisableKeepAlives     // if 0 defaults to false
 	}
 
-	//client.HTTPClient.Transport = tr
-	client.HTTPClient.Transport = &avoidClosingConnectionsRoundTripper{transport: tr,}
+	client.HTTPClient.Transport = tr
+	//client.HTTPClient.Transport = &avoidClosingConnectionsRoundTripper{transport: tr,}
 
 	// Log the configuration we're going to use. Clients are generally long
 	// lived so this shouldn't be too spammy. Knowing this information can
