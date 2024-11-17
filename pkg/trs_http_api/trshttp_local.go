@@ -310,6 +310,7 @@ if clientType == "insecure" {
 
 tr := &avoidClosingConnectionsRoundTripper{
 	transport: baseTransport, // Use the configured http.Transport
+	closeIdleConnectionsFn: baseTransport.CloseIdleConnections,
 }
 
 client.HTTPClient.Transport = tr
