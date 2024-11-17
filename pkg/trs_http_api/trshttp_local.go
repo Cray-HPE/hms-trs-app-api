@@ -184,13 +184,13 @@ func (c *avoidClosingConnectionsRoundTripper) RoundTrip(req *http.Request) (*htt
 
 	// Context timeouts
 	if errors.Is(err, context.DeadlineExceeded) {
-TESTLOGGER.Debugf("-----------------> RoundTrip: err=%v (CDE)", err)
+TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v (CDE)", err)
 		return nil, err
 	}
 
 	// Lower level HTTPClient.Timeout triggered timeouts
 	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-TESTLOGGER.Debugf("-----------------> RoundTrip: err=%v (HCT)", err)
+TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v (HCT)", err)
 		return nil, err
 	}
 
@@ -201,7 +201,7 @@ TESTLOGGER.Debugf("-----------------> RoundTrip: err=%v (HCT)", err)
 	//      return nil, err
 	//}
 
-TESTLOGGER.Debugf("-----------------> RoundTrip: err=%v (other)", err)
+TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v (other)", err)
 
 	return resp, err
 }
