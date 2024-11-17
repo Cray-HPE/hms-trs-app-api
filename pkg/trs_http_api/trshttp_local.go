@@ -29,6 +29,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"time"
 
@@ -53,13 +54,14 @@ const (
 //
 // ServiceName: Name of running service/application.
 // Return:      Error string if something went wrong.
-
+var TESTLOGGER *logrus.Logger
 func (tloc *TRSHTTPLocal) Init(serviceName string, logger *logrus.Logger) error {
 	if logger != nil {
 		tloc.Logger = logger
 	} else {
 		tloc.Logger = logrus.New()
 	}
+TESTLOGGER = tloc.Logger
 
 	tloc.ctx, tloc.ctxCancelFunc = context.WithCancel(context.Background())
 
@@ -166,9 +168,47 @@ func (l *leveledLogrus) Warn(msg string, keysAndValues ...interface{}) {
 	l.WithFields(l.fields(keysAndValues...)).Warn(msg)
 }
 
+// The retryablehttp module closes idle connections in an overly aggressive
+// manner.  If a single request experiences a timeout, all idle connections
+// are closed.  The following RoundTripper wrapper catches context
+// timeouts and http transport timeouts, and avoids returning a response if
+// either are detected.  Returning only the error will signal retryablehttp
+// not to close all connections.
+
+type avoidClosingConnectionsRoundTripper struct {
+	transport http.RoundTripper
+}
+
+func (c *avoidClosingConnectionsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := c.transport.RoundTrip(req)
+
+	// Context timeouts
+	if errors.Is(err, context.DeadlineExceeded) {
+TESTLOGGER.Debugf("-----------------> RoundTrip: err=%v (CDE)", err)
+		return nil, err
+	}
+
+	// Lower level HTTPClient.Timeout triggered timeouts
+	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+TESTLOGGER.Debugf("-----------------> RoundTrip: err=%v (HCT)", err)
+		return nil, err
+	}
+
+	// Note that we DO want to honor closing all idle connections when a
+	// context cancellation has arrived.
+	// Context cancellations
+	//if errors.Is(err, context.Canceled) {
+	//      return nil, err
+	//}
+
+TESTLOGGER.Debugf("-----------------> RoundTrip: err=%v (other)", err)
+
+	return resp, err
+}
+
 // Create and configure a new client transport for use with HTTP clients.
 
-func configureClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client *retryablehttp.Client) {
+func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client *retryablehttp.Client) {
 	client = retryablehttp.NewClient()
 
 	retryPolicy := task.CPolicy.Retry
@@ -201,7 +241,7 @@ func configureClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (cli
 		tr = &http.Transport{TLSClientConfig: tlsConfig,}
 	}
 
-	// Configure the client't http transport policy
+	// Configure the client't other http transport policies if requested
 	if httpTxPolicy.Enabled {
 		tr.MaxIdleConns          = httpTxPolicy.MaxIdleConns          // if 0 defaults to 2
 		tr.MaxIdleConnsPerHost   = httpTxPolicy.MaxIdleConnsPerHost   // if 0 defaults to 100
@@ -211,14 +251,14 @@ func configureClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (cli
 		tr.DisableKeepAlives	 = httpTxPolicy.DisableKeepAlives     // if 0 defaults to false
 	}
 
+	//client.HTTPClient.Transport = &avoidClosingConnsRoundTripper{transport: tr}
+	client.HTTPClient.Transport = tr
+
 	// Log the configuration we're going to use. Clients are generally long
 	// lived so this shouldn't be too spammy. Knowing this information can
 	// be pretty critical when debugging issues on site
 	tloc.Logger.Errorf("Created %s client with incoming policy %v (to's %s and %s) (ll %v)",
 					   clientType, task.CPolicy, task.Timeout, client.HTTPClient.Timeout, tloc.Logger.GetLevel())
-
-	// Write through to the client
-	client.HTTPClient.Transport = tr
 
 	return client
 }
@@ -236,11 +276,11 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 
 		cpack = new(clientPack)
 
-		cpack.insecure = configureClient(tct.task, tloc, "insecure")
+		cpack.insecure = createClient(tct.task, tloc, "insecure")
 		cpack.insecure.Logger = httpLogger
 
 		if (tloc.CACertPool != nil) {
-			cpack.secure = configureClient(tct.task, tloc, "secure")
+			cpack.secure = createClient(tct.task, tloc, "secure")
 			cpack.secure.Logger = httpLogger
 
 			tloc.Logger.Tracef("Created secure client with policy %v", tct.task.CPolicy)

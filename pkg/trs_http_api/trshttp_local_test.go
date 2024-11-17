@@ -658,7 +658,6 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 // NOT configure the http transport.
 
 func TestConnsWithNoHttpTxPolicy(t *testing.T) {
-return
 	httpRetries      := 3
 	pcsStatusTimeout := 30
 	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
@@ -752,8 +751,6 @@ return
 	a.openAfterClose         = 2
 
 	testConns(t, a)
-
-logLevel = logrus.ErrorLevel
 }
 
 // TestBasicConnectionBehavior tests the the connection behavior that
