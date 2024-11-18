@@ -486,7 +486,7 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 		t.Errorf("===> ERROR: Expected %v ESTABLISH(ED) connections, but got %v",
 				 clientEstabExp, len(debugOutput["clientEstab"]))
 		if logLevel == logrus.TraceLevel {
-			t.Errorf("===> ERROR: Full 'ss' output:\n%s", output)
+			t.Logf("Full 'ss' output:\n%s", output)
 		}
 	}
 
@@ -704,7 +704,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 
 	testConns(t, a)
 
-	// 2 requests, 1 skipped body closes
+	// 2 requests, 1 skipped body close
 
 	a.nTasks                 = 2	// MaxIdleConnsPerHost
 	a.nSkipCloseBody         = 1
@@ -717,7 +717,6 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody // no body close == bad connection
 	a.openAfterClose         = a.nTasks - a.nSkipCloseBody
 
-logLevel = logrus.TraceLevel
 	testConns(t, a)
 
 	// 2 requests: 1 skipped body closure and skip calling Cancel()
@@ -740,7 +739,6 @@ logLevel = logrus.TraceLevel
 	a.skipCancel             = true
 
 	testConns(t, a)
-logLevel = logrus.InfoLevel
 
 	a.skipCancel             = true	// reset to default
 
@@ -1181,7 +1179,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 				// Must fully read the body in order to close the body so that
 				// the underlying libraries/modules don't close the connection.
 				// If body not fully conusmed they assume the connection had issues
-				_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
+//				_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
 
 				tsk.Request.Response.Body.Close()
 				tsk.Request.Response.Body = nil
@@ -1217,7 +1215,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 				// Must fully read the body in order to close the body so that
 				// the underlying libraries/modules don't close the connection.
 				// If body not fully conusmed they assume the connection had issues
-				_, _ = io.Copy(io.Discard, tList[i].Request.Response.Body)
+//				_, _ = io.Copy(io.Discard, tList[i].Request.Response.Body)
 
 				tList[i].Request.Response.Body.Close()
 				tList[i].Request.Response.Body = nil
@@ -1273,7 +1271,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 			// Must fully read the body in order to close the body so that
 			// the underlying libraries/modules don't close the connection.
 			// If body not fully conusmed they assume the connection had issues
-			_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
+//			_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
 
 			tsk.Request.Response.Body.Close()
 			tsk.Request.Response.Body = nil
