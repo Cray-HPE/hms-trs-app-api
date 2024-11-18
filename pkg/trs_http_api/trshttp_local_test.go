@@ -1012,6 +1012,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.openAfterCancel        = 0 // FIND WORKAROUND???
 	a.openAfterClose         = 0 // FIND WORKAROUND???
 
+logLevel = logrus.DebugLevel
 	testConns(t, a)
 
 	// 10 requests that we run these twice to test IdleConnTimeout:
@@ -1041,6 +1042,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.runSecondTaskList = true // second run should not open any new connections
 
 	testConns(t, a)
+logLevel = logrus.InfoLevel
 
 	a.runSecondTaskList    = true	// set back to default
 	a.testIdleConnTimeout  = false	// set back to default
