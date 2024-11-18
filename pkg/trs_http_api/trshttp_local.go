@@ -215,14 +215,14 @@ TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v (other)", err)
 //type ctxKey string
 //const preventCloseIdleConnectionsKey ctxKey = "doNotCloseIdleConnections"
 
-type avoidClosingConnectionsRoundTripper struct {
+type trsRoundTripper struct {
 	transport              *http.Transport
 	closeIdleConnectionsFn func()
 	skipCICs               uint64
 	skipCICsMutex          sync.Mutex
 }
 
-func (c *avoidClosingConnectionsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp, err := c.transport.RoundTrip(req)
 
 TESTLOGGER.Warnf("-----------------> RoundTrip: ")
@@ -231,14 +231,14 @@ TESTLOGGER.Warnf("-----------------> RoundTrip: ")
 		c.skipCICs++
 TESTLOGGER.Warnf("                               skipCICs now %v", c.skipCICs)
 		c.skipCICsMutex.Unlock()
-		return nil, err
+		return nil, context.DeadlineExceeded	// not err
 	}
 TESTLOGGER.Warnf("                               not indicating skip")
 
 	return resp, err
 }
 
-func (c *avoidClosingConnectionsRoundTripper) CloseIdleConnections() {
+func (c *trsRoundTripper) CloseIdleConnections() {
 TESTLOGGER.Warnf("=================> CloseIdleConnections:")
 	c.skipCICsMutex.Lock()
 
@@ -323,7 +323,7 @@ if clientType == "insecure" {
 	baseTransport.TLSClientConfig = tlsConfig
 }
 
-tr := &avoidClosingConnectionsRoundTripper{
+tr := &trsRoundTripper{
 	transport: baseTransport, // Use the configured http.Transport
 	closeIdleConnectionsFn: baseTransport.CloseIdleConnections,
 }
