@@ -740,7 +740,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 1
 	a.testIdleConnTimeout    = false
-	a.openAfterTasksComplete = 10
+	a.openAfterTasksComplete = 2
 	a.openAfterBodyClose     = 2
 	a.openAfterCancel        = 2
 	a.openAfterClose         = 2
@@ -759,7 +759,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 2
 	a.testIdleConnTimeout    = false
-	a.openAfterTasksComplete = 10
+	a.openAfterTasksComplete = 2
 	a.openAfterTasksComplete = 2
 	a.openAfterBodyClose     = 2
 	a.openAfterCancel        = 2

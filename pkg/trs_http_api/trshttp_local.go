@@ -212,12 +212,12 @@ TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v (other)", err)
 //type ctxKey string
 //const preventCloseIdleConnectionsKey ctxKey = "doNotCloseIdleConnections"
 
-func (c *avoidClosingConnectionsRoundTripper) CloseIdleConnections(ctx context.Context) {
+func (c *avoidClosingConnectionsRoundTripper) CloseIdleConnections() {
 	// Check if this request explicitly prevents closing idle connections
-	if ctx.Err() == context.DeadlineExceeded {
-TESTLOGGER.Warnf("-----------------> CloseIdleConnections: NOT CLOSING")
-		return
-	}
+//	if ctx.Err() == context.DeadlineExceeded {
+//TESTLOGGER.Warnf("-----------------> CloseIdleConnections: NOT CLOSING")
+//		return
+//	}
 
 TESTLOGGER.Warnf("-----------------> CloseIdleConnections: closing")
 	// Default behavior: close idle connections
