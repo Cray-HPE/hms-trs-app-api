@@ -219,9 +219,10 @@ func (c *avoidClosingConnectionsRoundTripper) CloseIdleConnections() {
 //		return
 //	}
 
-TESTLOGGER.Warnf("-----------------> CloseIdleConnections: closing")
+TESTLOGGER.Warnf("=================> CloseIdleConnections:")
 	// Default behavior: close idle connections
 	if c.closeIdleConnectionsFn != nil {
+TESTLOGGER.Warnf("=================>                       closing")
 		c.closeIdleConnectionsFn()
 	}
 }
