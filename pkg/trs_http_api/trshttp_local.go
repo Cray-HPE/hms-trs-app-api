@@ -227,7 +227,7 @@ type trsRoundTripper struct {
 func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp, err := c.transport.RoundTrip(req)
 
-	TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v", err)
+	TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v type=%T", err, err)
 
 	if err != nil {
 		//c.skipCICsMutex.Lock()
