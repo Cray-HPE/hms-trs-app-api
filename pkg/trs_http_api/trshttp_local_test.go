@@ -758,7 +758,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
-	a.nHttpTimeouts          = 1
+	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = a.nTasks - a.nHttpTimeouts
 	a.openAfterBodyClose     = a.nTasks - a.nHttpTimeouts
