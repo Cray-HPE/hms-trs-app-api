@@ -668,7 +668,6 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 // NOT configure the http transport.
 
 func TestConnsWithNoHttpTxPolicy(t *testing.T) {
-return
 	httpRetries      := 3
 	pcsStatusTimeout := 30
 	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
@@ -720,6 +719,31 @@ return
 
 	testConns(t, a)
 
+	// 2 requests: 1 skipped body closure and skip calling Cancel()
+	//
+	// It's a much more common pattern to call Close() without Cancel().
+	// This test will validate that Close() successfully cancels all
+	// contexts and closes any reponse bodies that were left open.
+
+	a.nTasks                 = 2	// MaxIdleConnsPerHost
+	a.nSkipCloseBody         = 1
+	a.nSuccessRetries        = 0
+	a.nFailRetries           = 0
+	a.nHttpTimeouts          = 0
+	a.testIdleConnTimeout    = false
+	a.openAfterTasksComplete = a.nTasks
+	a.openAfterBodyClose     = a.nTasks
+	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody // no body close == bad connection
+	a.openAfterClose         = a.nTasks - a.nSkipCloseBody
+
+	a.skipCancel             = true
+
+logLevel = logrus.TraceLevel
+	testConns(t, a)
+logLevel = logrus.InfoLevel
+
+	a.skipCancel             = true	// reset to default
+
 	// TEST: 2 requests: 1 request retries once before success
 
 	a.nTasks                 = 2	// MaxIdleConnsPerHost
@@ -768,7 +792,7 @@ return
 
 	testConns(t, a)
 
-	// TEST: 10 requests, 2 skipped body closes, 3 successful retries, 2 retry failures
+	// 10 requests, 2 skipped body closes, 3 successful retries, 2 retry failures
 
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 2
@@ -913,9 +937,10 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = a.nTasks
-	a.skipCancel             = true
 	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody
 	a.openAfterClose         = a.nTasks - a.nSkipCloseBody
+
+	a.skipCancel             = true
 
 	testConns(t, a)
 
