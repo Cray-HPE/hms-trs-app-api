@@ -386,6 +386,7 @@ tr := &trsRoundTripper{
 }
 
 client.HTTPClient.Transport = tr
+client.CheckRetry = tr.trsCheckRetry
 
 //////
 
