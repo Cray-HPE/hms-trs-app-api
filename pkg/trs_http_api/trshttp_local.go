@@ -288,8 +288,6 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 // Create and configure a new client transport for use with HTTP clients.
 
 func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client *retryablehttp.Client) {
-	client = retryablehttp.NewClient()
-
 	// Configure the base transport
 
 	tr := &http.Transport{}
@@ -306,7 +304,8 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 	}
 
 	// Configure base transport policies if requested
-	if task.CPolicy.Tx.Enabled {
+	httpTxPolicy := task.CPolicy.Tx
+	if httpTxPolicy.Enabled {
 		tr.MaxIdleConns          = httpTxPolicy.MaxIdleConns          // if 0 defaults to 2
 		tr.MaxIdleConnsPerHost   = httpTxPolicy.MaxIdleConnsPerHost   // if 0 defaults to 100
 		tr.IdleConnTimeout       = httpTxPolicy.IdleConnTimeout       // if 0 defaults to no timeout
@@ -320,6 +319,9 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 		transport:              tr,
 		closeIdleConnectionsFn: tr.CloseIdleConnections,
 	}
+
+	// Create the httpretryable client and start configuring it
+	client = retryablehttp.NewClient()
 
 	client.HTTPClient.Transport = retryabletr
 	client.HTTPClient.Timeout   = task.Timeout * 9 / 10 // 90% of the task's context timeout
