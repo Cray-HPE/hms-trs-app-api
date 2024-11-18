@@ -198,12 +198,7 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 		}
 
 		// Delay retry based on test requirement
-		if retrySleep > 0 {
-			time.Sleep(time.Duration(retrySleep) * time.Second)
-		} else {
-			// Still want a little delay for clean looking output
-			time.Sleep(100 * time.Millisecond)
-		}
+		time.Sleep(time.Duration(retrySleep) * time.Second)
 
 		w.Header().Set("Content-Type","application/json")
 		w.Header().Set("Retry-After","1")
@@ -1150,7 +1145,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		t.Errorf("===> ERROR: tloc.Launch() failed: %v", err)
 	}
 
-	time.Sleep(1 * time.Second)	// Can take some time for all to get established
+	time.Sleep(2 * time.Second)	// Can take some time for all to get established
 	t.Logf("Testing connections after Launch")
 	testOpenConnections(t, (a.nTasks))
 
