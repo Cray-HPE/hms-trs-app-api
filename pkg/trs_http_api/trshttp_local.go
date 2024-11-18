@@ -183,6 +183,7 @@ type trsRoundTripper struct {
 	skipCloseMutex         sync.Mutex
 }
 
+// Our replacement for retryablehttp's RoundTripper()
 func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	return c.transport.RoundTrip(req)
 /*
@@ -224,10 +225,12 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 */
 }
 
+// Our replacement for the standard http.Client's CloseIdleConnections()
 func (c *trsRoundTripper) CloseIdleConnections() {
 	TESTLOGGER.Warnf("=================> CloseIdleConnections:")
 	c.skipCloseMutex.Lock()
 
+	// Skip closing idle connections if counter > 0
 	if c.skipCloseCount > 0 {
 		c.skipCloseCount--
 		TESTLOGGER.Warnf("                                          NOT CLOSING: skipCloseCount now %v", c.skipCloseCount)
@@ -238,7 +241,7 @@ func (c *trsRoundTripper) CloseIdleConnections() {
 
 	c.skipCloseMutex.Unlock()
 
-	// Default behavior: close idle connections
+	// Otherwise, close them
 	if c.closeIdleConnectionsFn != nil {
 		TESTLOGGER.Warnf("                                          closing")
 		c.closeIdleConnectionsFn()
@@ -246,8 +249,11 @@ func (c *trsRoundTripper) CloseIdleConnections() {
 	TESTLOGGER.Warnf("                                          done closing")
 }
 
+// Our replacement for retryablehttp's CheckRetry().  We want some control
+// over what gets retried and what doesn't
 func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {
 	TESTLOGGER.Warnf("-----------------> trsCheckRetry: err=%v type=%T", err, err)
+	// We want to avoid retries for specific errors
 	if err != nil {
 		c.skipCloseMutex.Lock()
 
@@ -257,15 +263,16 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 			TESTLOGGER.Warnf("                                      skipCloseCount now %v (lower level cancel)", c.skipCloseCount)
 			c.skipCloseMutex.Unlock()
 
-			return false, err
+			return false, err	// skip it
 		}
 
+		// General context timeout from above
 		if errors.Is(err, context.DeadlineExceeded) {
 			c.skipCloseCount++
 			TESTLOGGER.Warnf("                                      skipCloseCount now %v (DeadLineExceeded)", c.skipCloseCount)
 			c.skipCloseMutex.Unlock()
 
-			return false, err
+			return false, err	// skip it
 		}
 
 		// Lower level HTTPClient.Timeout triggered timeouts
@@ -274,19 +281,18 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 			TESTLOGGER.Warnf("                                       skipCloseCount now %v (netErr.Timeout)", c.skipCloseCount)
 			c.skipCloseMutex.Unlock()
 
-			return false, err
+			return false, err	// skip it
 		}
 		c.skipCloseMutex.Unlock()
 		TESTLOGGER.Warnf("                                      not indicating skip")
 	}
 	TESTLOGGER.Warnf("                                       there were no errors")
 
-	// Delegate to the default retry policy for all other cases
+	// If none of the above, delegate retry check to retryablehttp
 	return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
 }
 
 // Create and configure a new client transport for use with HTTP clients.
-
 func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client *retryablehttp.Client) {
 	// Configure the base transport
 
