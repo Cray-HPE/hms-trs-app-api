@@ -751,9 +751,9 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 //	a.openAfterCancel        = 0 // TODO:  Enable more debug to see if failed body is closed or not
 //	a.openAfterClose         = 0
 
-logLevel = logrus.DebugLevel
+	retrySleep = 0	// 0 seconds so retries complete first
+
 	testConns(t, a)
-logLevel = logrus.InfoLevel
 
 	// TEST: 2 requests, 1 http timeout
 
@@ -1134,7 +1134,6 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	// Configure any requested retries (put at beginning of list)
 	nRetries = a.nSuccessRetries
 	for i := 0; i < a.nFailRetries; i++ {
-		// Just choose the ones at the beginning
 		tList[i].Request.Header.Set("Trs-Fail-All-Retries", "true")
 
 		if (logLevel == logrus.DebugLevel) {
@@ -1146,7 +1145,6 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	// Configure any requested http timeouts (put at end of list)
 	nHttpTimeouts = a.nHttpTimeouts
 	for i := len(tList) - 1; i > len(tList) - 1 - a.nHttpTimeouts; i-- {
-		// Just choose the ones at the beginning
 		tList[i].Request.Header.Set("Trs-Context-Timeout", "true")
 
 		if (logLevel == logrus.DebugLevel) {
@@ -1217,23 +1215,23 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 			tasksToWaitFor--
 		}
 
-		t.Logf("Closing non-timeout response bodies early")
-		for _, tsk := range(tList) {
-			if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+		t.Logf("Closing non-timeout response bodies early and canceling their contexts")
+		for i := 0; i < len(tList) - a.nHttpTimeouts; i++ {
+			if tList[i].Request.Response != nil && tList[i].Request.Response.Body != nil {
 				// Must fully read the body in order to close the body so that
 				// the underlying libraries/modules don't close the connection.
 				// If body not fully conusmed they assume the connection had issues
-				_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
+				_, _ = io.Copy(io.Discard, tList[i].Request.Response.Body)
 
-				tsk.Request.Response.Body.Close()
-				tsk.Request.Response.Body = nil
+				tList[i].Request.Response.Body.Close()
+				tList[i].Request.Response.Body = nil
 
 				if logLevel == logrus.TraceLevel {
 					// Response headers can be  helpful for debug
-					t.Logf("Response headers: %s", tsk.Request.Response.Header)
+					t.Logf("Response headers: %s", tList[i].Request.Response.Header)
 				}
 			}
-			tsk.contextCancel()
+			tList[i].contextCancel()
 		}
 
 		// All connections should still be in ESTAB(LISHED)
