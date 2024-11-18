@@ -300,6 +300,7 @@ TESTLOGGER.Warnf("                                       skipCICs now %v (netErr
 		}
 		c.skipCICsMutex.Unlock()
 	}
+TESTLOGGER.Warnf("                                       there were no errors")
 
 	// Delegate to the default retry policy for all other cases
 	return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
