@@ -28,8 +28,7 @@ all:  unittest integration
 unittest:
 	# -logLevel values: 0=Panic, 1=Fatal, 2=Error 3=Warn, 4=Info, 5=Debug, 6=Trace"
 	#/opt/hostedtoolcache/go/1.21.13/x64/bin/go test -v ./pkg/trs_http_api/... -cover -logLevel=2
-	export GODEBUG=http2debug=2,httpdebug=1
-	go test -v ./pkg/trs_http_api/... -cover -logLevel=4
+	GODEBUG=http2debug=2,httpdebug=1 go test -v ./pkg/trs_http_api/... -cover -logLevel=4
 	# no -v -tags musl
 
 integration:
