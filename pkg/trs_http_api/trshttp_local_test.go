@@ -1169,19 +1169,54 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	testOpenConnections(t, (a.nTasks))
 
 	// If asked, here we attempt to close task bodies for tasks that have
-	// already completed, prior to tasks that will fail retries or timeout.
-	//  We do this to test if the completed tasks have their connections
-	// closed prior to HttpClient.Timeout expiring
+	// already completed, prior to tasks that will fail retries.  We do this
+	// to test if the completed tasks have their connections closed
 	tasksToWaitFor := a.nTasks
-	nBodiesToCloseEarly := a.nFailRetries + a.nHttpTimeouts
-	if nBodiesToCloseEarly > 0 && retrySleep > 0 {
-		t.Logf("Waiting for %v non-retry tasks to complete", a.nTasks - nBodiesToCloseEarly)
-		for i := 0; i < (a.nTasks - nBodiesToCloseEarly); i++ {
+	if a.nFailRetries > 0 && retrySleep > 0 {
+		t.Logf("Waiting for %v non-retry tasks to complete", a.nTasks - a.nFailRetries)
+		for i := 0; i < (a.nTasks - a.nFailRetries); i++ {
 			<-taskListChannel
 			tasksToWaitFor--
 		}
 
 		t.Logf("Closing non-retry response bodies early before retry failures")
+		for _, tsk := range(tList) {
+			if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+				// Must fully read the body in order to close the body so that
+				// the underlying libraries/modules don't close the connection.
+				// If body not fully conusmed they assume the connection had issues
+				_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
+
+				tsk.Request.Response.Body.Close()
+				tsk.Request.Response.Body = nil
+
+				if logLevel == logrus.TraceLevel {
+					// Response headers can be  helpful for debug
+					t.Logf("Response headers: %s", tsk.Request.Response.Header)
+				}
+			}
+		}
+
+		// All connections should still be in ESTAB(LISHED)
+		time.Sleep(time.Duration(a.nTasks) * time.Millisecond)
+		t.Logf("Testing connections after non-retry request bodies closed")
+		testOpenConnections(t, a.nTasks)
+	}
+
+	// Here we attempt to close task bodies and cancel context for tasks that
+	// have already completed, prior to tasks that will time.  We do this to
+	// test if the completed tasks have their connections closed before the
+	// HTTPClient.Timeout expires
+
+	tasksToWaitFor = a.nTasks - a.nHttpTimeouts
+	if a.nHttpTimeouts > 0 {
+		t.Logf("Waiting for %v non-timeout tasks to complete", a.nTasks - a.nHttpTimeouts)
+		for i := 0; i < (a.nTasks - a.nHttpTimeouts); i++ {
+			<-taskListChannel
+			tasksToWaitFor--
+		}
+
+		t.Logf("Closing non-timeout response bodies early")
 		for _, tsk := range(tList) {
 			if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 				// Must fully read the body in order to close the body so that
