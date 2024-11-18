@@ -224,19 +224,17 @@ type trsRoundTripper struct {
 }
 
 func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	return c.transport.RoundTrip(req)
-/*
 	resp, err := c.transport.RoundTrip(req)
 
 	TESTLOGGER.Warnf("-----------------> RoundTrip: ")
 
 	if err != nil {
-		c.skipCICsMutex.Lock()
+		//c.skipCICsMutex.Lock()
 
 		if errors.Is(err, context.DeadlineExceeded) {
-			c.skipCICs++
+			//c.skipCICs++
 			TESTLOGGER.Warnf("                               skipCICs now %v (DeadLineExceeded)", c.skipCICs)
-			c.skipCICsMutex.Unlock()
+			//c.skipCICsMutex.Unlock()
 
 			return nil, context.DeadlineExceeded	// not err
 		}
@@ -244,16 +242,15 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 
 		// Lower level HTTPClient.Timeout triggered timeouts
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			c.skipCICs++
+			//c.skipCICs++
 			TESTLOGGER.Warnf("                               skipCICs now %v (netErr.Timeout)", c.skipCICs)
-			c.skipCICsMutex.Unlock()
+			//c.skipCICsMutex.Unlock()
 
 			return nil, err
 		}
-		c.skipCICsMutex.Unlock()
+		//c.skipCICsMutex.Unlock()
 	}
 	return resp, err
-*/
 }
 
 func (c *trsRoundTripper) CloseIdleConnections() {
