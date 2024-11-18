@@ -672,6 +672,8 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	pcsStatusTimeout := 30
 	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
 
+	t.Logf("httpTimeout     = %v", httpTimeout)
+
 	// Default prototype to initialize each task in the task list with
 	// Can customize prior to each test
 	defaultTListProto := &HttpTask{
@@ -811,6 +813,9 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	// this for a buffer (ie. multiply by 150%).
 	idleConnTimeout := time.Duration(
 		(pcsStatusTimeout + pcsTimeToNextStatusPoll) * 15 / 10) * time.Second
+
+	t.Logf("httpTimeout     = %v", httpTimeout)
+	t.Logf("idleConnTimeout = %v", idleConnTimeout)
 
 	// Default prototype to initialize each task in the task list with
 	// Can customize prior to each test
