@@ -758,7 +758,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
-	a.nHttpTimeouts          = 0
+	a.nHttpTimeouts          = 1
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = a.nTasks - a.nHttpTimeouts
 	a.openAfterBodyClose     = a.nTasks - a.nHttpTimeouts
@@ -794,7 +794,6 @@ logLevel = logrus.InfoLevel
 // and the retryablehttp library.
 
 func TestBasicConnectionBehavior(t *testing.T) {
-return
 	httpRetries             := 3
 	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
 	pcsStatusTimeout        := 30
@@ -904,7 +903,7 @@ return
 	// 10 requests: 2 skipped body closures and skip calling Cancel()
 	//
 	// It's a much more common pattern to call Close() without Cancel().
-	// This test will validate that Close() successfully cancels all
+	// This test will validate that Cloe() successfully cancels all
 	// contexts and closes any reponse bodies that were left open.
 
 	a.nTasks                 = 10
