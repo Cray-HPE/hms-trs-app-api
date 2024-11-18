@@ -257,7 +257,7 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 	if err != nil {
 		c.skipCloseMutex.Lock()
 
-		// This is what Go returns when HTTPClient.Timeout expires
+		// This is what Go returns when HTTPClient.Timeout expires (set by TRS)
 		if err.Error() == "net/http: request canceled" {
 			c.skipCloseCount++
 			TESTLOGGER.Warnf("                                      skipCloseCount now %v (lower level cancel)", c.skipCloseCount)
@@ -266,7 +266,7 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 			return false, err	// skip it
 		}
 
-		// General context timeout from above
+		// Context timeout set by TRS
 		if errors.Is(err, context.DeadlineExceeded) {
 			c.skipCloseCount++
 			TESTLOGGER.Warnf("                                      skipCloseCount now %v (DeadLineExceeded)", c.skipCloseCount)
@@ -276,6 +276,7 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 		}
 
 		// Lower level HTTPClient.Timeout triggered timeouts
+		// TODO:  REMOVE THIS TIMEOUT CATCH BLOCK????
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			c.skipCloseCount++
 			TESTLOGGER.Warnf("                                       skipCloseCount now %v (netErr.Timeout)", c.skipCloseCount)
@@ -288,7 +289,6 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 	}
 
 	// If none of the above, delegate retry check to retryablehttp
-	//return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
 	shouldRetry, err := retryablehttp.DefaultRetryPolicy(ctx, resp, err)
 
 	TESTLOGGER.Warnf("                                       there were no errors (shouldRetry=%v)", shouldRetry)
@@ -304,11 +304,27 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 		TESTLOGGER.Warnf("                                       trsWR.retryCount now %v)", trsWR.retryCount)
 
 		if trsWR.retryCount > trsWR.retryMax {
+			// The retryablehttp documentation states that if a custom
+			// CheckRetry() wrapper decides not to retry (ie. return false),
+			// it is responsible for draining and closing the response body.
+			if resp != nil && resp.Body != nil {
+				_, _ = io.Copy(io.Discard, resp.Body)
+				resp.Body.Close()
+			}
+
+			// If no error present, let's give the caller the underlying
+			// reason why retries were exhausted
+			if err == nil {
+				err = fmt.Errorf("retries exhausted: last attempt received status %d (%s)",
+								 resp.StatusCode, http.StatusText(resp.StatusCode))
+			}
+
+			// Skip an idle connection close
 			c.skipCloseMutex.Lock()
 			c.skipCloseCount++
 			c.skipCloseMutex.Unlock()
 
-			TESTLOGGER.Warnf("                                       overriding retry, skipCloseCount now %v", c.skipCloseCount)
+			TESTLOGGER.Warnf("                                       overriding retry, skipCloseCount now %v and err is %v", c.skipCloseCount, err)
 
 			return false, err
 		}
