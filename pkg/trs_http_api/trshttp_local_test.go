@@ -692,8 +692,8 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
-	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 0
+	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = 10
 	a.openAfterBodyClose     = 2	// MaxIdleConnsPerHost
@@ -707,8 +707,8 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.nTasks                 = 2	// MaxIdleConnsPerHost
 	a.nSkipCloseBody         = 1
 	a.nSuccessRetries        = 0
-	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 0
+	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = a.nTasks
@@ -722,8 +722,8 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.nTasks                 = 2	// MaxIdleConnsPerHost
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 1
-	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 0
+	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = a.nTasks
@@ -737,8 +737,8 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.nTasks                 = 2	// MaxIdleConnsPerHost
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
-	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 1
+	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
 	a.openAfterBodyClose     = a.nTasks - a.nFailRetries
@@ -751,13 +751,28 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 
 	testConns(t, a)
 
+	// TEST: 2 requests, 1 http timeout
+
+	a.nTasks                 = 2	// MaxIdleConnsPerHost
+	a.nSkipCloseBody         = 0
+	a.nSuccessRetries        = 0
+	a.nFailRetries           = 0
+	a.nHttpTimeouts          = 1
+	a.testIdleConnTimeout    = false
+	a.openAfterTasksComplete = a.nTasks - a.nHttpTimeouts
+	a.openAfterBodyClose     = a.nTasks - a.nHttpTimeouts
+	a.openAfterCancel        = a.nTasks - a.nHttpTimeouts
+	a.openAfterClose         = a.nTasks - a.nHttpTimeouts
+
+	testConns(t, a)
+
 	// TEST: 10 requests, 2 skipped body closes, 3 successful retries, 2 retry failures
 
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 2
 	a.nSuccessRetries        = 3
-	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 2
+	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
 	a.openAfterBodyClose     = 2	// MaxIdleConnsPerHost
@@ -851,8 +866,8 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
-	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 0
+	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
@@ -871,8 +886,8 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 2
 	a.nSuccessRetries        = 0
-	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 0
+	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
@@ -891,8 +906,8 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 2
 	a.nSuccessRetries        = 0
-	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 0
+	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
@@ -910,8 +925,8 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 2
-	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 0
+	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
@@ -926,8 +941,8 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
-	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 1
+	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
@@ -951,8 +966,8 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
-	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 1
+	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
@@ -984,9 +999,9 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
+	a.nFailRetries           = 0
 	//a.nHttpTimeouts          = 2
 	a.nHttpTimeouts          = 1
-	a.nFailRetries           = 0
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = 0 // FIND WORKAROUND???
@@ -1011,8 +1026,8 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nTasks                 = 10
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
-	a.nHttpTimeouts          = 2 // so we can look at CLOSE-WAIT and FIN-WAIT-2 in traces
 	a.nFailRetries           = 0
+	a.nHttpTimeouts          = 2 // so we can look at CLOSE-WAIT and FIN-WAIT-2 in traces
 	a.testIdleConnTimeout    = true
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = 0

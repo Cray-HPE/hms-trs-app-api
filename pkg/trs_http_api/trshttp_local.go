@@ -224,6 +224,8 @@ type trsRoundTripper struct {
 }
 
 func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return c.transport.RoundTrip(req)
+/*
 	resp, err := c.transport.RoundTrip(req)
 
 TESTLOGGER.Warnf("-----------------> RoundTrip: ")
@@ -250,6 +252,7 @@ TESTLOGGER.Warnf("                               skipCICs now %v (netErr.Timeout
 		c.skipCICsMutex.Unlock()
 	}
 	return resp, err
+*/
 }
 
 func (c *trsRoundTripper) CloseIdleConnections() {
@@ -270,6 +273,46 @@ TESTLOGGER.Warnf("                                          NOT CLOSING: skipCIC
 TESTLOGGER.Warnf("                                          closing")
 		c.closeIdleConnectionsFn()
 	}
+}
+
+func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {
+	// Handle timeouts and context cancellations
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			fmt.Println("CustomCheckRetry: Context deadline exceeded. Stopping retries.")
+			return false, err // Do not retry
+		}
+		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+			fmt.Println("CustomCheckRetry: Network timeout detected. Retrying.")
+			return true, nil // Retry on timeout
+		}
+	}
+TESTLOGGER.Warnf("-----------------> trsCheckRetry: ")
+	if err != nil {
+		c.skipCICsMutex.Lock()
+
+		if errors.Is(err, context.DeadlineExceeded) {
+			c.skipCICs++
+TESTLOGGER.Warnf("                                      skipCICs now %v (DeadLineExceeded)", c.skipCICs)
+			c.skipCICsMutex.Unlock()
+
+			return false, err
+		}
+TESTLOGGER.Warnf("                                      not indicating skip")
+
+		// Lower level HTTPClient.Timeout triggered timeouts
+		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+			c.skipCICs++
+TESTLOGGER.Warnf("                                       skipCICs now %v (netErr.Timeout)", c.skipCICs)
+			c.skipCICsMutex.Unlock()
+
+			return false, err
+		}
+		c.skipCICsMutex.Unlock()
+	}
+
+	// Delegate to the default retry policy for all other cases
+	return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
 }
 
 // Create and configure a new client transport for use with HTTP clients.
