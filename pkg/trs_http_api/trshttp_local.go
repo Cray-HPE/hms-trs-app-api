@@ -277,16 +277,6 @@ TESTLOGGER.Warnf("                                          closing")
 
 func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {
 	// Handle timeouts and context cancellations
-	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			fmt.Println("CustomCheckRetry: Context deadline exceeded. Stopping retries.")
-			return false, err // Do not retry
-		}
-		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			fmt.Println("CustomCheckRetry: Network timeout detected. Retrying.")
-			return true, nil // Retry on timeout
-		}
-	}
 TESTLOGGER.Warnf("-----------------> trsCheckRetry: ")
 	if err != nil {
 		c.skipCICsMutex.Lock()
