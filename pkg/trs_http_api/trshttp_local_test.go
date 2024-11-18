@@ -1169,8 +1169,9 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	testOpenConnections(t, (a.nTasks))
 
 	// If asked, here we attempt to close task bodies for tasks that have
-	// already completed, prior to tasks that will fail retries.  We do this
-	// to test if the completed tasks have their connections closed
+	// already completed, prior to tasks that will fail retries or timeout.
+	//  We do this to test if the completed tasks have their connections
+	// closed prior to HttpClient.Timeout expiring
 	tasksToWaitFor := a.nTasks
 	nBodiesToCloseEarly := a.nFailRetries + a.nHttpTimeouts
 	if nBodiesToCloseEarly > 0 && retrySleep > 0 {
@@ -1196,6 +1197,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 					t.Logf("Response headers: %s", tsk.Request.Response.Header)
 				}
 			}
+			tsk.contextCancel()
 		}
 
 		// All connections should still be in ESTAB(LISHED)
