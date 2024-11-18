@@ -345,24 +345,27 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-	tr := &http.Transport{
-		MaxIdleConns          : httpTxPolicy.MaxIdleConns,
-		MaxIdleConnsPerHost   : httpTxPolicy.MaxIdleConnsPerHost,
-		IdleConnTimeout       : httpTxPolicy.IdleConnTimeout,
-		ResponseHeaderTimeout : httpTxPolicy.ResponseHeaderTimeout,
-		TLSHandshakeTimeout   : httpTxPolicy.TLSHandshakeTimeout,
-		DisableKeepAlives	  : httpTxPolicy.DisableKeepAlives,
-	}
+	tr := &http.Transport{}
 
 	if clientType == "insecure" {
 		tr.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true,
 		}
-	} else {	// secure
+	} else {	// insecure
 		tr.TLSClientConfig = &tls.Config{
 			RootCAs: tloc.CACertPool,
 		}
 		tr.TLSClientConfig.BuildNameToCertificate()
+	}
+
+	// Configure http transport policies if requested
+	if httpTxPolicy.Enabled {
+		tr.MaxIdleConns          = httpTxPolicy.MaxIdleConns          // if 0 defaults to 2
+		tr.MaxIdleConnsPerHost   = httpTxPolicy.MaxIdleConnsPerHost   // if 0 defaults to 100
+		tr.IdleConnTimeout       = httpTxPolicy.IdleConnTimeout       // if 0 defaults to no timeout
+		tr.ResponseHeaderTimeout = httpTxPolicy.ResponseHeaderTimeout // if 0 defaults to no timeout
+		tr.TLSHandshakeTimeout   = httpTxPolicy.TLSHandshakeTimeout   // if 0 defaults to 10s
+		tr.DisableKeepAlives	 = httpTxPolicy.DisableKeepAlives     // if 0 defaults to false
 	}
 
 	retryabletr := &trsRoundTripper{
