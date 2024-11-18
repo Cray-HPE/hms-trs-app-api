@@ -1171,7 +1171,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	// If asked, here we attempt to close task bodies for tasks that have
 	// already completed, prior to tasks that will fail retries.  We do this
 	// to test if the completed tasks have their connections closed
-	tasksToWaitFor := a.nFailRetries
+	tasksToWaitFor := a.nTasks
 	if a.nFailRetries > 0 && retrySleep > 0 {
 		t.Logf("Waiting for %v non-retry tasks to complete", a.nTasks - a.nFailRetries)
 		for i := 0; i < (a.nTasks - a.nFailRetries); i++ {
@@ -1208,7 +1208,6 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	// test if the completed tasks have their connections closed before the
 	// HTTPClient.Timeout expires
 
-	tasksToWaitFor = a.nHttpTimeouts
 	if a.nHttpTimeouts > 0 {
 		t.Logf("Waiting for %v non-timeout tasks to complete", a.nTasks - a.nHttpTimeouts)
 		for i := 0; i < (a.nTasks - a.nHttpTimeouts); i++ {
