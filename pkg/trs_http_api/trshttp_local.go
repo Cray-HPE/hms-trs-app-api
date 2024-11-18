@@ -344,25 +344,29 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 		DisableKeepAlives	  : httpTxPolicy.DisableKeepAlives,
 	}
 	if clientType == "insecure" {
-		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true,}
+		tr.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
 	} else {
-		tlsConfig := &tls.Config{RootCAs: tloc.CACertPool,}
-		tlsConfig.BuildNameToCertificate()
-		tr.TLSClientConfig = tlsConfig
+		tr.TLSClientConfig = &tls.Config{
+			RootCAs: tloc.CACertPool,
+		}
+		tr.TLSClientConfig.BuildNameToCertificate()
 	}
 
-//tr := &trsRoundTripper{
-//	transport: baseTransport, // Use the configured http.Transport
-//	closeIdleConnectionsFn: baseTransport.CloseIdleConnections,
-//}
+	retryableTr := &trsRoundTripper{
+		transport: tr, // Use the configured http.Transport
+		closeIdleConnectionsFn: tr.CloseIdleConnections,
+	}
+	client.HTTPClient.Transport = retryableTr
 
 //client.HTTPClient.Transport = tr
-client.HTTPClient.Transport = &trsRoundTripper{
-	transport: tr, // Use the configured http.Transport
-	closeIdleConnectionsFn: tr.CloseIdleConnections,
-}
+	client.HTTPClient.Transport = &trsRoundTripper{
+		transport: tr, // Use the configured http.Transport
+		closeIdleConnectionsFn: tr.CloseIdleConnections,
+	}
 
-client.CheckRetry = tr.trsCheckRetry
+	client.CheckRetry = retryableTr.trsCheckRetry
 
 //////
 
