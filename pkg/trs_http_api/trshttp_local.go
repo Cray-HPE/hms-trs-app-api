@@ -29,8 +29,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	base "github.com/Cray-HPE/hms-base/v2"
@@ -175,9 +175,11 @@ func (l *leveledLogrus) Debug(msg string, keysAndValues ...interface{}) {
 // are detected.  Returning only the error will signal retryablehttp not
 // to close all connections.
 
+/*
 type avoidClosingConnectionsRoundTripper struct {
 	transport http.RoundTripper
 	closeIdleConnectionsFn func()
+
 }
 
 func (c *avoidClosingConnectionsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -209,40 +211,52 @@ TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v (other)", err)
 	return resp, err
 }
 
+*/
 //type ctxKey string
 //const preventCloseIdleConnectionsKey ctxKey = "doNotCloseIdleConnections"
 
-func (c *avoidClosingConnectionsRoundTripper) CloseIdleConnections() {
-	// Check if this request explicitly prevents closing idle connections
-//	if ctx.Err() == context.DeadlineExceeded {
-//TESTLOGGER.Warnf("-----------------> CloseIdleConnections: NOT CLOSING")
-//		return
-//	}
+type avoidClosingConnectionsRoundTripper struct {
+	transport              *http.Transport
+	closeIdleConnectionsFn func()
+	skipCICs               uint64
+	skipCICsMutex          sync.Mutex
+}
 
+func (c *avoidClosingConnectionsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := c.transport.RoundTrip(req)
+
+TESTLOGGER.Warnf("-----------------> RoundTrip: ")
+	if err != nil && errors.Is(err, context.DeadlineExceeded) {
+		c.skipCICsMutex.Lock()
+		c.skipCICs++
+TESTLOGGER.Warnf("                               skipCICs now %v", c.skipCICs)
+		c.skipCICsMutex.Unlock()
+		return nil, err
+	}
+TESTLOGGER.Warnf("                               not indicating skip")
+
+	return resp, err
+}
+
+func (c *avoidClosingConnectionsRoundTripper) CloseIdleConnections() {
 TESTLOGGER.Warnf("=================> CloseIdleConnections:")
+	c.skipCICsMutex.Lock()
+
+	if c.skipCICs > 0 {
+		c.skipCICs--
+TESTLOGGER.Warnf("                                          NOT CLOSING: skipCICs now %v", c.skipCICs)
+		c.skipCICsMutex.Unlock()
+		return
+	}
+
+	c.skipCICsMutex.Unlock()
+
 	// Default behavior: close idle connections
 	if c.closeIdleConnectionsFn != nil {
-TESTLOGGER.Warnf("=================>                       closing")
+TESTLOGGER.Warnf("                                          closing")
 		c.closeIdleConnectionsFn()
 	}
 }
-
-/*
-func CustomCheckRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {
-	// Skip retries for context deadline exceeded
-	if errors.Is(err, context.DeadlineExceeded) {
-TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v (HCT)", err)
-		fmt.Println("Custom CheckRetry: Skipping retries for context deadline exceeded.")
-		// Set flag on this request's context to not close connections later
-		ctx = context.WithValue(ctx, preventCloseIdleConnectionsKey, true)
-
-		return false, nil
-	}
-
-	// Default retry policy for other errors and responses
-	return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
-}
-*/
 
 // Create and configure a new client transport for use with HTTP clients.
 
