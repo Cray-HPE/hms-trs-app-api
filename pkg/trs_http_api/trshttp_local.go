@@ -294,7 +294,7 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 			TESTLOGGER.Warnf("                                      skipCICs now %v (lower level cancel)", c.skipCICs)
 			c.skipCICsMutex.Unlock()
 
-			return false, err
+			return false, context.DeadlineExceeded
 		}
 
 		if errors.Is(err, context.DeadlineExceeded) {
