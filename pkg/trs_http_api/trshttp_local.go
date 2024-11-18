@@ -286,10 +286,35 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 		c.skipCloseMutex.Unlock()
 		TESTLOGGER.Warnf("                                      not indicating skip")
 	}
-	TESTLOGGER.Warnf("                                       there were no errors")
 
 	// If none of the above, delegate retry check to retryablehttp
-	return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+	//return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+	shouldRetry, err := retryablehttp.DefaultRetryPolicy(ctx, resp, err)
+
+	TESTLOGGER.Warnf("                                       there were no errors (shouldRetry=%v)", shouldRetry)
+
+	// Do our own retry check.  If we hit the max, let's signal
+	// CloseIdleConnections() to skip as we don't want retry limits to
+	// close all of the other idle connections
+	if shouldRetry == true {
+		trsWR := ctx.Value(trsRetryCountKey).(*trsWrappedReq)
+
+		trsWR.retryCount++
+
+		TESTLOGGER.Warnf("                                       trsWR.retryCount now %v)", trsWR.retryCount)
+
+		if trsWR.retryCount > trsWR.retryMax {
+			c.skipCloseMutex.Lock()
+			c.skipCloseCount++
+			c.skipCloseMutex.Unlock()
+
+			TESTLOGGER.Warnf("                                       overriding retry, skipCloseCount now %v)", c.skipCloseCount)
+
+			return false, err
+		}
+	}
+
+	return shouldRetry, err
 }
 
 // Create and configure a new client transport for use with HTTP clients.
@@ -358,6 +383,17 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 	return client
 }
 
+// Custom request wrapper that includes a retry counter that we'll use to
+// determine whether or not to close idle connections
+type trsWrappedReq struct {
+	orig        *http.Request // request we're wrapping
+	retryMax    int           // retry max from request
+	retryCount  int           // retry count for this request
+}
+
+type retryKey string	// avoids compiler warning
+var trsRetryCountKey retryKey = "trsRetryCount"
+
 //	Reference:  https://pkg.go.dev/github.com/hashicorp/go-retryablehttp
 
 func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
@@ -394,10 +430,13 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		return
 	}
 
-	//setup timeouts and context for request
+	// Set context timeout
 	tct.task.context, tct.task.contextCancel = context.WithTimeout(tloc.ctx, tct.task.Timeout)
 
+	// Add user agent header to the request
 	base.SetHTTPUserAgent(tct.task.Request,tloc.svcName)
+
+	// Create an retryablehttp request using the caller's request
 	req, err := retryablehttp.FromRequest(tct.task.Request)
 	if err != nil {
 		tloc.Logger.Errorf("Failed wrapping request with retryablehttp: %v", err)
@@ -406,7 +445,16 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		return
 	}
 
-	req = req.WithContext(tct.task.context)
+	// Add our own retry counter to the context
+	trsWR := &trsWrappedReq{
+		orig:       tct.task.Request, // Assign the original request
+		retryMax:   cpack.insecure.RetryMax, // secure and insecure contain same value
+		retryCount: 0,
+	}
+	tct.task.context = context.WithValue(req.Request.Context(), trsRetryCountKey, trsWR)
+
+	// Link retryablehttp's request context to the caller's request context
+	req.Request = req.Request.WithContext(tct.task.context)
 
 	// Execute the request
 	var tmpError error
