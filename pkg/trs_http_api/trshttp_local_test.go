@@ -198,7 +198,12 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 		}
 
 		// Delay retry based on test requirement
-		time.Sleep(time.Duration(retrySleep) * time.Second)
+		if retrySleep > 0 {
+			time.Sleep(time.Duration(retrySleep) * time.Second)
+		} else {
+			// Still want a little delay for clean looking output
+			time.Sleep(100 * time.Millisecond)
+		}
 
 		w.Header().Set("Content-Type","application/json")
 		w.Header().Set("Retry-After","1")
