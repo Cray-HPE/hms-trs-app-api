@@ -179,19 +179,20 @@ func (l *leveledLogrus) Debug(msg string, keysAndValues ...interface{}) {
 type trsRoundTripper struct {
 	transport              *http.Transport
 	closeIdleConnectionsFn func()
-	skipCICs               uint64
-	skipCICsMutex          sync.Mutex
+	skipCloseCount         uint64
+	skipCloseMutex         sync.Mutex
 }
 
 func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	return c.transport.RoundTrip(req)
+/*
 	TESTLOGGER.Warnf("-----------------> RoundTrip: starting request to lower level")
 	resp, err := c.transport.RoundTrip(req)
 
 	TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v type=%T", err, err)
 
 	if err != nil {
-		//c.skipCICsMutex.Lock()
+		//c.skipCloseMutex.Lock()
 
 		// This is what Go returns when HTTPClient.Timeout expires
 		if err.Error() == "net/http: request canceled" {
@@ -201,40 +202,41 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 
 		if errors.Is(err, context.DeadlineExceeded) {
-			//c.skipCICs++
+			//c.skipCloseCount++
 			TESTLOGGER.Warnf("                               DeadLineExceeded")
-			//c.skipCICsMutex.Unlock()
+			//c.skipCloseMutex.Unlock()
 
 			return nil, err
 		}
 
 		// Lower level HTTPClient.Timeout triggered timeouts
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			//c.skipCICs++
+			//c.skipCloseCount++
 			TESTLOGGER.Warnf("                               netErr.Timeout")
-			//c.skipCICsMutex.Unlock()
+			//c.skipCloseMutex.Unlock()
 
 			return nil, err
 		}
-		//c.skipCICsMutex.Unlock()
+		//c.skipCloseMutex.Unlock()
 	}
 	TESTLOGGER.Warnf("                               no error")
 	return resp, err
+*/
 }
 
 func (c *trsRoundTripper) CloseIdleConnections() {
 	TESTLOGGER.Warnf("=================> CloseIdleConnections:")
-	c.skipCICsMutex.Lock()
+	c.skipCloseMutex.Lock()
 
-	if c.skipCICs > 0 {
-		c.skipCICs--
-		TESTLOGGER.Warnf("                                          NOT CLOSING: skipCICs now %v", c.skipCICs)
-		c.skipCICsMutex.Unlock()
+	if c.skipCloseCount > 0 {
+		c.skipCloseCount--
+		TESTLOGGER.Warnf("                                          NOT CLOSING: skipCloseCount now %v", c.skipCloseCount)
+		c.skipCloseMutex.Unlock()
 
 		return
 	}
 
-	c.skipCICsMutex.Unlock()
+	c.skipCloseMutex.Unlock()
 
 	// Default behavior: close idle connections
 	if c.closeIdleConnectionsFn != nil {
@@ -248,34 +250,34 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 	// Handle timeouts and context cancellations
 	TESTLOGGER.Warnf("-----------------> trsCheckRetry: err=%v type=%T", err, err)
 	if err != nil {
-		c.skipCICsMutex.Lock()
+		c.skipCloseMutex.Lock()
 
 		// This is what Go returns when HTTPClient.Timeout expires
 		if err.Error() == "net/http: request canceled" {
-			c.skipCICs++
-			TESTLOGGER.Warnf("                                      skipCICs now %v (lower level cancel)", c.skipCICs)
-			c.skipCICsMutex.Unlock()
+			c.skipCloseCount++
+			TESTLOGGER.Warnf("                                      skipCloseCount now %v (lower level cancel)", c.skipCloseCount)
+			c.skipCloseMutex.Unlock()
 
 			return false, err
 		}
 
 		if errors.Is(err, context.DeadlineExceeded) {
-			c.skipCICs++
-			TESTLOGGER.Warnf("                                      skipCICs now %v (DeadLineExceeded)", c.skipCICs)
-			c.skipCICsMutex.Unlock()
+			c.skipCloseCount++
+			TESTLOGGER.Warnf("                                      skipCloseCount now %v (DeadLineExceeded)", c.skipCloseCount)
+			c.skipCloseMutex.Unlock()
 
 			return false, err
 		}
 
 		// Lower level HTTPClient.Timeout triggered timeouts
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			c.skipCICs++
-			TESTLOGGER.Warnf("                                       skipCICs now %v (netErr.Timeout)", c.skipCICs)
-			c.skipCICsMutex.Unlock()
+			c.skipCloseCount++
+			TESTLOGGER.Warnf("                                       skipCloseCount now %v (netErr.Timeout)", c.skipCloseCount)
+			c.skipCloseMutex.Unlock()
 
 			return false, err
 		}
-		c.skipCICsMutex.Unlock()
+		c.skipCloseMutex.Unlock()
 		TESTLOGGER.Warnf("                                      not indicating skip")
 	}
 	TESTLOGGER.Warnf("                                       there were no errors")
@@ -333,28 +335,33 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 	client.HTTPClient.Transport = tr
 */
 
-baseTransport := &http.Transport{
+	tr := &http.Transport{
 		MaxIdleConns          : httpTxPolicy.MaxIdleConns,
 		MaxIdleConnsPerHost   : httpTxPolicy.MaxIdleConnsPerHost,
 		IdleConnTimeout       : httpTxPolicy.IdleConnTimeout,
 		ResponseHeaderTimeout : httpTxPolicy.ResponseHeaderTimeout,
 		TLSHandshakeTimeout   : httpTxPolicy.TLSHandshakeTimeout,
 		DisableKeepAlives	  : httpTxPolicy.DisableKeepAlives,
-}
-if clientType == "insecure" {
-	baseTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true,}
-} else {
-	tlsConfig := &tls.Config{RootCAs: tloc.CACertPool,}
-	tlsConfig.BuildNameToCertificate()
-	baseTransport.TLSClientConfig = tlsConfig
+	}
+	if clientType == "insecure" {
+		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true,}
+	} else {
+		tlsConfig := &tls.Config{RootCAs: tloc.CACertPool,}
+		tlsConfig.BuildNameToCertificate()
+		tr.TLSClientConfig = tlsConfig
+	}
+
+//tr := &trsRoundTripper{
+//	transport: baseTransport, // Use the configured http.Transport
+//	closeIdleConnectionsFn: baseTransport.CloseIdleConnections,
+//}
+
+//client.HTTPClient.Transport = tr
+client.HTTPClient.Transport = &trsRoundTripper{
+	transport: tr, // Use the configured http.Transport
+	closeIdleConnectionsFn: tr.CloseIdleConnections,
 }
 
-tr := &trsRoundTripper{
-	transport: baseTransport, // Use the configured http.Transport
-	closeIdleConnectionsFn: baseTransport.CloseIdleConnections,
-}
-
-client.HTTPClient.Transport = tr
 client.CheckRetry = tr.trsCheckRetry
 
 //////
