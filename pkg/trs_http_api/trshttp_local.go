@@ -224,6 +224,7 @@ type trsRoundTripper struct {
 }
 
 func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	TESTLOGGER.Warnf("-----------------> RoundTrip: starting request to lower level")
 	resp, err := c.transport.RoundTrip(req)
 
 	TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v type=%T", err, err)
