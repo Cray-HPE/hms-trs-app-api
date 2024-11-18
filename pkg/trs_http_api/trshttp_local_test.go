@@ -769,9 +769,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.openAfterCancel        = a.nTasks - a.nHttpTimeouts
 	a.openAfterClose         = a.nTasks - a.nHttpTimeouts
 
-logLevel = logrus.DebugLevel
 	testConns(t, a)
-logLevel = logrus.InfoLevel
 
 	// TEST: 10 requests, 2 skipped body closes, 3 successful retries, 2 retry failures
 
@@ -1001,27 +999,6 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.runSecondTaskList = false	// set back to default
 	retrySleep = 0				// set back to default
 
-	// 10 requests: 2 http timeouts after 8 successes complete.  Note that
-	//              http requests time out at 90% of the context timeout.
-	//              Those requests will then retry before getting caught by
-	//              the context timeout, 10% of that time later
-
-	a.nTasks                 = 10
-	a.nSkipCloseBody         = 0
-	a.nSuccessRetries        = 0
-	a.nFailRetries           = 0
-	//a.nHttpTimeouts          = 2
-	a.nHttpTimeouts          = 1
-	a.testIdleConnTimeout    = false
-	a.openAtStart            = 0
-	a.openAfterTasksComplete = 0 // FIND WORKAROUND???
-	a.openAfterBodyClose     = 0 // FIND WORKAROUND???
-	a.openAfterCancel        = 0 // FIND WORKAROUND???
-	a.openAfterClose         = 0 // FIND WORKAROUND???
-
-logLevel = logrus.DebugLevel
-	testConns(t, a)
-
 	// 10 requests that we run these twice to test IdleConnTimeout:
 	//
 	//	* 1st run with 2 http timeouts so that all connections close and go
@@ -1041,13 +1018,14 @@ logLevel = logrus.DebugLevel
 	a.nHttpTimeouts          = 2 // so we can look at CLOSE-WAIT and FIN-WAIT-2 in traces
 	a.testIdleConnTimeout    = true
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = 0
-	a.openAfterBodyClose     = 0
-	a.openAfterCancel        = 0
-	a.openAfterClose         = 0
+	a.openAfterTasksComplete = a.nTasks - a.nHttpTimeouts
+	a.openAfterBodyClose     = a.nTasks - a.nHttpTimeouts
+	a.openAfterCancel        = a.nTasks - a.nHttpTimeouts
+	a.openAfterClose         = a.nTasks - a.nHttpTimeouts
 
 	a.runSecondTaskList = true // second run should not open any new connections
 
+logLevel = logrus.DebugLevel
 	testConns(t, a)
 logLevel = logrus.InfoLevel
 
@@ -1057,6 +1035,9 @@ logLevel = logrus.InfoLevel
 
 const sleepTimeToStabilizeConns = 250 * time.Millisecond
 
+// WARNING: testConns()/runTaskList() is not capable of testing retries and
+//          timeouts within the same call.  Please use different tests to
+//          test each
 func testConns(t *testing.T, a testConnsArg) {
 	logConnTestHeader(t, a)
 
@@ -1236,7 +1217,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 		// All connections should still be in ESTAB(LISHED)
 		time.Sleep(time.Duration(a.nTasks) * time.Millisecond)
-		t.Logf("Testing connections after non-retry request bodies closed")
+		t.Logf("Testing connections after non-timeout request bodies closed")
 		testOpenConnections(t, a.nTasks)
 	}
 
