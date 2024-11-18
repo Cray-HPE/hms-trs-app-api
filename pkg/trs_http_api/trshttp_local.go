@@ -258,7 +258,6 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 		//c.skipCICsMutex.Unlock()
 		TESTLOGGER.Warnf("                               not indicating skip")
 	}
-
 	TESTLOGGER.Warnf("                               no error")
 	return resp, err
 }

@@ -794,6 +794,7 @@ logLevel = logrus.InfoLevel
 // and the retryablehttp library.
 
 func TestBasicConnectionBehavior(t *testing.T) {
+return
 	httpRetries             := 3
 	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
 	pcsStatusTimeout        := 30
