@@ -242,7 +242,7 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 			TESTLOGGER.Warnf("                               skipCICs now %v (DeadLineExceeded)", c.skipCICs)
 			//c.skipCICsMutex.Unlock()
 
-			return nil, err	// not err
+			return nil, context.DeadlineExceeded	// not err
 		}
 
 		// Lower level HTTPClient.Timeout triggered timeouts
@@ -251,7 +251,7 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 			TESTLOGGER.Warnf("                               skipCICs now %v (netErr.Timeout)", c.skipCICs)
 			//c.skipCICsMutex.Unlock()
 
-			return nil, err
+			return nil, context.DeadlineExceeded
 		}
 		//c.skipCICsMutex.Unlock()
 		TESTLOGGER.Warnf("                               not indicating skip")
@@ -284,7 +284,7 @@ func (c *trsRoundTripper) CloseIdleConnections() {
 
 func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {
 	// Handle timeouts and context cancellations
-	TESTLOGGER.Warnf("-----------------> trsCheckRetry: ")
+	TESTLOGGER.Warnf("-----------------> trsCheckRetry: err=%v type=%T", err, err)
 	if err != nil {
 		c.skipCICsMutex.Lock()
 
@@ -294,7 +294,7 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 			TESTLOGGER.Warnf("                                      skipCICs now %v (lower level cancel)", c.skipCICs)
 			c.skipCICsMutex.Unlock()
 
-			return false, err
+			return false, context.DeadlineExceeded
 		}
 
 		if errors.Is(err, context.DeadlineExceeded) {
@@ -302,7 +302,7 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 			TESTLOGGER.Warnf("                                      skipCICs now %v (DeadLineExceeded)", c.skipCICs)
 			c.skipCICsMutex.Unlock()
 
-			return false, err
+			return false, context.DeadlineExceeded
 		}
 
 		// Lower level HTTPClient.Timeout triggered timeouts
@@ -311,7 +311,7 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 			TESTLOGGER.Warnf("                                       skipCICs now %v (netErr.Timeout)", c.skipCICs)
 			c.skipCICsMutex.Unlock()
 
-			return false, err
+			return false, context.DeadlineExceeded
 		}
 		c.skipCICsMutex.Unlock()
 		TESTLOGGER.Warnf("                                      not indicating skip")
