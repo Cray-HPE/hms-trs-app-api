@@ -357,16 +357,17 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 	retryableTr := &trsRoundTripper{
 		transport: tr, // Use the configured http.Transport
 		closeIdleConnectionsFn: tr.CloseIdleConnections,
+		CheckRetry: retryableTr.trsCheckRetry
 	}
 	client.HTTPClient.Transport = retryableTr
 
 //client.HTTPClient.Transport = tr
-	client.HTTPClient.Transport = &trsRoundTripper{
-		transport: tr, // Use the configured http.Transport
-		closeIdleConnectionsFn: tr.CloseIdleConnections,
-	}
+//	client.HTTPClient.Transport = &trsRoundTripper{
+//		transport: tr, // Use the configured http.Transport
+//		closeIdleConnectionsFn: tr.CloseIdleConnections,
+//	}
 
-	client.CheckRetry = retryableTr.trsCheckRetry
+//	client.CheckRetry = retryableTr.trsCheckRetry
 
 //////
 
