@@ -335,39 +335,29 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 	client.HTTPClient.Transport = tr
 */
 
-	tr := &http.Transport{
+baseTransport := &http.Transport{
 		MaxIdleConns          : httpTxPolicy.MaxIdleConns,
 		MaxIdleConnsPerHost   : httpTxPolicy.MaxIdleConnsPerHost,
 		IdleConnTimeout       : httpTxPolicy.IdleConnTimeout,
 		ResponseHeaderTimeout : httpTxPolicy.ResponseHeaderTimeout,
 		TLSHandshakeTimeout   : httpTxPolicy.TLSHandshakeTimeout,
 		DisableKeepAlives	  : httpTxPolicy.DisableKeepAlives,
-	}
-	if clientType == "insecure" {
-		tr.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true,
-		}
-	} else {
-		tr.TLSClientConfig = &tls.Config{
-			RootCAs: tloc.CACertPool,
-		}
-		tr.TLSClientConfig.BuildNameToCertificate()
-	}
+}
+if clientType == "insecure" {
+	baseTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true,}
+} else {
+	tlsConfig := &tls.Config{RootCAs: tloc.CACertPool,}
+	tlsConfig.BuildNameToCertificate()
+	baseTransport.TLSClientConfig = tlsConfig
+}
 
-	retryableTr := &trsRoundTripper{
-		transport: tr, // Use the configured http.Transport
-		closeIdleConnectionsFn: tr.CloseIdleConnections,
-		CheckRetry: retryableTr.trsCheckRetry
-	}
-	client.HTTPClient.Transport = retryableTr
+tr := &trsRoundTripper{
+	transport: baseTransport, // Use the configured http.Transport
+	closeIdleConnectionsFn: baseTransport.CloseIdleConnections,
+}
 
-//client.HTTPClient.Transport = tr
-//	client.HTTPClient.Transport = &trsRoundTripper{
-//		transport: tr, // Use the configured http.Transport
-//		closeIdleConnectionsFn: tr.CloseIdleConnections,
-//	}
-
-//	client.CheckRetry = retryableTr.trsCheckRetry
+client.HTTPClient.Transport = tr
+client.CheckRetry = tr.trsCheckRetry
 
 //////
 
