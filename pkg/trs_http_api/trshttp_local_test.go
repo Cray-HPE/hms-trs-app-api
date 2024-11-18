@@ -751,7 +751,9 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 //	a.openAfterCancel        = 0 // TODO:  Enable more debug to see if failed body is closed or not
 //	a.openAfterClose         = 0
 
+logLevel = logrus.DebugLevel
 	testConns(t, a)
+logLevel = logrus.InfoLevel
 
 	// TEST: 2 requests, 1 http timeout
 
