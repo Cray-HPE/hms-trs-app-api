@@ -238,7 +238,6 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 
 			return nil, context.DeadlineExceeded	// not err
 		}
-		TESTLOGGER.Warnf("                               not indicating skip")
 
 		// Lower level HTTPClient.Timeout triggered timeouts
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
@@ -249,6 +248,7 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 			return nil, err
 		}
 		//c.skipCICsMutex.Unlock()
+		TESTLOGGER.Warnf("                               not indicating skip")
 	}
 	return resp, err
 }
