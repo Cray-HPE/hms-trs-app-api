@@ -177,7 +177,7 @@ func (l *leveledLogrus) Debug(msg string, keysAndValues ...interface{}) {
 
 type avoidClosingConnectionsRoundTripper struct {
 	transport http.RoundTripper
-	closeIdleConnectionsFn func()
+	//closeIdleConnectionsFn func()
 }
 
 func (c *avoidClosingConnectionsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -212,6 +212,7 @@ TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v (other)", err)
 //type ctxKey string
 //const preventCloseIdleConnectionsKey ctxKey = "doNotCloseIdleConnections"
 
+/*
 func (c *avoidClosingConnectionsRoundTripper) CloseIdleConnections() {
 	// Check if this request explicitly prevents closing idle connections
 //	if ctx.Err() == context.DeadlineExceeded {
