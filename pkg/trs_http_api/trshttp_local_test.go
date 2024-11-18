@@ -743,14 +743,10 @@ return
 	a.nFailRetries           = 1
 	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
-	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
-	a.openAfterBodyClose     = a.nTasks - a.nFailRetries
-	a.openAfterCancel        = a.nTasks - a.nFailRetries
-	a.openAfterClose         = a.nTasks - a.nFailRetries
-//	a.openAfterTasksComplete = 1
-//	a.openAfterBodyClose     = 0	// retryablehttp closes all open conns after close of body for any other still open ...
-//	a.openAfterCancel        = 0 // TODO:  Enable more debug to see if failed body is closed or not
-//	a.openAfterClose         = 0
+	a.openAfterTasksComplete = a.nTasks
+	a.openAfterBodyClose     = a.nTasks
+	a.openAfterCancel        = a.nTasks
+	a.openAfterClose         = a.nTasks
 
 	retrySleep = 0	// 0 seconds so retries complete first
 
@@ -780,14 +776,10 @@ return
 	a.nFailRetries           = 2
 	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
-	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
+	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = 2	// MaxIdleConnsPerHost
 	a.openAfterCancel        = 2	// MaxIdleConnsPerHost
 	a.openAfterClose         = 2	// MaxIdleConnsPerHost
-//	a.openAfterTasksComplete = 8
-//	a.openAfterBodyClose     = 0
-//	a.openAfterCancel        = 0
-//	a.openAfterClose         = 0
 
 	testConns(t, a)
 }
@@ -869,24 +861,6 @@ func TestBasicConnectionBehavior(t *testing.T) {
 
 	a.tListProto.CPolicy.Tx.MaxIdleConns        = 10
 	a.tListProto.CPolicy.Tx.MaxIdleConnsPerHost = 10
-
-/////////////////////////////////
-	a.nTasks                 = 10
-	a.nSkipCloseBody         = 0
-	a.nSuccessRetries        = 0
-	a.nFailRetries           = 5
-	a.nHttpTimeouts          = 0
-	a.testIdleConnTimeout    = false
-	a.openAfterTasksComplete = 10
-	a.openAfterBodyClose     = 5
-	a.openAfterCancel        = 5
-	a.openAfterClose         = 5
-
-logLevel = logrus.DebugLevel
-	testConns(t, a)
-logLevel = logrus.InfoLevel
-return
-/////////////////////////////////
 
 	// 10 requests: No issues so all conns should be open
 
@@ -972,13 +946,10 @@ return
 	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
-	a.openAfterBodyClose     = a.nTasks - a.nFailRetries
-	a.openAfterCancel        = a.nTasks - a.nFailRetries
-	a.openAfterClose         = a.nTasks - a.nFailRetries
-//	a.openAfterBodyClose     = 0 // FIND WORKAROUND???
-//	a.openAfterCancel        = 0 // FIND WORKAROUND???
-//	a.openAfterClose         = 0 // FIND WORKAROUND???
+	a.openAfterTasksComplete = a.nTasks
+	a.openAfterBodyClose     = a.nTasks
+	a.openAfterCancel        = a.nTasks
+	a.openAfterClose         = a.nTasks
 
 	retrySleep = 0	// 0 seconds so retries complete first
 
@@ -997,14 +968,10 @@ return
 	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
-	a.openAfterBodyClose     = a.nTasks - a.nFailRetries
-	a.openAfterCancel        = a.nTasks - a.nFailRetries
-	a.openAfterClose         = a.nTasks - a.nFailRetries
-//	a.openAfterTasksComplete = 0 // Even though 8 prior bodies closed (WORKAROUND???)
-//	a.openAfterBodyClose     = 0 // FIND WORKAROUND???
-//	a.openAfterCancel        = 0 // FIND WORKAROUND???
-//	a.openAfterClose         = 0 // FIND WORKAROUND???
+	a.openAfterTasksComplete = a.nTasks
+	a.openAfterBodyClose     = a.nTasks
+	a.openAfterCancel        = a.nTasks
+	a.openAfterClose         = a.nTasks
 
 	retrySleep = 4	// 4 seconds so retries complete last
 
