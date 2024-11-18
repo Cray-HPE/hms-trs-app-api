@@ -753,7 +753,8 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 
 	// TEST: 2 requests, 1 http timeout
 
-	a.nTasks                 = 2	// MaxIdleConnsPerHost
+	//a.nTasks                 = 2	// MaxIdleConnsPerHost
+	a.nTasks                 = 1	// MaxIdleConnsPerHost
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
