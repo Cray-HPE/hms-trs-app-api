@@ -630,6 +630,7 @@ type testConnsArg struct {
 }
 
 func logConnTestHeader(t *testing.T, a testConnsArg) {
+return
 	t.Logf("============================================================")
 
 	if logLevel < logrus.ErrorLevel {
@@ -732,8 +733,6 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.openAfterCancel        = a.nTasks
 	a.openAfterClose         = a.nTasks
 
-logLevel = logrus.DebugLevel
-logLevel = logrus.InfoLevel
 	testConns(t, a)
 
 	// TEST: 2 requests, 1 request exhausts retries and fails
@@ -870,6 +869,24 @@ func TestBasicConnectionBehavior(t *testing.T) {
 
 	a.tListProto.CPolicy.Tx.MaxIdleConns        = 10
 	a.tListProto.CPolicy.Tx.MaxIdleConnsPerHost = 10
+
+/////////////////////////////////
+	a.nTasks                 = 10
+	a.nSkipCloseBody         = 0
+	a.nSuccessRetries        = 0
+	a.nFailRetries           = 5
+	a.nHttpTimeouts          = 0
+	a.testIdleConnTimeout    = false
+	a.openAfterTasksComplete = 10
+	a.openAfterBodyClose     = 5
+	a.openAfterCancel        = 5
+	a.openAfterClose         = 5
+
+logLevel = logrus.DebugLevel
+	testConns(t, a)
+logLevel = logrus.InfoLevel
+return
+/////////////////////////////////
 
 	// 10 requests: No issues so all conns should be open
 

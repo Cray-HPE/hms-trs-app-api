@@ -284,7 +284,7 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 			return false, err	// skip it
 		}
 		c.skipCloseMutex.Unlock()
-		TESTLOGGER.Warnf("                                      not indicating skip")
+		TESTLOGGER.Warnf("                                      not indicating skip for this error")
 	}
 
 	// If none of the above, delegate retry check to retryablehttp
@@ -308,7 +308,7 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 			c.skipCloseCount++
 			c.skipCloseMutex.Unlock()
 
-			TESTLOGGER.Warnf("                                       overriding retry, skipCloseCount now %v)", c.skipCloseCount)
+			TESTLOGGER.Warnf("                                       overriding retry, skipCloseCount now %v", c.skipCloseCount)
 
 			return false, err
 		}
