@@ -247,7 +247,6 @@ func (c *trsRoundTripper) CloseIdleConnections() {
 }
 
 func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {
-	// Handle timeouts and context cancellations
 	TESTLOGGER.Warnf("-----------------> trsCheckRetry: err=%v type=%T", err, err)
 	if err != nil {
 		c.skipCloseMutex.Lock()
@@ -291,59 +290,7 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client *retryablehttp.Client) {
 	client = retryablehttp.NewClient()
 
-	retryPolicy := task.CPolicy.Retry
-	httpTxPolicy := task.CPolicy.Tx
-
-	// Configure the httpretryable client retry count
-	if (retryPolicy.Retries > 0) {
-		client.RetryMax = retryPolicy.Retries
-	} else {
-		client.RetryMax = DFLT_RETRY_MAX
-	}
-
-	// Configure the httpretryable client backoff timeout
-	if (retryPolicy.BackoffTimeout > 0) {
-		client.RetryWaitMax = retryPolicy.BackoffTimeout
-	} else {
-		client.RetryWaitMax = DFLT_BACKOFF_MAX * time.Second
-	}
-
-	// HTTPClient timeout should be 90% of the task's context timeout
-	client.HTTPClient.Timeout = task.Timeout * 9 / 10
-
-/*
-	// Configure TLS for the client transport
-	var tr *http.Transport
-	if clientType == "insecure" {
-		tr = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true,},}
-	} else {
-		tlsConfig := &tls.Config{RootCAs: tloc.CACertPool,}
-		tlsConfig.BuildNameToCertificate()
-		tr = &http.Transport{TLSClientConfig: tlsConfig,}
-	}
-
-	// Configure the client't other http transport policies if requested
-	if httpTxPolicy.Enabled {
-		tr.MaxIdleConns          = httpTxPolicy.MaxIdleConns          // if 0 defaults to 2
-		tr.MaxIdleConnsPerHost   = httpTxPolicy.MaxIdleConnsPerHost   // if 0 defaults to 100
-		tr.IdleConnTimeout       = httpTxPolicy.IdleConnTimeout       // if 0 defaults to no timeout
-		tr.ResponseHeaderTimeout = httpTxPolicy.ResponseHeaderTimeout // if 0 defaults to no timeout
-		tr.TLSHandshakeTimeout   = httpTxPolicy.TLSHandshakeTimeout   // if 0 defaults to 10s
-		tr.DisableKeepAlives	 = httpTxPolicy.DisableKeepAlives     // if 0 defaults to false
-	}
-
-	client.HTTPClient.Transport = tr
-*/
-//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+	// Configure the base transport
 
 	tr := &http.Transport{}
 
@@ -358,8 +305,8 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 		tr.TLSClientConfig.BuildNameToCertificate()
 	}
 
-	// Configure http transport policies if requested
-	if httpTxPolicy.Enabled {
+	// Configure base transport policies if requested
+	if task.CPolicy.Tx.Enabled {
 		tr.MaxIdleConns          = httpTxPolicy.MaxIdleConns          // if 0 defaults to 2
 		tr.MaxIdleConnsPerHost   = httpTxPolicy.MaxIdleConnsPerHost   // if 0 defaults to 100
 		tr.IdleConnTimeout       = httpTxPolicy.IdleConnTimeout       // if 0 defaults to no timeout
@@ -368,15 +315,31 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 		tr.DisableKeepAlives	 = httpTxPolicy.DisableKeepAlives     // if 0 defaults to false
 	}
 
+	// Wrap base transport with retryablehttp
 	retryabletr := &trsRoundTripper{
-		transport: tr, // Use the configured http.Transport
+		transport:              tr,
 		closeIdleConnectionsFn: tr.CloseIdleConnections,
 	}
 
 	client.HTTPClient.Transport = retryabletr
+	client.HTTPClient.Timeout   = task.Timeout * 9 / 10 // 90% of the task's context timeout
+
+	// Wrap httpretryable's DefaultRetryPolicy() so we can prevent retries when desired
 	client.CheckRetry = retryabletr.trsCheckRetry
 
-//////
+	// Configure the httpretryable client retry count
+	if (task.CPolicy.Retry.Retries > 0) {
+		client.RetryMax = task.CPolicy.Retry.Retries
+	} else {
+		client.RetryMax = DFLT_RETRY_MAX
+	}
+
+	// Configure the httpretryable client backoff timeout
+	if (task.CPolicy.Retry.BackoffTimeout > 0) {
+		client.RetryWaitMax = task.CPolicy.Retry.BackoffTimeout
+	} else {
+		client.RetryWaitMax = DFLT_BACKOFF_MAX * time.Second
+	}
 
 	// Log the configuration we're going to use. Clients are generally long
 	// lived so this shouldn't be too spammy. Knowing this information can
