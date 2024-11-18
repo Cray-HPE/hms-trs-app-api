@@ -228,23 +228,24 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 /*
 	resp, err := c.transport.RoundTrip(req)
 
-TESTLOGGER.Warnf("-----------------> RoundTrip: ")
+	TESTLOGGER.Warnf("-----------------> RoundTrip: ")
+
 	if err != nil {
 		c.skipCICsMutex.Lock()
 
 		if errors.Is(err, context.DeadlineExceeded) {
 			c.skipCICs++
-TESTLOGGER.Warnf("                               skipCICs now %v (DeadLineExceeded)", c.skipCICs)
+			TESTLOGGER.Warnf("                               skipCICs now %v (DeadLineExceeded)", c.skipCICs)
 			c.skipCICsMutex.Unlock()
 
 			return nil, context.DeadlineExceeded	// not err
 		}
-TESTLOGGER.Warnf("                               not indicating skip")
+		TESTLOGGER.Warnf("                               not indicating skip")
 
 		// Lower level HTTPClient.Timeout triggered timeouts
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			c.skipCICs++
-TESTLOGGER.Warnf("                               skipCICs now %v (netErr.Timeout)", c.skipCICs)
+			TESTLOGGER.Warnf("                               skipCICs now %v (netErr.Timeout)", c.skipCICs)
 			c.skipCICsMutex.Unlock()
 
 			return nil, err
@@ -288,7 +289,8 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 			TESTLOGGER.Warnf("                                      skipCICs now %v (DeadLineExceeded)", c.skipCICs)
 			c.skipCICsMutex.Unlock()
 
-			return false, err
+			return false, context.DeadlineExceeded
+			//return false, err
 		}
 
 		// Lower level HTTPClient.Timeout triggered timeouts
