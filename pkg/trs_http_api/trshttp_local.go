@@ -31,7 +31,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"sync"
 	"time"
 
@@ -232,12 +231,10 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		//c.skipCICsMutex.Lock()
 
-		var urlErr *url.Error
-		if errors.As(err, &urlErr) {
-			if errors.Is(urlErr.Err, context.Canceled) {
-				TESTLOGGER.Warnf("                               skipCICs now %v (lower level cancel)", c.skipCICs)
-				return nil, err
-			}
+		// This is what Go returns when HTTPClient.Timeout expires
+		if err.Error() == "net/http: request canceled" {
+			TESTLOGGER.Warnf("                               skipCICs now %v (lower level cancel)", c.skipCICs)
+			return nil, err
 		}
 
 		if errors.Is(err, context.DeadlineExceeded) {
@@ -291,17 +288,13 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 	if err != nil {
 		c.skipCICsMutex.Lock()
 
-		if errors.Is(err, context.Canceled) {
-		}
-		var urlErr *url.Error
-		if errors.As(err, &urlErr) {
-			if errors.Is(urlErr.Err, context.Canceled) {
-				c.skipCICs++
-				TESTLOGGER.Warnf("                                      skipCICs now %v (lower level cancel)", c.skipCICs)
-				c.skipCICsMutex.Unlock()
+		// This is what Go returns when HTTPClient.Timeout expires
+		if err.Error() == "net/http: request canceled" {
+			c.skipCICs++
+			TESTLOGGER.Warnf("                                      skipCICs now %v (lower level cancel)", c.skipCICs)
+			c.skipCICsMutex.Unlock()
 
-				return false, err
-			}
+			return false, err
 		}
 
 		if errors.Is(err, context.DeadlineExceeded) {
