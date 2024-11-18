@@ -176,46 +176,6 @@ func (l *leveledLogrus) Debug(msg string, keysAndValues ...interface{}) {
 // are detected.  Returning only the error will signal retryablehttp not
 // to close all connections.
 
-/*
-type avoidClosingConnectionsRoundTripper struct {
-	transport http.RoundTripper
-	closeIdleConnectionsFn func()
-
-}
-
-func (c *avoidClosingConnectionsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	resp, err := c.transport.RoundTrip(req)
-
-	// Context timeouts
-	if errors.Is(err, context.DeadlineExceeded) {
-TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v (CDE)", err)
-		//newCtx := context.WithValue(req.Context(), preventCloseIdleConnectionsKey, true)
-		//*req = req.WithContext(newCtx)
-		return nil, err
-	}
-
-	// Lower level HTTPClient.Timeout triggered timeouts
-	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v (HCT)", err)
-		return nil, err
-	}
-
-	// Note that we DO want to honor closing all idle connections when a
-	// context cancellation has arrived.
-	// Context cancellations
-	//if errors.Is(err, context.Canceled) {
-	//      return nil, err
-	//}
-
-TESTLOGGER.Warnf("-----------------> RoundTrip: err=%v (other)", err)
-
-	return resp, err
-}
-
-*/
-//type ctxKey string
-//const preventCloseIdleConnectionsKey ctxKey = "doNotCloseIdleConnections"
-
 type trsRoundTripper struct {
 	transport              *http.Transport
 	closeIdleConnectionsFn func()
@@ -224,6 +184,7 @@ type trsRoundTripper struct {
 }
 
 func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return c.transport.RoundTrip(req)
 	TESTLOGGER.Warnf("-----------------> RoundTrip: starting request to lower level")
 	resp, err := c.transport.RoundTrip(req)
 

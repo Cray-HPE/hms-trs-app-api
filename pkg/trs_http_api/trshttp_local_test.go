@@ -732,6 +732,8 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.openAfterCancel        = a.nTasks
 	a.openAfterClose         = a.nTasks
 
+logLevel = logrus.DebugLevel
+logLevel = logrus.InfoLevel
 	testConns(t, a)
 
 	// TEST: 2 requests, 1 request exhausts retries and fails
@@ -1025,9 +1027,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 
 	a.runSecondTaskList = true // second run should not open any new connections
 
-logLevel = logrus.DebugLevel
 	testConns(t, a)
-logLevel = logrus.InfoLevel
 
 	a.runSecondTaskList    = true	// set back to default
 	a.testIdleConnTimeout  = false	// set back to default
