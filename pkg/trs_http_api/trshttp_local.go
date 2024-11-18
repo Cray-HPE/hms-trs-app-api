@@ -263,6 +263,7 @@ func (c *trsRoundTripper) CloseIdleConnections() {
 		c.skipCICs--
 		TESTLOGGER.Warnf("                                          NOT CLOSING: skipCICs now %v", c.skipCICs)
 		c.skipCICsMutex.Unlock()
+
 		return
 	}
 
