@@ -717,6 +717,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody // no body close == bad connection
 	a.openAfterClose         = a.nTasks - a.nSkipCloseBody
 
+logLevel = logrus.TraceLevel
 	testConns(t, a)
 
 	// 2 requests: 1 skipped body closure and skip calling Cancel()
@@ -738,13 +739,12 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 
 	a.skipCancel             = true
 
-logLevel = logrus.TraceLevel
 	testConns(t, a)
 logLevel = logrus.InfoLevel
 
 	a.skipCancel             = true	// reset to default
 
-	// TEST: 2 requests: 1 request retries once before success
+	// 2 requests: 1 request retries once before success
 
 	a.nTasks                 = 2	// MaxIdleConnsPerHost
 	a.nSkipCloseBody         = 0
@@ -759,7 +759,7 @@ logLevel = logrus.InfoLevel
 
 	testConns(t, a)
 
-	// TEST: 2 requests, 1 request exhausts retries and fails
+	// 2 requests, 1 request exhausts retries and fails
 
 	a.nTasks                 = 2	// MaxIdleConnsPerHost
 	a.nSkipCloseBody         = 0
@@ -776,7 +776,7 @@ logLevel = logrus.InfoLevel
 
 	testConns(t, a)
 
-	// TEST: 2 requests, 1 http timeout
+	// 2 requests, 1 http timeout
 
 	//a.nTasks                 = 2	// MaxIdleConnsPerHost
 	a.nTasks                 = 2	// MaxIdleConnsPerHost
@@ -1078,7 +1078,13 @@ func testConns(t *testing.T, a testConnsArg) {
 		a.nSuccessRetries        = 0
 		a.nHttpTimeouts          = 0
 		a.nFailRetries           = 0
-		a.openAtStart            = a.openAfterClose // carry forward at end of last run
+
+		if (a.testIdleConnTimeout) {
+			a.openAtStart        = 0 // should have all timeed out
+		} else {
+			a.openAtStart        = a.openAfterClose // carry forward at end of last run
+		}
+
 		a.openAfterTasksComplete = a.nTasks
 		a.openAfterBodyClose     = a.nTasks
 		a.openAfterCancel        = a.nTasks

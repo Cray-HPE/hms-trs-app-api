@@ -296,7 +296,8 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 	// Do our own retry check.  If we hit the max, let's signal
 	// CloseIdleConnections() to skip as we don't want retry limits to
 	// close all of the other idle connections
-	if shouldRetry == true {
+	//if shouldRetry == true {
+	if false {
 		trsWR := ctx.Value(trsRetryCountKey).(*trsWrappedReq)
 
 		trsWR.retryCount++
