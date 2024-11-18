@@ -234,7 +234,7 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 		// This is what Go returns when HTTPClient.Timeout expires
 		if err.Error() == "net/http: request canceled" {
 			TESTLOGGER.Warnf("                               skipCICs now %v (lower level cancel)", c.skipCICs)
-			return nil, err
+			return nil, context.DeadlineExceeded
 		}
 
 		if errors.Is(err, context.DeadlineExceeded) {
