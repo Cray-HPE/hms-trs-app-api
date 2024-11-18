@@ -256,12 +256,12 @@ TESTLOGGER.Warnf("                               skipCICs now %v (netErr.Timeout
 }
 
 func (c *trsRoundTripper) CloseIdleConnections() {
-TESTLOGGER.Warnf("=================> CloseIdleConnections:")
+	TESTLOGGER.Warnf("=================> CloseIdleConnections:")
 	c.skipCICsMutex.Lock()
 
 	if c.skipCICs > 0 {
 		c.skipCICs--
-TESTLOGGER.Warnf("                                          NOT CLOSING: skipCICs now %v", c.skipCICs)
+		TESTLOGGER.Warnf("                                          NOT CLOSING: skipCICs now %v", c.skipCICs)
 		c.skipCICsMutex.Unlock()
 		return
 	}
@@ -270,37 +270,38 @@ TESTLOGGER.Warnf("                                          NOT CLOSING: skipCIC
 
 	// Default behavior: close idle connections
 	if c.closeIdleConnectionsFn != nil {
-TESTLOGGER.Warnf("                                          closing")
+		TESTLOGGER.Warnf("                                          closing")
 		c.closeIdleConnectionsFn()
 	}
+	TESTLOGGER.Warnf("                                          done closing")
 }
 
 func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {
 	// Handle timeouts and context cancellations
-TESTLOGGER.Warnf("-----------------> trsCheckRetry: ")
+	TESTLOGGER.Warnf("-----------------> trsCheckRetry: ")
 	if err != nil {
 		c.skipCICsMutex.Lock()
 
 		if errors.Is(err, context.DeadlineExceeded) {
 			c.skipCICs++
-TESTLOGGER.Warnf("                                      skipCICs now %v (DeadLineExceeded)", c.skipCICs)
+			TESTLOGGER.Warnf("                                      skipCICs now %v (DeadLineExceeded)", c.skipCICs)
 			c.skipCICsMutex.Unlock()
 
 			return false, err
 		}
-TESTLOGGER.Warnf("                                      not indicating skip")
 
 		// Lower level HTTPClient.Timeout triggered timeouts
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			c.skipCICs++
-TESTLOGGER.Warnf("                                       skipCICs now %v (netErr.Timeout)", c.skipCICs)
+			TESTLOGGER.Warnf("                                       skipCICs now %v (netErr.Timeout)", c.skipCICs)
 			c.skipCICsMutex.Unlock()
 
 			return false, err
 		}
 		c.skipCICsMutex.Unlock()
+		TESTLOGGER.Warnf("                                      not indicating skip")
 	}
-TESTLOGGER.Warnf("                                       there were no errors")
+	TESTLOGGER.Warnf("                                       there were no errors")
 
 	// Delegate to the default retry policy for all other cases
 	return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
