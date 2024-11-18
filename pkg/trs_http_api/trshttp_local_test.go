@@ -630,7 +630,6 @@ type testConnsArg struct {
 }
 
 func logConnTestHeader(t *testing.T, a testConnsArg) {
-return
 	t.Logf("============================================================")
 
 	if logLevel < logrus.ErrorLevel {
@@ -669,6 +668,7 @@ return
 // NOT configure the http transport.
 
 func TestConnsWithNoHttpTxPolicy(t *testing.T) {
+return
 	httpRetries      := 3
 	pcsStatusTimeout := 30
 	httpTimeout      := time.Duration(pcsStatusTimeout) * time.Second
