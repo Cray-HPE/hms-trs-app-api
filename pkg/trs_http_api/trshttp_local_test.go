@@ -696,54 +696,54 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.nFailRetries           = 0
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = 10
-	a.openAfterBodyClose     = 2 // MaxIdleConnsPerHost default is 2
-	a.openAfterCancel        = 2
-	a.openAfterClose         = 2
+	a.openAfterBodyClose     = 2	// MaxIdleConnsPerHost
+	a.openAfterCancel        = 2	// MaxIdleConnsPerHost
+	a.openAfterClose         = 2	// MaxIdleConnsPerHost
 
 	testConns(t, a)
 
 	// 2 requests, 1 skipped body closes
 
-	a.nTasks                 = 2
+	a.nTasks                 = 2	// MaxIdleConnsPerHost
 	a.nSkipCloseBody         = 1
 	a.nSuccessRetries        = 0
 	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 0
 	a.testIdleConnTimeout    = false
-	a.openAfterTasksComplete = 2
-	a.openAfterBodyClose     = 2
-	a.openAfterCancel        = 1 // no body close == bad connection
-	a.openAfterClose         = 1
+	a.openAfterTasksComplete = a.nTasks
+	a.openAfterBodyClose     = a.nTasks
+	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody // no body close == bad connection
+	a.openAfterClose         = a.nTasks - a.nSkipCloseBody
 
 	testConns(t, a)
 
 	// TEST: 2 requests: 1 request retries once before success
 
-	a.nTasks                 = 2
+	a.nTasks                 = 2	// MaxIdleConnsPerHost
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 1
 	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 0
 	a.testIdleConnTimeout    = false
-	a.openAfterTasksComplete = 2
-	a.openAfterBodyClose     = 2
-	a.openAfterCancel        = 2
-	a.openAfterClose         = 2
+	a.openAfterTasksComplete = a.nTasks
+	a.openAfterBodyClose     = a.nTasks
+	a.openAfterCancel        = a.nTasks
+	a.openAfterClose         = a.nTasks
 
 	testConns(t, a)
 
 	// TEST: 2 requests, 1 request exhausts retries and fails
 
-	a.nTasks                 = 2
+	a.nTasks                 = 2	// MaxIdleConnsPerHost
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
 	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 1
 	a.testIdleConnTimeout    = false
-	a.openAfterTasksComplete = 2
-	a.openAfterBodyClose     = 2
-	a.openAfterCancel        = 2
-	a.openAfterClose         = 2
+	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
+	a.openAfterBodyClose     = a.nTasks - a.nFailRetries
+	a.openAfterCancel        = a.nTasks - a.nFailRetries
+	a.openAfterClose         = a.nTasks - a.nFailRetries
 //	a.openAfterTasksComplete = 1
 //	a.openAfterBodyClose     = 0	// retryablehttp closes all open conns after close of body for any other still open ...
 //	a.openAfterCancel        = 0 // TODO:  Enable more debug to see if failed body is closed or not
@@ -759,11 +759,10 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.nHttpTimeouts          = 0
 	a.nFailRetries           = 2
 	a.testIdleConnTimeout    = false
-	a.openAfterTasksComplete = 2
-	a.openAfterTasksComplete = 2
-	a.openAfterBodyClose     = 2
-	a.openAfterCancel        = 2
-	a.openAfterClose         = 2
+	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
+	a.openAfterBodyClose     = 2	// MaxIdleConnsPerHost
+	a.openAfterCancel        = 2	// MaxIdleConnsPerHost
+	a.openAfterClose         = 2	// MaxIdleConnsPerHost
 //	a.openAfterTasksComplete = 8
 //	a.openAfterBodyClose     = 0
 //	a.openAfterCancel        = 0
@@ -931,10 +930,10 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nFailRetries           = 1
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks // 1 would close if we set Connection:close
-	a.openAfterBodyClose     = a.nTasks
-	a.openAfterCancel        = a.nTasks
-	a.openAfterClose         = a.nTasks
+	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
+	a.openAfterBodyClose     = a.nTasks - a.nFailRetries
+	a.openAfterCancel        = a.nTasks - a.nFailRetries
+	a.openAfterClose         = a.nTasks - a.nFailRetries
 //	a.openAfterBodyClose     = 0 // FIND WORKAROUND???
 //	a.openAfterCancel        = 0 // FIND WORKAROUND???
 //	a.openAfterClose         = 0 // FIND WORKAROUND???
@@ -956,10 +955,10 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.nFailRetries           = 1
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks // 1 would close if we set Connection:close
-	a.openAfterBodyClose     = a.nTasks
-	a.openAfterCancel        = a.nTasks
-	a.openAfterClose         = a.nTasks
+	a.openAfterTasksComplete = a.nTasks - a.nFailRetries
+	a.openAfterBodyClose     = a.nTasks - a.nFailRetries
+	a.openAfterCancel        = a.nTasks - a.nFailRetries
+	a.openAfterClose         = a.nTasks - a.nFailRetries
 //	a.openAfterTasksComplete = 0 // Even though 8 prior bodies closed (WORKAROUND???)
 //	a.openAfterBodyClose     = 0 // FIND WORKAROUND???
 //	a.openAfterCancel        = 0 // FIND WORKAROUND???

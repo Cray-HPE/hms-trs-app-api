@@ -29,6 +29,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -226,15 +227,28 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp, err := c.transport.RoundTrip(req)
 
 TESTLOGGER.Warnf("-----------------> RoundTrip: ")
-	if err != nil && errors.Is(err, context.DeadlineExceeded) {
+	if err != nil {
 		c.skipCICsMutex.Lock()
-		c.skipCICs++
-TESTLOGGER.Warnf("                               skipCICs now %v", c.skipCICs)
-		c.skipCICsMutex.Unlock()
-		return nil, context.DeadlineExceeded	// not err
-	}
+
+		if errors.Is(err, context.DeadlineExceeded) {
+			c.skipCICs++
+TESTLOGGER.Warnf("                               skipCICs now %v (DeadLineExceeded)", c.skipCICs)
+			c.skipCICsMutex.Unlock()
+
+			return nil, context.DeadlineExceeded	// not err
+		}
 TESTLOGGER.Warnf("                               not indicating skip")
 
+		// Lower level HTTPClient.Timeout triggered timeouts
+		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+			c.skipCICs++
+TESTLOGGER.Warnf("                               skipCICs now %v (netErr.Timeout)", c.skipCICs)
+			c.skipCICsMutex.Unlock()
+
+			return nil, err
+		}
+		c.skipCICsMutex.Unlock()
+	}
 	return resp, err
 }
 
