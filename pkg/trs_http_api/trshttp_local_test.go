@@ -839,7 +839,7 @@ func TestBasicConnectionBehaviorWithHttpTxPolicy(t *testing.T) {
 
 
 	// Timeout placed on the context for the http request
-	ctxTimeout := time.Duration(pcsStatusTimeout) * time.Second,
+	ctxTimeout := time.Duration(pcsStatusTimeout) * time.Second
 
 	// idleConnTimeout is the time after which idle connections are closed.
 	// In PCS we want them to stay open between polling intervals so they
