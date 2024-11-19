@@ -646,6 +646,7 @@ type testConnsArg struct {
 	tListProto             *HttpTask // Initialization to pass to tloc.CreateTaskList()
 	srvHandler             func(http.ResponseWriter, *http.Request) // response handler to use
 	nTasks                 int       // Number of tasks to create
+	maxIdleConnsPerHost    int       // Value of MaxIdleConnsPerHost
 	nSuccessRetries        int32     // Number of retries to succeed
 	nFailRetries           int       // Number of retries to fail
 	nSkipDrainBody         int       // Number of response bodies to skip draining before closing
@@ -734,6 +735,7 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 
 	// Initialize argument structure (will be modified each test)
 	a := testConnsArg{
+		maxIdleConnsPerHost:    maxIdleConnsPerHost,
 		tListProto:             defaultTListProto,
 		srvHandler:             launchHandler,	// always returns success
 	}
@@ -968,6 +970,7 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 
 	// Initialize argument structure (will be modified each test)
 	a := testConnsArg{
+		maxIdleConnsPerHost:    maxIdleConnsPerHost,
 		tListProto:             defaultTListProto,
 		srvHandler:             launchHandler,	// always returns success
 	}
@@ -1165,8 +1168,8 @@ func TestLargeConnectionPools(t *testing.T) {
 	httpRetries             := 3
 	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
 	pcsStatusTimeout        := 30
-	pcsMaxIdleConns         := 10000
-	pcsMaxIdleConnsPerHost  := 10000
+	maxIdleConns            := 10000
+	maxIdleConnsPerHost     := 10000
 	nTasks                  := 10000
 
 	// Timeout placed on the context for the http request
@@ -1206,6 +1209,7 @@ func TestLargeConnectionPools(t *testing.T) {
 
 	// Initialize argument structure (will be modified each test)
 	a := testConnsArg{
+		maxIdleConnsPerHost:    maxIdleConnsPerHost,
 		tListProto:             defaultTListProto,
 		srvHandler:             launchHandler,	// always returns success
 	}
@@ -1219,8 +1223,8 @@ func TestLargeConnectionPools(t *testing.T) {
 	t.Logf("ctxTimeout              = %v", ctxTimeout)
 	t.Logf("idleConnTimeout         = %v", idleConnTimeout)
 	t.Logf("pcsTimeToNextStatusPoll = %v", pcsTimeToNextStatusPoll)
-	t.Logf("MaxIdleConns            = %v", pcsMaxIdleConns)
-	t.Logf("MaxIdleConnsPerHost     = %v", pcsMaxIdleConnsPerHost)
+	t.Logf("MaxIdleConns            = %v", maxIdleConns)
+	t.Logf("MaxIdleConnsPerHost     = %v", maxIdleConnsPerHost)
 	t.Logf("httpRetries             = %v", httpRetries)
 	t.Logf("")
 
@@ -1393,14 +1397,6 @@ const sleepTimeToStabilizeConns = 250 * time.Millisecond
 func testConns(t *testing.T, a testConnsArg) {
 	logConnTestHeader(t, a)
 
-	// Will need this in several places
-	var maxIdleConnsPerHost int
-	if a.tListProto.CPolicy.Tx.Enabled == false {
-		maxIdleConnsPerHost = 2
-	} else {
-		maxIdleConnsPerHost = a.tListProto.CPolicy.Tx.MaxIdleConnsPerHost
-	}
-
 	// Initialize the task system
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger())
@@ -1438,9 +1434,9 @@ func testConns(t *testing.T, a testConnsArg) {
 		}
 
 		a.openAfterTasksComplete = a.nTasks
-		a.openAfterBodyClose     = maxIdleConnsPerHost
-		a.openAfterCancel        = maxIdleConnsPerHost
-		a.openAfterClose         = maxIdleConnsPerHost
+		a.openAfterBodyClose     = a.maxIdleConnsPerHost
+		a.openAfterCancel        = a.maxIdleConnsPerHost
+		a.openAfterClose         = a.maxIdleConnsPerHost
 
 		t.Logf("===================> RUNNING SECOND TASK LIST <===================")
 
@@ -1555,8 +1551,8 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 			    a.openAfterBodyClose, a.nFailRetries)
 
 		nToWaitFor := a.openAfterBodyClose + a.nFailRetries
-		if nToWaitFor > maxIdleConnsPerHost {}
-			nToWaitFor = maxIdleConnsPerHost
+		if nToWaitFor > a.maxIdleConnsPerHost {
+			nToWaitFor = a.maxIdleConnsPerHost
 		}
 
 		testOpenConnections(t, nToWaitFor)
