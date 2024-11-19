@@ -723,29 +723,27 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 
 	testConns(t, a)
 
-	// 2 requests: 1 skipped body closure and skip calling Cancel()
+	// 2 requests, 1 skipped body drain
 	//
-	// It's a much more common pattern to call Close() without Cancel().
-	// This test will validate that Close() successfully cancels all
-	// contexts and closes any reponse bodies that were left open.
+	// If a body is closed but not drained first, the connection is marked
+	// as "dirty".  This marks it for a lazy closure in the network layer.
+	// If a tool like 'ss' which interrogates connections, this can kick
+	// the network layer into closing it.  We run 'ss' in this test so this
+	// will verify our "dirty" connection gets closed
 
 	a.nTasks                 = 2	// MaxIdleConnsPerHost
-	a.nSkipDrainBody         = 0
-	a.nSkipCloseBody         = 1
+	a.nSkipDrainBody         = 1
+	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
 	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = a.nTasks
-	a.openAfterCancel        = a.nTasks
-	a.openAfterClose         = a.nTasks
-
-	a.skipCancel             = true
+	a.openAfterBodyClose     = a.nTasks - a.nSkipCloseBody	// the ss call after body close does it
+	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody
+	a.openAfterClose         = a.nTasks - a.nSkipCloseBody
 
 	testConns(t, a)
-
-	a.skipCancel             = true	// reset to default
 
 	// 2 requests: 1 request retries once before success
 
@@ -931,6 +929,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 
 	testConns(t, a)
 
+//TODO: Change following tost to skip draining 2 bodys - cancelling tasks with unclosed bodies doesnt close connection
 	// 10 requests: 2 skipped body closures and skip calling Cancel()
 	//
 	// It's a much more common pattern to call Close() without Cancel().
