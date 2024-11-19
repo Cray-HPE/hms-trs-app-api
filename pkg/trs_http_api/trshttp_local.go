@@ -414,7 +414,9 @@ var trsRetryCountKey retryKey = "trsRetryCount"
 //	Reference:  https://pkg.go.dev/github.com/hashicorp/go-retryablehttp
 
 func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
-	//Find a client or make one!
+
+	// Find a client to use, or make a new one!
+
 	var cpack *clientPack
 	tloc.clientMutex.Lock()
 	if _, ok := tloc.clientMap[tct.task.CPolicy]; !ok {
@@ -439,6 +441,9 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	}
 	tloc.clientMutex.Unlock()
 
+	// Found a client to use, now set up a request
+
+	// First validate our task
 	if ok, err := tct.task.Validate(); !ok {
 		tloc.Logger.Errorf("Failed validation of request: %+v, err: %s", tct.task, err)
 		tct.task.Err = &err
@@ -452,7 +457,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	// Add user agent header to the request
 	base.SetHTTPUserAgent(tct.task.Request,tloc.svcName)
 
-	// Create an retryablehttp request using the caller's request
+	// Create a retryablehttp request using the caller's request
 	req, err := retryablehttp.FromRequest(tct.task.Request)
 	if err != nil {
 		tloc.Logger.Errorf("Failed wrapping request with retryablehttp: %v", err)
@@ -494,6 +499,8 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	}
 	if tct.task.Request.Response != nil {
 		tloc.Logger.Tracef("Response: %d", tct.task.Request.Response.StatusCode)
+	} else {
+		tloc.Logger.Tracef("No response received")
 	}
 
 	tct.taskListChannel <- tct.task
