@@ -430,18 +430,18 @@ func TestLaunchTimeout(t *testing.T) {
 //
 //		And body was drained
 //
-//			* Go connection state:    open, unusable (resource leak)
-//			* OS connection state:    open, unusable (resource leak)
-//			* Istio connection state: open, unusable (resource leak)
+//			* Go connection state:    open, unusable (resource leak) (dirty)
+//			* OS connection state:    open, unusable (resource leak) (dirty)
+//			* Istio connection state: open, unusable (resource leak) (dirty)
+//
+//			* Marked "dirty" and could get cleaned up any time since the
+//			  body was drained
 //
 //		And body was NOT drained
 //
 //			* Go connection state:    open, unusable (resource leak)
 //			* OS connection state:    open, unusable (resource leak)
 //			* Istio connection state: open, unusable (resource leak)
-//
-//			 Depending on server and transport behavior the connection may
-//           close in some cases but I have not observed this in unit tests
 //
 
 // Test connection states using 'ss' utility
@@ -864,11 +864,13 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	// Body Drain: yes
 	// Body Close: skip
 	//
-	// Connection stays open if the body is never closed but is not reusable
+	// Connection stays open if the body is never closed and is not reusable
 	// for any other requests (unless body is later drained/closed)
 	//
-	// When pruning open connections down to maxIdleConnsPerHost, I assume
-	// this unusable connection gets chosen to remain open
+ 	// However, because it was marked "dirty" it can get cleaned up by
+	// the system at any time. I've seen that using 'ss' in the tests
+	// can force this to happen immediately after tasks complete if the
+	// number of open connections is greater than maxIdleConnsPerHost
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
@@ -894,8 +896,7 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	// When pruning open connections down to maxIdleConnsPerHost, I assume
 	// this unusable connection gets chosen to remain open
 
-	//a.nTasks                 = nTasks
-	a.nTasks                 = 1
+	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
 	a.nSkipDrainBody         = 1
@@ -903,6 +904,15 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	a.nHttpTimeouts          = 0
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
+
+	// Truncate the good connections down to MaxIdleConnsPerHost
+	openAfter = a.nTasks - a.nSkipDrainBody
+	if openAfter > maxIdleConnsPerHost {
+		openAfter = maxIdleConnsPerHost
+	}
+	// And add in the unusable open connections
+	openAfter += a.nSkipDrainBody	// must be same as a.nSkipCloseBody
+
 	a.openAfterBodyClose     = maxIdleConnsPerHost
 	a.openAfterCancel        = maxIdleConnsPerHost
 	a.openAfterClose         = maxIdleConnsPerHost
@@ -1145,6 +1155,15 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 	a.nHttpTimeouts          = 0
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
+
+	// Truncate the good connections down to MaxIdleConnsPerHost
+	openAfter = a.nTasks - a.nSkipDrainBody
+	if openAfter > maxIdleConnsPerHost {
+		openAfter = maxIdleConnsPerHost
+	}
+	// And add in the unusable open connections
+	openAfter += a.nSkipDrainBody	// must be same as a.nSkipCloseBody
+
 	a.openAfterBodyClose     = maxIdleConnsPerHost
 	a.openAfterCancel        = maxIdleConnsPerHost
 	a.openAfterClose         = maxIdleConnsPerHost
@@ -1188,9 +1207,9 @@ func TestLargeConnectionPools(t *testing.T) {
 	httpRetries             := 3
 	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
 	pcsStatusTimeout        := 30
-	maxIdleConns            := 10000
-	maxIdleConnsPerHost     := 10000
-	nTasks                  := 10000
+	maxIdleConns            := 50000
+	maxIdleConnsPerHost     := 50000
+	nTasks                  := 50000
 
 	// Timeout placed on the context for the http request
 	ctxTimeout := time.Duration(pcsStatusTimeout) * time.Second
