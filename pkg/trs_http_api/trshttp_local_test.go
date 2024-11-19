@@ -863,7 +863,9 @@ func TestConnsBasics(t *testing.T) {
 
 	a.runSecondTaskList = true
 
+logLevel = logrus.DebugLevel
 	testConns(t, a)
+logLevel = logrus.ErrorLevel
 
 	a.runSecondTaskList = false
 
@@ -1531,6 +1533,8 @@ func testConns(t *testing.T, a testConnsArg) {
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger())
 
+	// TODO: Set tloc.Logger to match current logLevel???
+
 	// Copy logger into global namespace for the http server handlers
 	handlerLogger = t
 
@@ -1647,7 +1651,12 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		t.Errorf("=====> ERROR: tloc.Launch() failed: %v <=====", err)
 	}
 
-	time.Sleep(2 * time.Second)	// Can take some time for all to get established
+	// Can take some time for all requests to get started... pause for them
+	if a.nTasks <= 100 {
+		time.Sleep(2 * time.Second)
+	} else {
+		time.Sleep(5 * time.Second)
+	}
 	t.Logf("Testing connections after Launch")
 	testOpenConnections(t, (a.nTasks))
 
@@ -1680,7 +1689,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		}
 
 		// All connections should still be in ESTAB(LISHED)
-		time.Sleep(time.Duration(a.nTasks) * time.Millisecond)
+		time.Sleep(sleepTimeToStabilizeConns)
 		t.Logf("Testing connections after non-retry request bodies closed")
 		testOpenConnections(t, a.nTasks)
 	}
@@ -1716,7 +1725,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		}
 
 		// All connections should still be in ESTAB(LISHED)
-		time.Sleep(time.Duration(a.nTasks) * time.Millisecond)
+		time.Sleep(sleepTimeToStabilizeConns)
 		t.Logf("Testing connections after non-timeout request bodies closed")
 		testOpenConnections(t, a.nTasks)
 	}
