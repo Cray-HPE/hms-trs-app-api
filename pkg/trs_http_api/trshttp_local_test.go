@@ -1551,9 +1551,9 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 			    a.openAfterBodyClose, a.nFailRetries)
 
 		nToWaitFor := a.openAfterBodyClose + a.nFailRetries
-		if nToWaitFor > a.maxIdleConnsPerHost {
-			nToWaitFor = a.maxIdleConnsPerHost
-		}
+		//if nToWaitFor > a.maxIdleConnsPerHost {
+			//nToWaitFor = a.maxIdleConnsPerHost
+		//}
 
 		testOpenConnections(t, nToWaitFor)
 	}
