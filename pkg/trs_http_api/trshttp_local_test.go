@@ -1279,7 +1279,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	// our open connections, this act causes the "dirty" connections to
 	// close.  Thus, we do want to test for that case too.
 	nBodyClosesSkipped := 0
-	nBodyDrainBeforeCloseSkipped := 0
+	nBodyDrainSkipped := 0
 	t.Logf("Closing response bodies (skip body=%v drain=%v)", a.nSkipCloseBody, a.nSkipDrainBody)
 	for _, tsk := range(tList) {
 		if nBodyClosesSkipped < a.nSkipCloseBody {
@@ -1292,12 +1292,18 @@ t.Errorf("SKIPPING closing response body for task %v", tsk.GetID())
 		}
 t.Errorf("Checking for response for task %v", tsk.GetID())
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
-			// Must fully read the body in order to close the body so that
+			// Must fully drain the body in before closing the body so that
 			// the underlying libraries/modules don't close the connection.
-			// If body not fully conusmed they assume the connection had issues
-			if a.nSkipDrainBody < nBodyDrainBeforeCloseSkipped {
+			// If body not drained before closure the connection stays open
+			// but is marked "dirty".  Here we dirty connections if requested
+			if nBodyDrainSkipped < a.nSkipDrainBody {
+				nBodyDrainSkipped++
+t.Errorf("Skip draining response body for task %v", tsk.GetID())
+				if logLevel == logrus.DebugLevel {
+					t.Logf("Skipping draining response body for task %v", tsk.GetID())
+				}
+			} else {
 t.Errorf("Draining response body for task %v", tsk.GetID())
-				nBodyDrainBeforeCloseSkipped++
 				_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
 			}
 t.Errorf("Closing response body for task %v", tsk.GetID())
