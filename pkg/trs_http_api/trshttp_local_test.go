@@ -882,8 +882,8 @@ func TestBasicConnectionBehaviorWithHttpTxPolicy(t *testing.T) {
 	t.Logf("ctxTimeout              = %v", ctxTimeout)
 	t.Logf("idleConnTimeout         = %v", idleConnTimeout)
 	t.Logf("pcsTimeToNextStatusPoll = %v", pcsTimeToNextStatusPoll)
-	t.Logf("MaxIdleConns            = %v", maxIdleConns)
-	t.Logf("MaxIdleConnsPerHost     = %v", maxIdleConnsPerHost)
+	t.Logf("MaxIdleConns            = %v", pcsMaxIdleConns)
+	t.Logf("MaxIdleConnsPerHost     = %v", pcsMaxIdleConnsPerHost)
 	t.Logf("httpRetries             = %v", httpRetries)
 
 	// 10 requests: No issues so all conns should be open
@@ -1061,7 +1061,7 @@ func TestLargeConnectionPools(t *testing.T) {
 	pcsMaxIdleConnsPerHost  := 1000
 
 	// Timeout placed on the context for the http request
-	ctxTimeout := time.Duration(pcsStatusTimeout) * time.Second,
+	ctxTimeout := time.Duration(pcsStatusTimeout) * time.Second
 
 	// idleConnTimeout is the time after which idle connections are closed.
 	// In PCS we want them to stay open between polling intervals so they
@@ -1075,7 +1075,7 @@ func TestLargeConnectionPools(t *testing.T) {
 	// Default prototype to initialize each task in the task list with
 	// Can customize prior to each test
 	defaultTListProto := &HttpTask{
-		Timeout: ctxTimeout
+		Timeout: ctxTimeout,
 
 		CPolicy: ClientPolicy {
 			Retry:
@@ -1104,8 +1104,8 @@ func TestLargeConnectionPools(t *testing.T) {
 	t.Logf("ctxTimeout              = %v", ctxTimeout)
 	t.Logf("idleConnTimeout         = %v", idleConnTimeout)
 	t.Logf("pcsTimeToNextStatusPoll = %v", pcsTimeToNextStatusPoll)
-	t.Logf("MaxIdleConns            = %v", maxIdleConns)
-	t.Logf("MaxIdleConnsPerHost     = %v", maxIdleConnsPerHost)
+	t.Logf("MaxIdleConns            = %v", pcsMaxIdleConns)
+	t.Logf("MaxIdleConnsPerHost     = %v", pcsMaxIdleConnsPerHost)
 	t.Logf("httpRetries             = %v", httpRetries)
 
 	// 1000 requests: No issues so all conns should be open
