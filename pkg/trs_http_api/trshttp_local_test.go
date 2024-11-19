@@ -1295,7 +1295,7 @@ t.Errorf("Checking for response for task %v", tsk.GetID())
 			// Must fully read the body in order to close the body so that
 			// the underlying libraries/modules don't close the connection.
 			// If body not fully conusmed they assume the connection had issues
-			if nBodyDrainBeforeCloseSkipped < a.nSkipDrainBody {
+			if a.nSkipDrainBody < nBodyDrainBeforeCloseSkipped {
 t.Errorf("Draining response body for task %v", tsk.GetID())
 				nBodyDrainBeforeCloseSkipped++
 				_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
