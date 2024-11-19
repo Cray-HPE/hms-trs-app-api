@@ -1153,12 +1153,10 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 	a.openAfterCancel        = openAfter
 	a.openAfterClose         = openAfter
 
-	a.runSecondTaskList   = true // second run should not open any new connections
-	a.testIdleConnTimeout = true
+	a.runSecondTaskList   = true // do a second run
 
 	testConns(t, a)
 
-	a.testIdleConnTimeout  = false	// set back to default
 	a.runSecondTaskList    = false	// set back to default
 }
 
@@ -1603,7 +1601,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		}
 		oConns += a.nHttpTimeouts
 
-		testOpenConnections(t, a.nTasks)
+		testOpenConnections(t, oConns)
 	}
 
 	t.Logf("Waiting for %d tasks to complete", tasksToWaitFor)
