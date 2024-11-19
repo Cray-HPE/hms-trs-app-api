@@ -850,7 +850,6 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	a.openAfterTasksComplete = a.nTasks
 
 	openAfter := a.nTasks - a.nSkipDrainBody
-
 	if openAfter > maxIdleConnsPerHost {
 		openAfter = maxIdleConnsPerHost
 	}
@@ -913,13 +912,11 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	// And add in the unusable open connections
 	openAfter += a.nSkipDrainBody	// must be same as a.nSkipCloseBody
 
-	a.openAfterBodyClose     = maxIdleConnsPerHost
-	a.openAfterCancel        = maxIdleConnsPerHost
-	a.openAfterClose         = maxIdleConnsPerHost
+	a.openAfterBodyClose     = openAfter
+	a.openAfterCancel        = openAfter
+	a.openAfterClose         = openAfter
 
 	testConns(t, a)
-logLevel = logrus.TraceLevel
-logLevel = logrus.ErrorLevel
 
 	// Basics: One context timeout (not http - can only be consigured if
 	//         using HttpTxPolicy).  We also run a second task list to
@@ -1064,7 +1061,7 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
-	a.nFailRetries           = 1
+	a.nFailRetries           = 2
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
 	a.nHttpTimeouts          = 0
@@ -1087,7 +1084,7 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
-	a.nFailRetries           = 1
+	a.nFailRetries           = 2
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
 	a.nHttpTimeouts          = 0
@@ -1164,9 +1161,9 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 	// And add in the unusable open connections
 	openAfter += a.nSkipDrainBody	// must be same as a.nSkipCloseBody
 
-	a.openAfterBodyClose     = maxIdleConnsPerHost
-	a.openAfterCancel        = maxIdleConnsPerHost
-	a.openAfterClose         = maxIdleConnsPerHost
+	a.openAfterBodyClose     = openAfter
+	a.openAfterCancel        = openAfter
+	a.openAfterClose         = openAfter
 
 	testConns(t, a)
 
@@ -1653,8 +1650,12 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	t.Logf("Closing the task list channel")
 	close(taskListChannel)
 
-	// All connections should still be in ESTAB(LISHED)
-	time.Sleep(sleepTimeToStabilizeConns)
+	// Can take some time for all requests to complete... pause for them
+	if a.nTasks <= 1000 {
+		time.Sleep(sleepTimeToStabilizeConns)
+	} else {
+		time.Sleep(2 * time.Second)
+	}
 	t.Logf("Testing connections after tasks complete")
 	testOpenConnections(t, a.openAfterTasksComplete)
 
