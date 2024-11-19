@@ -747,7 +747,6 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	t.Logf("")
 	t.Logf("nTasks                  = %v", nTasks)
 	t.Logf("ctxTimeout              = %v", ctxTimeout)
-	t.Logf("ctxTimeout              = %v", ctxTimeout)
 	t.Logf("idleConnTimeout         = %v", idleConnTimeout)
 	t.Logf("pcsTimeToNextStatusPoll = %v", pcsTimeToNextStatusPoll)
 	t.Logf("MaxIdleConns            = %v", maxIdleConns)
@@ -763,6 +762,7 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
 	a.nHttpTimeouts          = 0
+	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = maxIdleConnsPerHost
 	a.openAfterCancel        = maxIdleConnsPerHost
@@ -778,6 +778,7 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
 	a.nHttpTimeouts          = 0
+	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = maxIdleConnsPerHost
 	a.openAfterCancel        = maxIdleConnsPerHost
@@ -794,6 +795,7 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
 	a.nHttpTimeouts          = 0
+	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = maxIdleConnsPerHost
 	a.openAfterCancel        = maxIdleConnsPerHost
@@ -816,6 +818,7 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
 	a.nHttpTimeouts          = 0
+	a.openAtStart            = 0
 	a.openAfterTasksComplete = maxIdleConnsPerHost	// successful tasks closed bodies already
 	a.openAfterBodyClose     = maxIdleConnsPerHost
 	a.openAfterCancel        = maxIdleConnsPerHost
@@ -836,6 +839,7 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	a.nSkipDrainBody         = 1
 	a.nSkipCloseBody         = 0
 	a.nHttpTimeouts          = 0
+	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 
 	openAfter := a.nTasks - a.nSkipDrainBody
@@ -862,6 +866,7 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 1
 	a.nHttpTimeouts          = 0
+	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = maxIdleConnsPerHost
 	a.openAfterCancel        = maxIdleConnsPerHost
@@ -878,6 +883,7 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	a.nSkipDrainBody         = 1
 	a.nSkipCloseBody         = 1
 	a.nHttpTimeouts          = 0
+	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = maxIdleConnsPerHost
 	a.openAfterCancel        = maxIdleConnsPerHost
@@ -895,6 +901,8 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
 	a.nHttpTimeouts          = 1
+
+	a.openAtStart            = 0
 
 	openAfter = a.nTasks - a.nHttpTimeouts
 
@@ -989,7 +997,7 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 	t.Logf("httpRetries             = %v", httpRetries)
 	t.Logf("")
 
-	// 10 requests: No issues so all conns should be open
+	// All success
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
@@ -1003,13 +1011,9 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 	a.openAfterCancel        = maxIdleConnsPerHost
 	a.openAfterClose         = maxIdleConnsPerHost
 
-	a.runSecondTaskList = true // second run should not open any new connections
-
 	testConns(t, a)
 
-	a.runSecondTaskList = false
-
-	// 10 requests: 2 retries that both succeed
+	// Two successful retries
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 2
@@ -1025,7 +1029,8 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 
 	testConns(t, a)
 
-	// 10 requests: 2 exhaust all retries and fail BEFORE successes complete
+	// Two failed due to retries exceeded that complete before the
+	// successful reception of responses
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
@@ -1039,15 +1044,16 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 	a.openAfterCancel        = maxIdleConnsPerHost
 	a.openAfterClose         = maxIdleConnsPerHost
 
-	retrySleep = 0	// 0 seconds so retries complete first
+	retrySleep   = 0	// 0 seconds so retries complete first
+	handlerSleep = 10	// slow down the others
 
 	testConns(t, a)
 
-	retrySleep = 0	// set back to default
+	handlerSleep = 2	// slow down the others
+	retrySleep   = 0	// set back to default
 
-	// 10 requests: 2 exhaust all retries and fail AFTER successes complete
-	//              We close the successful tasks response bodies before the
-	//              failed retry tasks complete
+	// Two failed due to retries exceeded that complete after the
+	// successful reception of a response
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
@@ -1063,26 +1069,12 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 
 	retrySleep = 4	// 4 seconds so retries complete last
 
-	// We want to run a 2nd task list with the same server to make sure that
-	// failures from prior task list don't impact future ones.  This second
-	// task list should succeed everything.
-	a.runSecondTaskList = true
-
 	testConns(t, a)
-
-	a.runSecondTaskList = false	// set back to default
 
 	retrySleep = 0				// set back to default
 
-	// 10 requests: 2 skipped body drains
-	//
-	// If a body is closed but not drained first, the connection is marked
-	// as "dirty".  This marks it for lazy closure in the network layer but
-	// the connection stays open with status "idle", though it cannot be
-	// used.  If a tool like 'ss' starts interrogating the details of
-	// connections on a system, this can kick the network layer into closing
-	// it.  We run 'ss' in this test so this after closing bodies, so that
-	// will actually close any connections with undrained bodies.
+	// Body Drain: skip
+	// Body Close: yes
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
@@ -1105,7 +1097,8 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 
 	testConns(t, a)
 
-	// 10 requests: 2 skipped body closures
+	// Body Drain: yes
+	// Body Close: skip
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
@@ -1121,27 +1114,35 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 
 	testConns(t, a)
 
-	// 10 requests that we run these twice to test IdleConnTimeout:
-	//
-	//	* 1st run with 2 http timeouts.  2 connections close and go
-	//	  into CLOSE-WAIT or FIN-WAIT-2.  After IdleConnTimeout we verify
-	//	  that the other 8 connections are now closed to ensure that our
-	//    IdleConnTimeout logic is working correctly.
-	//
-	//	* 2nd run with 10 successful requests so that all connections are
-	//	  in ESTAB(LISHED).  After IdleConnTimeout we verify that those
-	//    10 connections get closed
-	//
-	// THESE TESTS WILL TAKE A LOT OF TIME TO COMPLETE!!!!
+	// Body Drain: skip
+	// Body Close: skip
+
+	a.nTasks                 = nTasks
+	a.nSuccessRetries        = 0
+	a.nFailRetries           = 0
+	a.nSkipDrainBody         = 2
+	a.nSkipCloseBody         = 2
+	a.nHttpTimeouts          = 0
+	a.openAtStart            = 0
+	a.openAfterTasksComplete = a.nTasks
+	a.openAfterBodyClose     = maxIdleConnsPerHost
+	a.openAfterCancel        = maxIdleConnsPerHost
+	a.openAfterClose         = maxIdleConnsPerHost
+
+	testConns(t, a)
+
+	// Two context timeouts (not http - can only be consigured if
+	// using HttpTxPolicy).  We also run a second task list to
+	// confirm same number of open connections at start of second
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 2 // so we can look at CLOSE-WAIT and FIN-WAIT-2 in traces
+	a.nHttpTimeouts          = 2
+
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks - a.nHttpTimeouts
 
 	openAfter = a.nTasks - a.nHttpTimeouts
 
@@ -1149,15 +1150,16 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 		openAfter = maxIdleConnsPerHost
 	}
 
+	a.openAfterTasksComplete = openAfter
 	a.openAfterBodyClose     = openAfter
 	a.openAfterCancel        = openAfter
 	a.openAfterClose         = openAfter
 
-	a.runSecondTaskList   = true // do a second run
+	a.runSecondTaskList   = true
 
 	testConns(t, a)
 
-	a.runSecondTaskList    = false	// set back to default
+	a.runSecondTaskList    = false
 }
 
 // TestLargeConnectionPools tests very large connection pools
