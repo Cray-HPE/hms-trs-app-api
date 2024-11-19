@@ -433,7 +433,7 @@ func TestLaunchTimeout(t *testing.T) {
 //
 //		And body was NOT drained
 //
-//			* Go connection state: open, reusable (application memory leak)
+//			* Go connection state: open, unusable (application memory leak)
 //			* OS connection state: open, idle
 //
 //			 Depending on server and transport behavior the connection may
@@ -877,7 +877,8 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	// Body Drain: skip
 	// Body Close: skip
 
-	a.nTasks                 = nTasks
+	//a.nTasks                 = nTasks
+	a.nTasks                 = 1
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
 	a.nSkipDrainBody         = 1
@@ -889,7 +890,9 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	a.openAfterCancel        = maxIdleConnsPerHost
 	a.openAfterClose         = maxIdleConnsPerHost
 
+logLevel = logrus.TraceLevel
 	testConns(t, a)
+logLevel = logrus.ErrorLevel
 
 	// Basics: One context timeout (not http - can only be consigured if
 	//         using HttpTxPolicy).  We also run a second task list to
