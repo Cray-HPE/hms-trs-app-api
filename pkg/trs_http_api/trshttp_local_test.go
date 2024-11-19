@@ -853,7 +853,7 @@ func TestBasicConnectionBehaviorWithHttpTxPolicy(t *testing.T) {
 	// Default prototype to initialize each task in the task list with
 	// Can customize prior to each test
 	defaultTListProto := &HttpTask{
-		Timeout: ctxTimeout
+		Timeout: ctxTimeout,
 
 		CPolicy: ClientPolicy {
 			Retry:
