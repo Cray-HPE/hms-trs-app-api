@@ -416,28 +416,32 @@ func TestLaunchTimeout(t *testing.T) {
 //
 //		And body was drained before closure:
 //
-//			* Go connection state: open, reusable
-//			* OS connection state: open, idle
+//			* Go connection state:    open, idle, reusable
+//			* OS connection state:    open, idle, reusable
+//			* Istio connection state: open, idle, reusable
 //
 //		And body was NOT drained before closure
 //
-//			* Go connection state: closed
-//			* OS connection state: closed (immediately)
+//			* Go connection state:    closed
+//			* OS connection state:    closed
+//			* Istio connection state: closed
 //
 // If response body is NOT closed
 //
 //		And body was drained
 //
-//			* Go connection state: open, reusable (application memory leak)
-//			* OS connection state: open, idle
+//			* Go connection state:    open, unusable (resource leak)
+//			* OS connection state:    open, unusable (resource leak)
+//			* Istio connection state: open, unusable (resource leak)
 //
 //		And body was NOT drained
 //
-//			* Go connection state: open, unusable (application memory leak)
-//			* OS connection state: open, idle
+//			* Go connection state:    open, unusable (resource leak)
+//			* OS connection state:    open, unusable (resource leak)
+//			* Istio connection state: open, unusable (resource leak)
 //
 //			 Depending on server and transport behavior the connection may
-//           close in some cases but have not observed this in unit tests
+//           close in some cases but I have not observed this in unit tests
 //
 
 // Test connection states using 'ss' utility
@@ -832,6 +836,9 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 
 	// Body Drain: skip
 	// Body Close: yes
+	//
+	// Even though we close the body, if it was not drained first the
+	// connection gets closed
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
@@ -857,8 +864,11 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	// Body Drain: yes
 	// Body Close: skip
 	//
-	// Unlike skipping the body drain, skipping the body close does not cause
-	// the connection to be marked "dirty"
+	// Connection stays open if the body is never closed but is not reusable
+	// for any other requests (unless body is later drained/closed)
+	//
+	// When pruning open connections down to maxIdleConnsPerHost, I assume
+	// this unusable connection gets chosen to remain open
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
@@ -876,6 +886,13 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 
 	// Body Drain: skip
 	// Body Close: skip
+	//
+	// Like the abote test case, an open body stays open if the body is
+	// never closed and is not reusable for any other requests (unless
+	// body is later drained/closed)
+	//
+	// When pruning open connections down to maxIdleConnsPerHost, I assume
+	// this unusable connection gets chosen to remain open
 
 	//a.nTasks                 = nTasks
 	a.nTasks                 = 1
@@ -890,8 +907,8 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	a.openAfterCancel        = maxIdleConnsPerHost
 	a.openAfterClose         = maxIdleConnsPerHost
 
-logLevel = logrus.TraceLevel
 	testConns(t, a)
+logLevel = logrus.TraceLevel
 logLevel = logrus.ErrorLevel
 
 	// Basics: One context timeout (not http - can only be consigured if
