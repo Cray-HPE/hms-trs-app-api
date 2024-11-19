@@ -1255,23 +1255,26 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	}
 
 	// Now close the response bodies so connections stay open after we call
-	// tloc.Cancel().  We always skip at least one to test that tloc.Close()
+	// tloc.Cancel().  We sometimes skip one to test that tloc.Close()
 	// closes it for us and the connection associated with it
 	nSkipped := 0
-	t.Logf("Closing response bodies")
+	t.Logf("Closing response bodies (nSkipCloseBody=%v)", a.nSkipCloseBody)
 	for _, tsk := range(tList) {
 		if nSkipped < a.nSkipCloseBody {
 			nSkipped++
 			if logLevel == logrus.DebugLevel {
 				t.Logf("Skipping closing response body for task %v", tsk.GetID())
 			}
+t.Errorf("SKIPPING closing response body for task %v", tsk.GetID())
 			continue
 		}
+t.Errorf("Checking for response for task %v", tsk.GetID())
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 			// Must fully read the body in order to close the body so that
 			// the underlying libraries/modules don't close the connection.
 			// If body not fully conusmed they assume the connection had issues
 //			_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
+t.Errorf("Closing response body for task %v", tsk.GetID())
 
 			tsk.Request.Response.Body.Close()
 			tsk.Request.Response.Body = nil
