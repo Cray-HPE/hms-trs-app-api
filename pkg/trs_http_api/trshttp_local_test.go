@@ -1408,7 +1408,7 @@ func TestLargeConnectionPools(t *testing.T) {
 	a.openAfterClose         = a.nTasks
 
 	retrySleep   = 0	// 0 seconds so retries complete first
-	handlerSleep = 4	// slow down the others
+	handlerSleep = 10	// slow down the others
 
 	testConns(t, a)
 
