@@ -615,6 +615,7 @@ type testConnsArg struct {
 	tListProto             *HttpTask // Initialization to pass to tloc.CreateTaskList()
 	srvHandler             func(http.ResponseWriter, *http.Request) // response handler to use
 	nTasks                 int       // Number of tasks to create
+	nSkipDrainBody         int       // Number of response bodies to skip draining before closing
 	nSkipCloseBody         int       // Number of response bodies to skip closing
 	nSuccessRetries        int32     // Number of retries to succeed
 	nFailRetries           int       // Number of retries to fail
@@ -637,6 +638,7 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 	}
 
 	t.Logf("   nTasks:              %v", a.nTasks)
+	t.Logf("   nSkipDrainBody:      %v", a.nSkipDrainBody)
 	t.Logf("   nSkipCloseBody:      %v", a.nSkipCloseBody)
 	t.Logf("   nSuccessRetries:     %v", a.nSuccessRetries)
 	t.Logf("   nFailRetries:        %v", a.nFailRetries)
@@ -692,6 +694,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	// 10 requests: no issues
 
 	a.nTasks                 = 10
+	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
@@ -707,6 +710,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	// 2 requests, 1 skipped body close
 
 	a.nTasks                 = 2	// MaxIdleConnsPerHost
+	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 1
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
@@ -714,8 +718,8 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = a.nTasks
-	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody // no body close == bad connection
-	a.openAfterClose         = a.nTasks - a.nSkipCloseBody
+	a.openAfterCancel        = a.nTasks
+	a.openAfterClose         = a.nTasks
 
 	testConns(t, a)
 
@@ -726,6 +730,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	// contexts and closes any reponse bodies that were left open.
 
 	a.nTasks                 = 2	// MaxIdleConnsPerHost
+	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 1
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
@@ -733,8 +738,8 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = a.nTasks
-	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody // no body close == bad connection
-	a.openAfterClose         = a.nTasks - a.nSkipCloseBody
+	a.openAfterCancel        = a.nTasks
+	a.openAfterClose         = a.nTasks
 
 	a.skipCancel             = true
 
@@ -745,6 +750,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	// 2 requests: 1 request retries once before success
 
 	a.nTasks                 = 2	// MaxIdleConnsPerHost
+	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 1
 	a.nFailRetries           = 0
@@ -760,6 +766,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	// 2 requests, 1 request exhausts retries and fails
 
 	a.nTasks                 = 2	// MaxIdleConnsPerHost
+	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 1
@@ -778,6 +785,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 
 	//a.nTasks                 = 2	// MaxIdleConnsPerHost
 	a.nTasks                 = 2	// MaxIdleConnsPerHost
+	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
@@ -793,6 +801,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	// 10 requests, 2 skipped body closes, 3 successful retries, 2 retry failures
 
 	a.nTasks                 = 10
+	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 2
 	a.nSuccessRetries        = 3
 	a.nFailRetries           = 2
@@ -887,6 +896,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	// 10 requests: No issues so all conns should be open
 
 	a.nTasks                 = 10
+	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
@@ -907,6 +917,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	// 10 requests: 2 skipped body closures
 
 	a.nTasks                 = 10
+	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 2
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
@@ -915,8 +926,8 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = a.nTasks
-	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody
-	a.openAfterClose         = a.nTasks - a.nSkipCloseBody
+	a.openAfterCancel        = a.nTasks
+	a.openAfterClose         = a.nTasks
 
 	testConns(t, a)
 
@@ -927,6 +938,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	// contexts and closes any reponse bodies that were left open.
 
 	a.nTasks                 = 10
+	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 2
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
@@ -935,8 +947,8 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = a.nTasks
-	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody
-	a.openAfterClose         = a.nTasks - a.nSkipCloseBody
+	a.openAfterCancel        = a.nTasks
+	a.openAfterClose         = a.nTasks
 
 	a.skipCancel             = true
 
@@ -947,6 +959,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	// 10 requests: 2 retries that both succeed
 
 	a.nTasks                 = 10
+	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 2
 	a.nFailRetries           = 0
@@ -963,6 +976,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	// 10 requests: 2 exhaust all retries and fail BEFORE 8 success complete
 
 	a.nTasks                 = 10
+	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 1
@@ -985,6 +999,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	//              failed retry tasks complete
 
 	a.nTasks                 = 10
+	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 1
@@ -1021,6 +1036,7 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	// THESE TESTS WILL TAKE TIME TO COMPLETE!!!!
 
 	a.nTasks                 = 10
+	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
@@ -1072,6 +1088,7 @@ func testConns(t *testing.T, a testConnsArg) {
 		// a.nTasks stays the same
 		// a.testIdleConnTimeout stays the same
 
+		a.nSkipDrainBody         = 0
 		a.nSkipCloseBody         = 0
 		a.nSuccessRetries        = 0
 		a.nHttpTimeouts          = 0
@@ -1179,7 +1196,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 				// Must fully read the body in order to close the body so that
 				// the underlying libraries/modules don't close the connection.
 				// If body not fully conusmed they assume the connection had issues
-//				_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
+				_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
 
 				tsk.Request.Response.Body.Close()
 				tsk.Request.Response.Body = nil
@@ -1215,7 +1232,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 				// Must fully read the body in order to close the body so that
 				// the underlying libraries/modules don't close the connection.
 				// If body not fully conusmed they assume the connection had issues
-//				_, _ = io.Copy(io.Discard, tList[i].Request.Response.Body)
+				_, _ = io.Copy(io.Discard, tList[i].Request.Response.Body)
 
 				tList[i].Request.Response.Body.Close()
 				tList[i].Request.Response.Body = nil
@@ -1256,12 +1273,17 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 	// Now close the response bodies so connections stay open after we call
 	// tloc.Cancel().  We sometimes skip one to test that tloc.Close()
-	// closes it for us and the connection associated with it
-	nSkipped := 0
-	t.Logf("Closing response bodies (nSkipCloseBody=%v)", a.nSkipCloseBody)
+	// closes it for us and the connection associated with it.  Note that
+	// if a response body is not drained before closure, the connection
+	// stays open but is marked "dirty".  If a tool like 'ss' inspects all
+	// our open connections, this act causes the "dirty" connections to
+	// close.  Thus, we do want to test for that case too.
+	nBodyClosesSkipped := 0
+	nBodyDrainBeforeCloseSkipped := 0
+	t.Logf("Closing response bodies (skip body=%v drain=%v)", a.nSkipCloseBody, a.nSkipDrainBody)
 	for _, tsk := range(tList) {
-		if nSkipped < a.nSkipCloseBody {
-			nSkipped++
+		if nBodyClosesSkipped < a.nSkipCloseBody {
+			nBodyClosesSkipped++
 			if logLevel == logrus.DebugLevel {
 				t.Logf("Skipping closing response body for task %v", tsk.GetID())
 			}
@@ -1273,7 +1295,11 @@ t.Errorf("Checking for response for task %v", tsk.GetID())
 			// Must fully read the body in order to close the body so that
 			// the underlying libraries/modules don't close the connection.
 			// If body not fully conusmed they assume the connection had issues
-//			_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
+			if nBodyDrainBeforeCloseSkipped < a.nSkipDrainBody {
+t.Errorf("Draining response body for task %v", tsk.GetID())
+				nBodyDrainBeforeCloseSkipped++
+				_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
+			}
 t.Errorf("Closing response body for task %v", tsk.GetID())
 
 			tsk.Request.Response.Body.Close()
