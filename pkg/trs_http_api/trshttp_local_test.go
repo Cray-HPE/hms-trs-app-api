@@ -860,7 +860,7 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 1
 	a.nHttpTimeouts          = 0
-	a.openAfterTasksComplete = maxIdleConnsPerHost
+	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = maxIdleConnsPerHost
 	a.openAfterCancel        = maxIdleConnsPerHost
 	a.openAfterClose         = maxIdleConnsPerHost
@@ -1393,6 +1393,14 @@ const sleepTimeToStabilizeConns = 250 * time.Millisecond
 func testConns(t *testing.T, a testConnsArg) {
 	logConnTestHeader(t, a)
 
+	// Will need this in several places
+	var maxIdleConnsPerHost int
+	if a.tListProto.CPolicy.Tx.Enabled == false {
+		maxIdleConnsPerHost = 2
+	} else {
+		maxIdleConnsPerHost = a.tListProto.CPolicy.Tx.MaxIdleConnsPerHost
+	}
+
 	// Initialize the task system
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger())
@@ -1430,18 +1438,9 @@ func testConns(t *testing.T, a testConnsArg) {
 		}
 
 		a.openAfterTasksComplete = a.nTasks
-
-		var maxIdleConns int
-
-		if a.tListProto.CPolicy.Tx.Enabled == false {
-			maxIdleConns = 2
-		} else {
-			maxIdleConns = a.tListProto.CPolicy.Tx.MaxIdleConns
-		}
-
-		a.openAfterBodyClose     = maxIdleConns
-		a.openAfterCancel        = maxIdleConns
-		a.openAfterClose         = maxIdleConns
+		a.openAfterBodyClose     = maxIdleConnsPerHost
+		a.openAfterCancel        = maxIdleConnsPerHost
+		a.openAfterClose         = maxIdleConnsPerHost
 
 		t.Logf("===================> RUNNING SECOND TASK LIST <===================")
 
@@ -1550,19 +1549,17 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 			}
 		}
 
-		// All connections should still be in ESTAB(LISHED)
+		// Test proper number of open connections
 		time.Sleep(sleepTimeToStabilizeConns)
 		t.Logf("Testing connections after non-retry request bodies closed (oabc=%v nfr=%v)",
 			    a.openAfterBodyClose, a.nFailRetries)
 
-		/*
-		if a.tListProto.CPolicy.Tx.Enabled == false {
-			maxIdleConns = 2
-		} else {
-			maxIdleConns = a.tListProto.CPolicy.Tx.MaxIdleConns
+		nToWaitFor := a.openAfterBodyClose + a.nFailRetries
+		if nToWaitFor > maxIdleConnsPerHost {}
+			nToWaitFor = maxIdleConnsPerHost
 		}
-			*/
-		testOpenConnections(t, a.openAfterBodyClose + a.nFailRetries)
+
+		testOpenConnections(t, nToWaitFor)
 	}
 
 	// Here we attempt to close task bodies and cancel context for tasks that
