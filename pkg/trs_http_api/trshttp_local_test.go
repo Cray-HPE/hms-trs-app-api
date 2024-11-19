@@ -1074,7 +1074,7 @@ func TestBasicConnectionBehaviorWithHttpTxPolicy(t *testing.T) {
 	pcsMaxIdleConns        = 10
 	pcsMaxIdleConnsPerHost = 10
 
-	nTasks                  := 10
+	nTasks                  := 1000
 
 	// Timeout placed on the context for the http request
 	ctxTimeout := time.Duration(pcsStatusTimeout) * time.Second
