@@ -1197,8 +1197,8 @@ func TestLargeConnectionPools(t *testing.T) {
 			Tx:
 				HttpTxPolicy {
 					Enabled:                  true,
-					MaxIdleConns:             pcsMaxIdleConns,
-					MaxIdleConnsPerHost:      pcsMaxIdleConnsPerHost,
+					MaxIdleConns:             maxIdleConns,
+					MaxIdleConnsPerHost:      maxIdleConnsPerHost,
 					IdleConnTimeout:          idleConnTimeout,
 					// ResponseHeaderTimeout: responseHeaderTimeout,
 					// TLSHandshakeTimeout:   tLSHandshakeTimeout,
