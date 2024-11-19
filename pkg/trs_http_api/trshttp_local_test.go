@@ -691,7 +691,7 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	}
 
 	t.Logf("ctxTimeout              = %v", ctxTimeout)
-	t.Logf("idleConnTimeout         = %v", idleConnTimeout)
+	t.Logf("idleConnTimeout         = 0   (default) (ie. no limit)")
 	t.Logf("pcsTimeToNextStatusPoll = %v", pcsTimeToNextStatusPoll)
 	t.Logf("MaxIdleConns            = 100 (default)")
 	t.Logf("MaxIdleConnsPerHost     = 2   (default)")
