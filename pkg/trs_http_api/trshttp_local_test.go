@@ -1552,8 +1552,16 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 		// All connections should still be in ESTAB(LISHED)
 		time.Sleep(sleepTimeToStabilizeConns)
-		t.Logf("Testing connections after non-retry request bodies closed")
+		t.Logf("Testing connections after non-retry request bodies closed (oabc=%v nfr=%v)",
+			    a.openAfterBodyClose, a.nFailRetries)
 
+		/*
+		if a.tListProto.CPolicy.Tx.Enabled == false {
+			maxIdleConns = 2
+		} else {
+			maxIdleConns = a.tListProto.CPolicy.Tx.MaxIdleConns
+		}
+			*/
 		testOpenConnections(t, a.openAfterBodyClose + a.nFailRetries)
 	}
 
