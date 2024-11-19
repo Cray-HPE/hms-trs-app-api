@@ -1523,9 +1523,11 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	tasksToWaitFor := a.nTasks
 	if a.nFailRetries > 0 && retrySleep > 0 {
 		t.Logf("Waiting for %v non-retry tasks to complete", a.nTasks - a.nFailRetries)
+		nWaitedFor := 0
 		for i := 0; i < (a.nTasks - a.nFailRetries); i++ {
 			<-taskListChannel
 			tasksToWaitFor--
+			nWaitedFor++
 		}
 
 		t.Logf("Draining/closing non-retry response bodies early before retry failures")
@@ -1550,12 +1552,13 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		t.Logf("Testing connections after non-retry request bodies closed (oabc=%v nfr=%v)",
 			    a.openAfterBodyClose, a.nFailRetries)
 
-		nToWaitFor := a.openAfterBodyClose + a.nFailRetries
-		//if nToWaitFor > a.maxIdleConnsPerHost {
-			//nToWaitFor = a.maxIdleConnsPerHost
-		//}
+		oConns := nWaitedFor
+		if nWaitedFor > a.maxIdleConnsPerHost {
+			oConns = a.maxIdleConnsPerHost
+		}
+		oConns += a.nFailRetries
 
-		testOpenConnections(t, nToWaitFor)
+		testOpenConnections(t, oConns)
 	}
 
 	// Here we attempt to close task bodies and cancel context for tasks that
