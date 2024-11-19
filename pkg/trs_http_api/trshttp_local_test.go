@@ -415,7 +415,7 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Logf("error running ss utility: %v", err)
+		t.Errorf("===> ERROR: error running ss utility: %v", err)
 		return
 	}
 
@@ -631,7 +631,11 @@ type testConnsArg struct {
 }
 
 func logConnTestHeader(t *testing.T, a testConnsArg) {
-	t.Logf("============================================================")
+	t.Logf("")
+	t.Logf("--------------------------------------------------")
+	t.Logf("-             Sub-Test Configuration             -")
+	t.Logf("--------------------------------------------------")
+	t.Logf("")
 
 	if logLevel < logrus.ErrorLevel {
 		return 
@@ -663,7 +667,7 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 		t.Logf("                        IdleConnTimeout:     %v", a.tListProto.CPolicy.Tx.IdleConnTimeout)
 	}
 
-	t.Logf("============================================================")
+	t.Logf("")
 }
 
 // TestConnsWithHttpTxPolicy tests connection use by TRS callers that do
@@ -690,12 +694,19 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 		srvHandler:             launchHandler,	// always returns success
 	}
 
+	t.Logf("")
+	t.Logf("============================================================")
+	t.Logf("=                  Test Configuration                    ===")
+	t.Logf("============================================================")
+	t.Logf("")
+	t.Logf("ctxTimeout              = %v", ctxTimeout)
 	t.Logf("ctxTimeout              = %v", ctxTimeout)
 	t.Logf("idleConnTimeout         = 0   (default) (ie. no limit)")
 	t.Logf("pcsTimeToNextStatusPoll = %v", pcsTimeToNextStatusPoll)
 	t.Logf("MaxIdleConns            = 100 (default)")
 	t.Logf("MaxIdleConnsPerHost     = 2   (default)")
 	t.Logf("httpRetries             = %v", httpRetries)
+	t.Logf("")
 
 	// 10 requests: no issues
 
@@ -879,12 +890,18 @@ func TestBasicConnectionBehaviorWithHttpTxPolicy(t *testing.T) {
 		srvHandler:             launchHandler,	// always returns success
 	}
 
+	t.Logf("")
+	t.Logf("============================================================")
+	t.Logf("=                  Test Configuration                    ===")
+	t.Logf("============================================================")
+	t.Logf("")
 	t.Logf("ctxTimeout              = %v", ctxTimeout)
 	t.Logf("idleConnTimeout         = %v", idleConnTimeout)
 	t.Logf("pcsTimeToNextStatusPoll = %v", pcsTimeToNextStatusPoll)
 	t.Logf("MaxIdleConns            = %v", pcsMaxIdleConns)
 	t.Logf("MaxIdleConnsPerHost     = %v", pcsMaxIdleConnsPerHost)
 	t.Logf("httpRetries             = %v", httpRetries)
+	t.Logf("")
 
 	// 10 requests: No issues so all conns should be open
 
@@ -1101,12 +1118,18 @@ func TestLargeConnectionPools(t *testing.T) {
 		srvHandler:             launchHandler,	// always returns success
 	}
 
+	t.Logf("")
+	t.Logf("============================================================")
+	t.Logf("=                  Test Configuration                    ===")
+	t.Logf("============================================================")
+	t.Logf("")
 	t.Logf("ctxTimeout              = %v", ctxTimeout)
 	t.Logf("idleConnTimeout         = %v", idleConnTimeout)
 	t.Logf("pcsTimeToNextStatusPoll = %v", pcsTimeToNextStatusPoll)
 	t.Logf("MaxIdleConns            = %v", pcsMaxIdleConns)
 	t.Logf("MaxIdleConnsPerHost     = %v", pcsMaxIdleConnsPerHost)
 	t.Logf("httpRetries             = %v", httpRetries)
+	t.Logf("")
 
 	// 1000 requests: No issues so all conns should be open
 
@@ -1229,7 +1252,9 @@ func TestLargeConnectionPools(t *testing.T) {
 	// task list should succeed everything.
 	a.runSecondTaskList = true
 
+logLevel = logrus.DebugLevel
 	testConns(t, a)
+logLevel = logrus.ErrorLevel
 
 	a.runSecondTaskList = false	// set back to default
 

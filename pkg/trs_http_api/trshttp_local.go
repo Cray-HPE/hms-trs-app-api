@@ -419,8 +419,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	tloc.clientMutex.Lock()
 	if _, ok := tloc.clientMap[tct.task.CPolicy]; !ok {
 		log := logrus.New()
-		log.SetLevel(logrus.DebugLevel)
-		//log.SetLevel(tloc.Logger.GetLevel())
+		log.SetLevel(tloc.Logger.GetLevel())
 		httpLogger := retryablehttp.LeveledLogger(&leveledLogrus{log})
 
 		cpack = new(clientPack)
