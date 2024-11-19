@@ -739,9 +739,9 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = a.nTasks - a.nSkipCloseBody	// the ss call after body close does it
-	a.openAfterCancel        = a.nTasks - a.nSkipCloseBody
-	a.openAfterClose         = a.nTasks - a.nSkipCloseBody
+	a.openAfterBodyClose     = a.nTasks - a.nSkipDrainBody	// the ss call after body close does it
+	a.openAfterCancel        = a.nTasks - a.nSkipDrainBody
+	a.openAfterClose         = a.nTasks - a.nSkipDrainBody
 
 	testConns(t, a)
 
@@ -937,23 +937,19 @@ func TestBasicConnectionBehavior(t *testing.T) {
 	// contexts and closes any reponse bodies that were left open.
 
 	a.nTasks                 = 10
-	a.nSkipDrainBody         = 0
-	a.nSkipCloseBody         = 2
+	a.nSkipDrainBody         = 2
+	a.nSkipCloseBody         = 0
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
 	a.nHttpTimeouts          = 0
 	a.testIdleConnTimeout    = false
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = a.nTasks
-	a.openAfterCancel        = a.nTasks
-	a.openAfterClose         = a.nTasks
-
-	a.skipCancel             = true
+	a.openAfterBodyClose     = a.nTasks - a.nSkipDrainBody	// the ss call after body close does it
+	a.openAfterCancel        = a.nTasks - a.nSkipDrainBody
+	a.openAfterClose         = a.nTasks - a.nSkipDrainBody
 
 	testConns(t, a)
-
-	a.skipCancel             = false // this was the only test we set it
 
 	// 10 requests: 2 retries that both succeed
 
