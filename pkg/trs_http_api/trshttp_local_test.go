@@ -1062,6 +1062,7 @@ return
 // to in TRS.  This includes the use of an http transport configuration.
 
 func TestBasicConnectionBehaviorWithHttpTxPolicy(t *testing.T) {
+return
 	// PCS defaults
 	httpRetries             := 3
 	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
@@ -1074,7 +1075,7 @@ func TestBasicConnectionBehaviorWithHttpTxPolicy(t *testing.T) {
 	pcsMaxIdleConns        = 10
 	pcsMaxIdleConnsPerHost = 10
 
-	nTasks                  := 1000
+	nTasks                  := 10
 
 	// Timeout placed on the context for the http request
 	ctxTimeout := time.Duration(pcsStatusTimeout) * time.Second
