@@ -740,7 +740,7 @@ func TestConnsBasics(t *testing.T) {
 	// All successes
 
 	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 2
+	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
@@ -850,7 +850,7 @@ func TestConnsBasics(t *testing.T) {
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
 	a.nSkipDrainBody         = 1
-	a.nSkipCloseBody         = 0
+	a.nSkipCloseBody         = 1
 	a.nHttpTimeouts          = 0
 	a.openAfterTasksComplete = a.nTasks
 	a.openAfterBodyClose     = a.nTasks - a.nSkipDrainBody // lazy closure caused by 'ss'
@@ -1044,7 +1044,9 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.openAfterCancel        = 2	// MaxIdleConnsPerHost
 	a.openAfterClose         = 2	// MaxIdleConnsPerHost
 
+logLevel = logrus.DebugLevel
 	testConns(t, a)
+logLevel = logrus.ErrorLevel
 }
 
 // TestBasicConnectionBehavior tests the connection behavior that we code
@@ -1424,9 +1426,7 @@ func TestLargeConnectionPools(t *testing.T) {
 	// task list should succeed everything.
 	a.runSecondTaskList = true
 
-//logLevel = logrus.DebugLevel
 	testConns(t, a)
-//logLevel = logrus.ErrorLevel
 
 	a.runSecondTaskList = false	// set back to default
 
@@ -1551,9 +1551,18 @@ func testConns(t *testing.T, a testConnsArg) {
 		}
 
 		a.openAfterTasksComplete = a.nTasks
-		a.openAfterBodyClose     = a.nTasks
-		a.openAfterCancel        = a.nTasks
-		a.openAfterClose         = a.nTasks
+
+		var maxIdleConns int
+
+		if a.tListProto.CPolicy.Tx.Enabled == false {
+			maxIdleConns = 2
+		} else {
+			maxIdleConns = a.tListProto.CPolicy.Tx.MaxIdleConns
+		}
+
+		a.openAfterBodyClose     = maxIdleConns
+		a.openAfterCancel        = maxIdleConns
+		a.openAfterClose         = maxIdleConns
 
 		t.Logf("===================> RUNNING SECOND TASK LIST <===================")
 
@@ -1778,7 +1787,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		t.Logf("Skipping tloc.Cancel()")
 	} else {
 		// tloc.Cancel() cancels the contexts for all of the tasks in the task list
-		t.Logf("Calling tloc.Cancel() to cancel all tasks")
+		t.Logf("Calling tloc.Cancel() to cancel all tasks (skipCancel=false)")
 		tloc.Cancel(&tList)
 
 		// Cancelling the task list should not alter existing ESTAB(LISHED)
