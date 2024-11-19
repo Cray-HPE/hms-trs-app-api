@@ -1568,9 +1568,11 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 	if a.nHttpTimeouts > 0 {
 		t.Logf("Waiting for %v non-timeout tasks to complete", a.nTasks - a.nHttpTimeouts)
+		nWaitedFor := 0
 		for i := 0; i < (a.nTasks - a.nHttpTimeouts); i++ {
 			<-taskListChannel
 			tasksToWaitFor--
+			nWaitedFor++
 		}
 
 		t.Logf("Draining/closing non-timeout response bodies early and canceling their contexts")
@@ -1591,9 +1593,16 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 			tList[i].contextCancel()
 		}
 
-		// All connections should still be in ESTAB(LISHED)
+		// Test proper number of open connections
 		time.Sleep(sleepTimeToStabilizeConns)
 		t.Logf("Testing connections after non-timeout request bodies closed")
+
+		oConns := nWaitedFor
+		if nWaitedFor > a.maxIdleConnsPerHost {
+			oConns = a.maxIdleConnsPerHost
+		}
+		oConns += a.nHttpTimeouts
+
 		testOpenConnections(t, a.nTasks)
 	}
 
