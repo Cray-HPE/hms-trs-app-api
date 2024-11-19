@@ -807,7 +807,7 @@ func TestConnsBasics(t *testing.T) {
 
 	retrySleep = 0	// Set back to default
 
-	// Body Drain: no
+	// Body Drain: skip
 	// Body Close: yes
 
 	a.nTasks                 = nTasks
@@ -824,7 +824,7 @@ func TestConnsBasics(t *testing.T) {
 	testConns(t, a)
 
 	// Body Drain: yes
-	// Body Close: no
+	// Body Close: skip
 	//
 	// Unlike skipping the body drain, skipping the body close does not cause
 	// the connection to be marked "dirty"
@@ -843,8 +843,12 @@ func TestConnsBasics(t *testing.T) {
 
 	testConns(t, a)
 
-	// Body Drain: no
-	// Body Close: no
+	// Body Drain: skip
+	// Body Close: skip
+	//
+	// Run second task list as undrained/closed body should result in open
+	// but unusable connection. Should get a 3rd connection opened with the
+	// second run
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
@@ -853,13 +857,19 @@ func TestConnsBasics(t *testing.T) {
 	a.nSkipCloseBody         = 1
 	a.nHttpTimeouts          = 0
 	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = a.nTasks - a.nSkipDrainBody // lazy closure caused by 'ss'
-	a.openAfterCancel        = a.nTasks - a.nSkipDrainBody
-	a.openAfterClose         = a.nTasks - a.nSkipDrainBody
+	a.openAfterBodyClose     = a.nTasks	// 1 of these should be open but unusable
+	a.openAfterCancel        = a.nTasks
+	a.openAfterClose         = a.nTasks
+
+	a.runSecondTaskList = true
 
 	testConns(t, a)
 
-	// Basics: One context timeout (not http - can only be consigured if using HttpTxPolicy)
+	a.runSecondTaskList = false
+
+	// Basics: One context timeout (not http - can only be consigured if
+	//         using HttpTxPolicy).  We also run a second task list to
+	//		   confirm same number of open connections at start of second
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
@@ -873,7 +883,11 @@ func TestConnsBasics(t *testing.T) {
 	a.openAfterCancel        = a.nTasks - a.nHttpTimeouts
 	a.openAfterClose         = a.nTasks - a.nHttpTimeouts
 
+	a.runSecondTaskList = true
+
 	testConns(t, a)
+
+	a.runSecondTaskList = false
 
 }
 
@@ -918,6 +932,26 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	t.Logf("MaxIdleConnsPerHost     = 2   (default)")
 	t.Logf("httpRetries             = %v", httpRetries)
 	t.Logf("")
+
+	// No issues
+
+	a.nTasks                 = nTasks
+	a.nSuccessRetries        = 0
+	a.nFailRetries           = 0
+	a.nSkipDrainBody         = 0
+	a.nSkipCloseBody         = 0
+	a.nHttpTimeouts          = 0
+	a.testIdleConnTimeout    = false
+	a.openAfterTasksComplete = 10
+	a.openAfterBodyClose     = 2	// MaxIdleConnsPerHost
+	a.openAfterCancel        = 2	// MaxIdleConnsPerHost
+	a.openAfterClose         = 2	// MaxIdleConnsPerHost
+
+	a.runSecondTaskList = true // second run should not open any new connections
+
+	testConns(t, a)
+
+	a.runSecondTaskList = false
 
 	//  Basics: One skipped body close
 
@@ -1008,27 +1042,6 @@ func TestConnsWithNoHttpTxPolicy(t *testing.T) {
 	a.openAfterClose         = a.nTasks - a.nHttpTimeouts
 
 	testConns(t, a)
-
-	// No issues
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 0
-	a.nFailRetries           = 0
-	a.nSkipDrainBody         = 0
-	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 0
-	a.testIdleConnTimeout    = false
-	a.openAfterTasksComplete = 10
-	a.openAfterBodyClose     = 2	// MaxIdleConnsPerHost
-	a.openAfterCancel        = 2	// MaxIdleConnsPerHost
-	a.openAfterClose         = 2	// MaxIdleConnsPerHost
-
-	a.runSecondTaskList = true // second run should not open any new connections
-
-	testConns(t, a)
-
-	a.runSecondTaskList = false
-
 
 	// 2 skipped body closes, 3 successful retries, 2 retry failures
 
@@ -1732,27 +1745,29 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 	nBodyClosesSkipped := 0
 	nBodyDrainSkipped := 0
-	t.Logf("Draining/Closing response bodies (skip body=%v drain=%v)", a.nSkipCloseBody, a.nSkipDrainBody)
+	t.Logf("Draining/Closing response bodies (skipClose=%v skipDrain=%v)", a.nSkipCloseBody, a.nSkipDrainBody)
 	for _, tsk := range(tList) {
 		if nBodyClosesSkipped < a.nSkipCloseBody {
-			// May also want to drain body before skipping closure
-			if nBodyDrainSkipped < a.nSkipDrainBody {
+			if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
+				// May also want to drain body before skipping closure
+				if nBodyDrainSkipped < a.nSkipDrainBody {
 
-				nBodyDrainSkipped++
+					nBodyDrainSkipped++
+
+					if logLevel == logrus.DebugLevel {
+						t.Logf("Skipping draining response body for task %v", tsk.GetID())
+					}
+				} else {
+					_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
+				}
+
+				nBodyClosesSkipped++
 
 				if logLevel == logrus.DebugLevel {
-					t.Logf("Skipping draining response body for task %v", tsk.GetID())
+					t.Logf("Skipping closing response body for task %v", tsk.GetID())
 				}
-			} else {
-				_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
+				continue
 			}
-
-			nBodyClosesSkipped++
-
-			if logLevel == logrus.DebugLevel {
-				t.Logf("Skipping closing response body for task %v", tsk.GetID())
-			}
-			continue
 		}
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 			// Skip draining the body if requested
