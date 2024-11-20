@@ -908,13 +908,14 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 
 	// Truncate the good connections down to MaxIdleConnsPerHost
 	// plus whatever connections are yucky
-	openAfter := a.nTasks - a.nSkipDrainBody
-	t.Logf("openAfter = %v", openAfter)
-	openAfter = openAfter % maxIdleConns
-	t.Logf("openAfter = %v", openAfter)
-	openAfter = openAfter + a.nSkipDrainBody
-	t.Logf("openAfter = %v", openAfter)
-	//openAfter := ((a.nTasks - a.nSkipDrainBody) % maxIdleConns) + a.nSkipDrainBody
+
+	//openAfter := a.nTasks - a.nSkipDrainBody
+	//t.Logf("openAfter = %v", openAfter)
+	//openAfter = openAfter % maxIdleConns
+	//t.Logf("openAfter = %v", openAfter)
+	//openAfter = openAfter + a.nSkipDrainBody
+	//t.Logf("openAfter = %v", openAfter)
+	openAfter := ((a.nTasks - a.nSkipDrainBody) % maxIdleConnsPerHost) + a.nSkipDrainBody
 
 	a.openAfterBodyClose     = openAfter
 	a.openAfterCancel        = openAfter
@@ -1167,7 +1168,7 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 //	}
 //	// And add in the unusable open connections
 //	openAfter += a.nSkipDrainBody	// must be same as a.nSkipCloseBody
-	openAfter := ((a.nTasks - a.nSkipDrainBody) % maxIdleConns) + a.nSkipDrainBody
+	openAfter := ((a.nTasks - a.nSkipDrainBody) % maxIdleConnsPerHost) + a.nSkipDrainBody
 
 	a.openAfterBodyClose     = openAfter
 	a.openAfterCancel        = openAfter
@@ -1214,9 +1215,9 @@ func TestLargeConnectionPools(t *testing.T) {
 	httpRetries             := 3
 	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
 	pcsStatusTimeout        := 30
-	maxIdleConns            := 50000
-	maxIdleConnsPerHost     := 50000
-	nTasks                  := 50000
+	maxIdleConns            := 30000	// TRS can handle larger but unit test vm can't
+	maxIdleConnsPerHost     := 30000	// TRS can handle larger but unit test vm can't
+	nTasks                  := 30000	// TRS can handle larger but unit test vm can't
 
 	// Timeout placed on the context for the http request
 	ctxTimeout := time.Duration(pcsStatusTimeout) * time.Second
