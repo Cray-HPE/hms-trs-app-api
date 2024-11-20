@@ -136,7 +136,21 @@ func (tloc *TRSHTTPLocal) CreateTaskList(source *HttpTask, numTasks int) []HttpT
 // we can control its log levels.  We match TRS's log level as this is what
 // TRS's caller wants to see.  The code for this comes from the community as
 // a recommended work around for the following issue:
-// https://github.com/hashicorp/go-retryablehttp/issues/93
+//
+//      https://github.com/hashicorp/go-retryablehttp/issues/93
+//
+// In the final version of the commit that added this capability, the
+// decision was made NOT to pass our leveldLogrus down to retryablehttp.
+// With the prior implementation, TRS was passing down a non-leveled
+// logger but did so incorrectly which resulted in NO log messages ever
+// being made by retryablehttp.  With the following leveled logger
+// being correctly passed down, logs start to happen but by doing this
+// it was observed that retryablehttp is overly verbose in its logging,
+// even at the error level.  To prevent log volume issues, we are keeping
+// the currently incorrectly configured logger in place down inside of
+// ExecuteTask() so that no logging happens in retryablehttp.  We are
+// keeping the code needed for leveled logging in place though in the
+// event a new version of retryablehttp becomes less chatty.
 
 type leveledLogrus struct {
 	*logrus.Logger
@@ -434,12 +448,8 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		httpLogger := logrus.New()
 		httpLogger.SetLevel(tloc.Logger.GetLevel())
 
-		// While having a leveled logger is super nice for seeing what is
-		// happening in retryablehttp, it comes with the cost of massive
-		// logging on large systems even for the highest error log level.
-		// Because it is so overly verbose, we keep to a non-leveled logger
-		// for now. Maybe a future version of retryablehttp will be less
-		// loggy.
+		// Do not use leveled logging for now.  See explanation further
+		// up in the source code.
 		//
 		//retryablehttpLogger := retryablehttp.LeveledLogger(&leveledLogrus{httpLogger})
 

@@ -820,7 +820,7 @@ func TestConnsWithNoHttpTxPolicy_ModeratlyBusy(t *testing.T) {
 
 func TestConnsWithNoHttpTxPolicy_Busy(t *testing.T) {
 
-	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	//t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 	nTasks  := 4000
 	nIssues := 1
@@ -882,6 +882,7 @@ func TestConnsWithHttpTxPolicy_PcsSmallIdle(t *testing.T) {
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
 
+/* PUT BACK IF 4000 LVEEL TEST REMOVED
 func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusy(t *testing.T) {
 	nTasks              := 1000
 	nIssues             := 4
@@ -891,6 +892,7 @@ func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusy(t *testing.T) {
 
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
+*/
 
 func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusyLotsOfErrors(t *testing.T) {
 	nTasks              := 1000
@@ -899,14 +901,14 @@ func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusyLotsOfErrors(t *testing.T) {
 	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
 	pcsStatusTimeout    := 30   // PCS default
 
-	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	//t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
 
 func TestConnsWithHttpTxPolicy_PcsSmallBusy(t *testing.T) {
 
-	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	//t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 	nTasks              := 4000
 	nIssues             := 10

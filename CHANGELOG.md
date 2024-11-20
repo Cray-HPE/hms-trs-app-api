@@ -9,14 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Created new HttpTxPolicy that callers can use to configure http transport
-- Added additional tracing for debug purposes
-- ExecuteTask(): Reworked for easier readability and maintainability
-- ExecuteTask(): Return immediately when errors are encountered
-- ExecuteTask(): Cancel contexts immediatly after successful responses
+- TRS now supports configuration of connection counts and timeouts by callers
+- TRS no longer closes all idle connections when http or contexts time out
+- TRS no longer closes all idle connections when request retry limits are reached
+- Reworked several sections of code for clarity and reduced code duplication
+- Fixed bug where contexts were never being cancelled which lead to resource leaks
+- Additional tracing added for debug purposes
 - Unit tests: Now run in verbose mode so failures are more easily analyzed
 - Unit tests: Enabled TRS logging from inside unit tests
 - Unit tests: Error signature changed to make identifying errors easier
+- Unit tests: Reworked some existing unit tests
 - Unit tests: Numerous unit tests added to test connection states
 
 ## [2.1.1] - 2024-10-31
