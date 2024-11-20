@@ -218,6 +218,15 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 // connections after every single http timeout, context timeout, or retry
 // count exceeded condition.  So, if we close out all the connections
 // occasionally after a two hour period, not a big deal.
+//
+// WARNING!  The Go runtime behavior surrounding connections has changed in
+//			 more recent versions of Go.  Prior to version 1.23, if any
+//			 connection in the connection pool experiences a timeout, the
+//			 Go runtime closes ALL idle connections.  There is nothing we
+//			 can do about this in TRS, other than use a newer version of Go
+//			 that doesn't exhibit this (horrible) behavior.  Our clever
+//			 trick below with CloseIdleConnections() cannot prevent the
+//			 Go runtime from doing this.
 
 func (c *trsRoundTripper) CloseIdleConnections() {
 
@@ -462,9 +471,8 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		if (tloc.CACertPool != nil) {
 			cpack.secure = createClient(tct.task, tloc, "secure")
 			cpack.secure.Logger = httpLogger
-
-			tloc.Logger.Tracef("Created secure client with policy %v", tct.task.CPolicy)
 		}
+
 		tloc.clientMap[tct.task.CPolicy] = cpack
 	} else {
 		cpack = tloc.clientMap[tct.task.CPolicy]

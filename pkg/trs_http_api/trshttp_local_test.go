@@ -485,9 +485,9 @@ func TestLaunchTimeout(t *testing.T) {
 ///////////////////////////////////////////////////////////////////////////
 //
 // WARNING!  The Go runtime behavior surrounding connections has changed in
-//			 more recent versions of Go.  Prior to version 1.23.X, if any
+//			 more recent versions of Go.  Prior to version 1.23, if any
 //			 connection in the connection pool experiences a timeout, the
-//			 Go runtime closes all idle connections.  There is nothing we
+//			 Go runtime closes ALL idle connections.  There is nothing we
 //			 can do about this in TRS, other than use a newer version of Go
 //			 that doesn't exhibit this (horrible) behavior.
 //
