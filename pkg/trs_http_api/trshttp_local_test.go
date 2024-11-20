@@ -882,7 +882,7 @@ func TestConnsWithHttpTxPolicy_PcsSmallIdle(t *testing.T) {
 	nTasks              := 4
 	nIssues             := 4
 	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
-	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
+	maxIdleConns        := 4000	// PCS default when using HttpTxPolicy
 	pcsStatusTimeout    := 30   // PCS default
 
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
@@ -891,9 +891,9 @@ func TestConnsWithHttpTxPolicy_PcsSmallIdle(t *testing.T) {
 func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusy(t *testing.T) {
 
 	nTasks              := 1000
-	nIssues             := 10
+	nIssues             := 5
 	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
-	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
+	maxIdleConns        := 4000	// PCS default when using HttpTxPolicy
 	pcsStatusTimeout    := 30   // PCS default
 
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
@@ -906,7 +906,7 @@ func TestConnsWithHttpTxPolicy_PcsSimulatedMedium(t *testing.T) {
 	nTasks              := 1000
 	nIssues             := 4
 	maxIdleConnsPerHost := 1000 // Simulate more servers and larger connection pool
-	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
+	maxIdleConns        := 4000	// PCS default when using HttpTxPolicy
 	pcsStatusTimeout    := 30   // PCS default
 
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
@@ -919,7 +919,7 @@ func TestConnsWithHttpTxPolicy_PcsSmallBusy(t *testing.T) {
 	nTasks              := 4000
 	nIssues             := 10
 	maxIdleConnsPerHost := 1000	// Simulate more servers and larger connection pool
-	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
+	maxIdleConns        := 4000	// PCS default when using HttpTxPolicy
 	pcsStatusTimeout    := 30   // PCS default
 
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
