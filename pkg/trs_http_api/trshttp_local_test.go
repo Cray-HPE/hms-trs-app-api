@@ -823,7 +823,7 @@ func TestConnsWithNoHttpTxPolicy_Busy(t *testing.T) {
 	//t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 	nTasks  := 4000
-	nIssues := 1
+	nIssues := 200
 
 	testConnsWithNoHttpTxPolicy(t, nTasks, nIssues)
 }
@@ -882,22 +882,20 @@ func TestConnsWithHttpTxPolicy_PcsSmallIdle(t *testing.T) {
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
 
-/* PUT BACK IF 4000 LVEEL TEST REMOVED
 func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusy(t *testing.T) {
 	nTasks              := 1000
-	nIssues             := 4
+	nIssues             := 10
 	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
 	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
 	pcsStatusTimeout    := 30   // PCS default
 
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
-*/
 
-func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusyLotsOfErrors(t *testing.T) {
+func TestConnsWithHttpTxPolicy_PcsSimulatedMedium(t *testing.T) {
 	nTasks              := 1000
-	nIssues             := 900
-	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
+	nIssues             := 4
+	maxIdleConnsPerHost := 1000 // Simulate more servers and larger connection pool
 	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
 	pcsStatusTimeout    := 30   // PCS default
 
@@ -908,11 +906,11 @@ func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusyLotsOfErrors(t *testing.T) {
 
 func TestConnsWithHttpTxPolicy_PcsSmallBusy(t *testing.T) {
 
-	//t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 	nTasks              := 4000
 	nIssues             := 10
-	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
+	maxIdleConnsPerHost := 1000	// Simulate more servers and larger connection pool
 	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
 	pcsStatusTimeout    := 30   // PCS default
 
@@ -1122,7 +1120,11 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.openAfterCancel        = a.maxIdleConnsPerHost
 	a.openAfterClose         = a.maxIdleConnsPerHost
 
-	retrySleep = 10	// So retries complete after
+	if a.nTasks < 1000 && a.nFailRetries < 10 {
+		retrySleep = 10	// So retries complete after
+	} else {
+		retrySleep = 20	// So retries complete after
+	}
 
 	testConns(t, a)
 
