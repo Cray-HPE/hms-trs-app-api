@@ -907,7 +907,7 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	// Truncate the good connections down to MaxIdleConnsPerHost
 	// plus whatever connections are yucky
 
-	openAfter := a.nTasks - a.nSkipDrainBody
+	openAfter = a.nTasks - a.nSkipDrainBody
 	if openAfter > maxIdleConnsPerHost {
 		openAfter = maxIdleConnsPerHost
 	}
@@ -1162,7 +1162,7 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 	// Truncate the good connections down to MaxIdleConnsPerHost
 	// plus whatever connections are yucky
 
-	openAfter := a.nTasks - a.nSkipDrainBody
+	openAfter = a.nTasks - a.nSkipDrainBody
 	if openAfter > maxIdleConnsPerHost {
 		openAfter = maxIdleConnsPerHost
 	}
