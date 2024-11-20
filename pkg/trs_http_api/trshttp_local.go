@@ -314,10 +314,14 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 			}
 
 			// If no error present, let's give the caller the underlying
-			// reason why retries were exhausted
+			// reason why retries were exhausted, if it exists
 			if err == nil {
-				err = fmt.Errorf("retries exhausted: last attempt received status %d (%s)",
-								 resp.StatusCode, http.StatusText(resp.StatusCode))
+				if resp != nil {
+					err = fmt.Errorf("retries exhausted: last attempt received status %d (%s)",
+									 resp.StatusCode, http.StatusText(resp.StatusCode))
+				} else {
+					err = fmt.Errorf("retries exhausted")
+				}
 			}
 
 			// Skip an idle connection close
