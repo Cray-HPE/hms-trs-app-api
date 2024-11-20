@@ -436,6 +436,7 @@ func TestLaunchTimeout(t *testing.T) {
 //
 //			* Marked "dirty" and could get cleaned up any time since the
 //			  body was drained
+//			* Additionally, if IdleConnTimeout is exceeded, it will be closed
 //
 //		And body was NOT drained
 //
@@ -443,6 +444,11 @@ func TestLaunchTimeout(t *testing.T) {
 //			* OS connection state:    open, unusable (resource leak)
 //			* Istio connection state: open, unusable (resource leak)
 //
+//			* If IdleConnTimeout is exceeded, it will be closed and:
+//
+//				* Client resource leak will remain
+//				* OS resource leak will ??? (likely freed)
+//				* Istio resource leak should be freed
 
 // Test connection states using 'ss' utility
 func testOpenConnections(t *testing.T, clientEstabExp int) {
@@ -791,7 +797,7 @@ func TestConnsWithHttpTxPolicy_PcsLargeBusy(t *testing.T) {
 	nIssues             := 400
 	maxIdleConnsPerHost := 8000  // We're only using one Host server so pretend
 	maxIdleConns        := 8000  // 8000 requests / 4 per host = 2000 BMCs
-	pcsStatusTimeout    := 30
+	pcsStatusTimeout    := 60    // Increase for pitiful unit test vm 
 
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
@@ -933,7 +939,7 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.openAfterClose         = a.maxIdleConnsPerHost
 
 	retrySleep   = 0	// 0 seconds so retries complete first
-	handlerSleep = 10	// slow down the others
+	handlerSleep = 20	// slow down the others
 
 	testConns(t, a)
 
@@ -1023,12 +1029,13 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	// Body Drain: skip
 	// Body Close: skip
 	//
-	// Like the abote test case, an open body stays open if the body is
+	// Like the above test case, an open body stays open if the body is
 	// never closed and is not reusable for any other requests (unless
-	// body is later drained/closed)
+	// body is later drained/closed).
 	//
-	// When pruning open connections down to maxIdleConnsPerHost, I assume
-	// this unusable connection gets chosen to remain open
+	// Unlike the case above, the connection is not marked "dirty" and is
+	// not closed unless the caller closes the body or IdleConnTimeout
+	// causes it to close.
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
