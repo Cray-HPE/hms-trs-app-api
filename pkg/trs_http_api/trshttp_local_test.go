@@ -1204,9 +1204,9 @@ func TestLargeConnectionPools(t *testing.T) {
 	httpRetries             := 3
 	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
 	pcsStatusTimeout        := 30
-	maxIdleConns            := 50000
-	maxIdleConnsPerHost     := 50000
-	nTasks                  := 50000
+	maxIdleConns            := 100000
+	maxIdleConnsPerHost     := 100000
+	nTasks                  := 100000
 
 	// Timeout placed on the context for the http request
 	ctxTimeout := time.Duration(pcsStatusTimeout) * time.Second
@@ -1717,8 +1717,6 @@ t.Logf("Skipping draining response body for task %v", tsk.GetID())
 				t.Logf("Closed response body for task %v with response headers: %s",
 					   tsk.GetID(), tsk.Request.Response.Header)
 			}
-t.Logf("Closed response body for task %v with response headers: %s",
-	   tsk.GetID(), tsk.Request.Response.Header)
 		}
 	}
 
