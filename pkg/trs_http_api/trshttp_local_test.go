@@ -712,11 +712,15 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 // which is a newer feature of TRS.
 
 func TestConnsWithNoHttpTxPolicyAndTwoTasks(t *testing.T) {
-	testConnsWithNoHttpTxPolicy(t, 2)	// default MaxIdleConnsPerHost
+	nTasks := 2	// default MaxIdleConnsPerHost
+
+	testConnsWithNoHttpTxPolicy(t, nTasks)
 }
 
 func TestConnsWithNoHttpTxPolicyAndOneThousandTasks(t *testing.T) {
-	testConnsWithNoHttpTxPolicy(t, 1000)
+	nTasks := 1000
+
+	testConnsWithNoHttpTxPolicy(t, nTasks)
 }
 
 func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
@@ -724,10 +728,9 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	httpRetries             := 3
 	pcsStatusTimeout        := 30
 	ctxTimeout              := time.Duration(pcsStatusTimeout) * time.Second
-	//pcsTimeToNextStatusPoll := 30	// pmSampleInterval
-	//idleConnTimeout         := 0	// default when not using HttpTxPolicy (no timeout)
-	//maxIdleConns            := 100	// default when not using HttpTxPolicy
-	maxIdleConnsPerHost     := 2	// default when not using HttpTxPolicy
+	maxIdleConnsPerHost     := 2		// default when not using HttpTxPolicy
+	//maxIdleConns            := 100	// default when using HttpTxPolicy
+	//pcsTimeToNextStatusPoll := 30		// pmSampleInterval
 
 	// Default prototype to initialize each task in the task list with
 	// Can customize prior to each test
@@ -735,6 +738,91 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 		Timeout: ctxTimeout,
 		CPolicy: ClientPolicy {
 			Retry: RetryPolicy{Retries: httpRetries},
+		},
+	}
+
+	// Initialize argument structure (will be modified each test)
+	a := testConnsArg{
+		maxIdleConnsPerHost:    maxIdleConnsPerHost,
+		tListProto:             defaultTListProto,
+		srvHandler:             launchHandler,	// always returns success
+	}
+
+	testConnsPrep(t, a, nTasks, nIssues)
+}
+
+// TestConnsWithHttpTxPolicy* tests use by TRS users that do configure
+// the http transport.  We will use the defaults used by the PCS status
+// configuration for this.
+
+func TestConnsWithHttpTxPolicy_PcsSmallIdle(t *testing.T) {
+	nTasks              := 4
+	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
+	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
+
+	testConnsWithHttpTxPolicy(t, nTasks, maxIdleConnsPerHost, maxIdleConns)
+}
+
+func TestConnsWithHttpTxPolicy_PcsSmallBusy(t *testing.T) {
+	nTasks              := 4000
+	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
+	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
+
+	testConnsWithHttpTxPolicy(t, nTasks, maxIdleConnsPerHost, maxIdleConns)
+}
+
+func TestConnsWithHttpTxPolicy_PcsLargeBusy(t *testing.T) {
+	nTasks              := 8000
+	maxIdleConnsPerHost := 8000  // We're only using one Host server so pretend
+	maxIdleConns        := 8000  // 8000 requests / 4 per host = 2000 BMCs
+
+	testConnsWithHttpTxPolicy(t, nTasks, maxIdleConnsPerHost, maxIdleConns)
+}
+
+func TestConnsWithHttpTxPolicy_PcsHugeBusy(t *testing.T) {
+	nTasks                  := 24000  // TRS can handle larger but unit test vm can't
+	maxIdleConnsPerHost     := 24000  // We're only using one Host server so pretend
+	maxIdleConns            := 24000  // 24000 requests / 4 per host = 6000 BMCs
+
+	testConnsWithHttpTxPolicy(t, nTasks, maxIdleConnsPerHost, maxIdleConns)
+}
+
+func testConnsWithHttpTxPolicy(t *testing.T, nTasks int, maxIdleConnsPerHost int, maxIdleConns int) {
+	nIssues                 := 4
+	httpRetries             := 3
+	pcsStatusTimeout        := 30
+	ctxTimeout              := time.Duration(pcsStatusTimeout) * time.Second
+	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
+
+	// idleConnTimeout is the time after which idle connections are closed.
+	// In PCS we want them to stay open between polling intervals so they
+	// can be reused for the next poll.  Thus, we set it to the worst case
+	// time it takes for one poll (pcsStatusTimeout) plus the time until
+	// the next poll (pcsStatusPollInterval).  We add an additional 50% to
+	// this for a buffer (ie. multiply by 150%).
+	idleConnTimeout := time.Duration(
+		(pcsStatusTimeout + pcsTimeToNextStatusPoll) * 15 / 10) * time.Second
+
+	// Default prototype to initialize each task in the task list with
+	// Can customize prior to each test
+	defaultTListProto := &HttpTask{
+		Timeout: ctxTimeout,
+
+		CPolicy: ClientPolicy {
+			Retry:
+				RetryPolicy {
+					Retries: httpRetries,
+				},
+			Tx:
+				HttpTxPolicy {
+					Enabled:                  true,
+					MaxIdleConns:             maxIdleConns,
+					MaxIdleConnsPerHost:      maxIdleConnsPerHost,
+					IdleConnTimeout:          idleConnTimeout,
+					// ResponseHeaderTimeout: responseHeaderTimeout,
+					// TLSHandshakeTimeout:   tLSHandshakeTimeout,
+					// DisableKeepAlives:     DisableKeepAlives,
+			},
 		},
 	}
 
@@ -765,13 +853,12 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 		t.Logf("MaxIdleConns            = %v", a.tListProto.CPolicy.Tx.MaxIdleConns)
 		t.Logf("MaxIdleConnsPerHost     = %v", a.tListProto.CPolicy.Tx.MaxIdleConnsPerHost)
 	} else {
-		t.Logf("idleConnTimeout         = 0 (default - unlimited)")
-		t.Logf("MaxIdleConnsPerHost     = 2 (default)")
+		t.Logf("idleConnTimeout         = 0   (default - unlimited)")
+		t.Logf("MaxIdleConnsPerHost     = 2   (default)")
 		t.Logf("MaxIdleConns            = 100 (default)")
 	}
 
 	t.Logf("")
-
 
 	///////////////////////////////////////////////////////
 	// All successes
@@ -989,86 +1076,9 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.runSecondTaskList = false
 }
 
-// TestConnsWithHttpTxPolicy* tests use by TRS users that do configure
-// the http transport.  We will use the defaults used by the PCS status
-// configuration for this.
-
-func TestConnsWithHttpTxPolicyAndFourTasks(t *testing.T) {
-	testConnsWithHttpTxPolicy(t, 4)	// default MaxIdleConnsPerHost
-}
-
-func TestConnsWithHttpTxPolicyAndFourThousandTasks(t *testing.T) {
-	testConnsWithHttpTxPolicy(t, 1000)
-}
-
-func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
-	nIssues                 := 4
-	httpRetries             := 3
-	pcsStatusTimeout        := 30
-	ctxTimeout              := time.Duration(pcsStatusTimeout) * time.Second
-	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
-	maxIdleConns            := 1000	// default when using HttpTxPolicy
-	maxIdleConnsPerHost     := 4	// default when using HttpTxPolicy
-
-	// idleConnTimeout is the time after which idle connections are closed.
-	// In PCS we want them to stay open between polling intervals so they
-	// can be reused for the next poll.  Thus, we set it to the worst case
-	// time it takes for one poll (pcsStatusTimeout) plus the time until
-	// the next poll (pcsStatusPollInterval).  We add an additional 50% to
-	// this for a buffer (ie. multiply by 150%).
-	idleConnTimeout := time.Duration(
-		(pcsStatusTimeout + pcsTimeToNextStatusPoll) * 15 / 10) * time.Second
-
-	// Default prototype to initialize each task in the task list with
-	// Can customize prior to each test
-	defaultTListProto := &HttpTask{
-		Timeout: ctxTimeout,
-
-		CPolicy: ClientPolicy {
-			Retry:
-				RetryPolicy {
-					Retries: httpRetries,
-				},
-			Tx:
-				HttpTxPolicy {
-					Enabled:                  true,
-					MaxIdleConns:             maxIdleConns,
-					MaxIdleConnsPerHost:      maxIdleConnsPerHost,
-					IdleConnTimeout:          idleConnTimeout,
-					// ResponseHeaderTimeout: responseHeaderTimeout,
-					// TLSHandshakeTimeout:   tLSHandshakeTimeout,
-					// DisableKeepAlives:     DisableKeepAlives,
-			},
-		},
-	}
-
-	// Initialize argument structure (will be modified each test)
-	a := testConnsArg{
-		maxIdleConnsPerHost:    maxIdleConnsPerHost,
-		tListProto:             defaultTListProto,
-		srvHandler:             launchHandler,	// always returns success
-	}
-
-	t.Logf("")
-	t.Logf("============================================================")
-	t.Logf("=                  Test Configuration                    ===")
-	t.Logf("============================================================")
-	t.Logf("")
-	t.Logf("nTasks                  = %v", nTasks)
-	t.Logf("ctxTimeout              = %v", ctxTimeout)
-	t.Logf("idleConnTimeout         = %v", idleConnTimeout)
-	t.Logf("pcsTimeToNextStatusPoll = %v", pcsTimeToNextStatusPoll)
-	t.Logf("MaxIdleConns            = %v", maxIdleConns)
-	t.Logf("MaxIdleConnsPerHost     = %v", maxIdleConnsPerHost)
-	t.Logf("httpRetries             = %v", httpRetries)
-	t.Logf("")
-
-	testConnsPrep(t, a, nTasks, nIssues)
-}
-
 // TestLargeConnectionPools tests very large connection pools
 
-func TestLargeConnectionPools(t *testing.T) {
+func testLargeConnectionPools(t *testing.T) {
 	httpRetries             := 3
 	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
 	pcsStatusTimeout        := 30
