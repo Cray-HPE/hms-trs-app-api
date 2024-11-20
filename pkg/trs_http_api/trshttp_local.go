@@ -262,7 +262,7 @@ func (c *trsRoundTripper) CloseIdleConnections() {
 			// If its been two hours since we last closed idle connections
 			// or since the counter last reached zero, reset the counter to
 			// zero and proceed to close idle connections
-TESTLOGGER.Errorf("                                          RESETTING SKIP COUNTER!!!!")
+TESTLOGGER.Errorf("                                          RESETTING SKIP COUNTER!!!! ===> ERROR")
 			c.skipCloseCount = 0
 		} else {
 			c.skipCloseMutex.Unlock()
