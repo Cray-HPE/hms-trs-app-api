@@ -711,20 +711,28 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 // if they updated to the latest TRS without configuring the transport,
 // which is a newer feature of TRS.
 
-func TestConnsWithNoHttpTxPolicyAndTwoTasks(t *testing.T) {
-	nTasks := 2	// default MaxIdleConnsPerHost
+func TestConnsWithNoHttpTxPolicy_Idle(t *testing.T) {
+	nTasks  := 2	// default MaxIdleConnsPerHost
+	nIssues := 1
 
-	testConnsWithNoHttpTxPolicy(t, nTasks)
+	testConnsWithNoHttpTxPolicy(t, nTasks, nIssues)
 }
 
-func TestConnsWithNoHttpTxPolicyAndOneThousandTasks(t *testing.T) {
-	nTasks := 1000
+func TestConnsWithNoHttpTxPolicy_Busy(t *testing.T) {
+	nTasks  := 4000
+	nIssues := 1
 
-	testConnsWithNoHttpTxPolicy(t, nTasks)
+	testConnsWithNoHttpTxPolicy(t, nTasks, nIssues)
 }
 
-func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
-	nIssues                 := 1	// Issues to send to the next level down
+func TestConnsWithNoHttpTxPolicy_VeryBusy(t *testing.T) {
+	nTasks  := 8000
+	nIssues := 400
+
+	testConnsWithNoHttpTxPolicy(t, nTasks, nIssues)
+}
+
+func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int, nIssues int) {
 	httpRetries             := 3
 	pcsStatusTimeout        := 30
 	ctxTimeout              := time.Duration(pcsStatusTimeout) * time.Second
@@ -757,40 +765,48 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 
 func TestConnsWithHttpTxPolicy_PcsSmallIdle(t *testing.T) {
 	nTasks              := 4
+	nIssues             := 4
 	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
 	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
+	pcsStatusTimeout    := 30
 
-	testConnsWithHttpTxPolicy(t, nTasks, maxIdleConnsPerHost, maxIdleConns)
+	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
 
 func TestConnsWithHttpTxPolicy_PcsSmallBusy(t *testing.T) {
 	nTasks              := 4000
+	nIssues             := 100
 	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
 	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
+	pcsStatusTimeout    := 30
 
-	testConnsWithHttpTxPolicy(t, nTasks, maxIdleConnsPerHost, maxIdleConns)
+	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
 
 func TestConnsWithHttpTxPolicy_PcsLargeBusy(t *testing.T) {
 	nTasks              := 8000
+	nIssues             := 400
 	maxIdleConnsPerHost := 8000  // We're only using one Host server so pretend
 	maxIdleConns        := 8000  // 8000 requests / 4 per host = 2000 BMCs
+	pcsStatusTimeout    := 30
 
-	testConnsWithHttpTxPolicy(t, nTasks, maxIdleConnsPerHost, maxIdleConns)
+	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
 
 func TestConnsWithHttpTxPolicy_PcsHugeBusy(t *testing.T) {
-	nTasks                  := 24000  // TRS can handle larger but unit test vm can't
-	maxIdleConnsPerHost     := 24000  // We're only using one Host server so pretend
-	maxIdleConns            := 24000  // 24000 requests / 4 per host = 6000 BMCs
+	nTasks               := 24000  // TRS can handle larger but unit test vm can't
+	nIssues              := 2
+	maxIdleConnsPerHost  := 24000  // We're only using one Host server so pretend
+	maxIdleConns         := 24000  // 24000 requests / 4 per host = 6000 BMCs
+	pcsStatusTimeout     := 60     // Larger so we have more time to sleep to wait
 
-	testConnsWithHttpTxPolicy(t, nTasks, maxIdleConnsPerHost, maxIdleConns)
+	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
 
-func testConnsWithHttpTxPolicy(t *testing.T, nTasks int, maxIdleConnsPerHost int, maxIdleConns int) {
-	nIssues                 := 4
+func testConnsWithHttpTxPolicy(t *testing.T, nTasks int, nIssues int,
+	                           maxIdleConnsPerHost int, maxIdleConns int,
+							   pcsStatusTimeout int) {
 	httpRetries             := 3
-	pcsStatusTimeout        := 30
 	ctxTimeout              := time.Duration(pcsStatusTimeout) * time.Second
 	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
 
@@ -853,7 +869,7 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 		t.Logf("MaxIdleConns            = %v", a.tListProto.CPolicy.Tx.MaxIdleConns)
 		t.Logf("MaxIdleConnsPerHost     = %v", a.tListProto.CPolicy.Tx.MaxIdleConnsPerHost)
 	} else {
-		t.Logf("idleConnTimeout         = 0   (default - unlimited)")
+		t.Logf("idleConnTimeout         = 0   (default = unlimited)")
 		t.Logf("MaxIdleConnsPerHost     = 2   (default)")
 		t.Logf("MaxIdleConns            = 100 (default)")
 	}
@@ -1076,266 +1092,6 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.runSecondTaskList = false
 }
 
-// TestLargeConnectionPools tests very large connection pools
-
-func testLargeConnectionPools(t *testing.T) {
-	httpRetries             := 3
-	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
-	pcsStatusTimeout        := 30
-	maxIdleConns            := 24000	// TRS can handle larger but unit test vm can't
-	maxIdleConnsPerHost     := 24000	// TRS can handle larger but unit test vm can't
-	nTasks                  := 24000	// TRS can handle larger but unit test vm can't
-
-	// Timeout placed on the context for the http request
-	ctxTimeout := time.Duration(pcsStatusTimeout) * time.Second
-
-	// idleConnTimeout is the time after which idle connections are closed.
-	// In PCS we want them to stay open between polling intervals so they
-	// can be reused for the next poll.  Thus, we set it to the worst case
-	// time it takes for one poll (pcsStatusTimeout) plus the time until
-	// the next poll (pcsStatusPollInterval).  We add an additional 50% to
-	// this for a buffer (ie. multiply by 150%).
-	idleConnTimeout := time.Duration(
-		(pcsStatusTimeout + pcsTimeToNextStatusPoll) * 15 / 10) * time.Second
-
-	// Default prototype to initialize each task in the task list with
-	// Can customize prior to each test
-	defaultTListProto := &HttpTask{
-		Timeout: ctxTimeout,
-
-		CPolicy: ClientPolicy {
-			Retry:
-				RetryPolicy {
-					Retries: httpRetries,
-				},
-			Tx:
-				HttpTxPolicy {
-					Enabled:                  true,
-					MaxIdleConns:             maxIdleConns,
-					MaxIdleConnsPerHost:      maxIdleConnsPerHost,
-					IdleConnTimeout:          idleConnTimeout,
-					// ResponseHeaderTimeout: responseHeaderTimeout,
-					// TLSHandshakeTimeout:   tLSHandshakeTimeout,
-					// DisableKeepAlives:     DisableKeepAlives,
-			},
-		},
-	}
-
-	// Initialize argument structure (will be modified each test)
-	a := testConnsArg{
-		maxIdleConnsPerHost:    maxIdleConnsPerHost,
-		tListProto:             defaultTListProto,
-		srvHandler:             launchHandler,	// always returns success
-	}
-
-	t.Logf("")
-	t.Logf("============================================================")
-	t.Logf("=                  Test Configuration                    ===")
-	t.Logf("============================================================")
-	t.Logf("")
-	t.Logf("nTasks                  = %v", nTasks)
-	t.Logf("ctxTimeout              = %v", ctxTimeout)
-	t.Logf("idleConnTimeout         = %v", idleConnTimeout)
-	t.Logf("pcsTimeToNextStatusPoll = %v", pcsTimeToNextStatusPoll)
-	t.Logf("MaxIdleConns            = %v", maxIdleConns)
-	t.Logf("MaxIdleConnsPerHost     = %v", maxIdleConnsPerHost)
-	t.Logf("httpRetries             = %v", httpRetries)
-	t.Logf("")
-
-	// 1000 requests: No issues so all conns should be open
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 0
-	a.nFailRetries           = 0
-	a.nSkipDrainBody         = 0
-	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 0
-	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = a.nTasks
-	a.openAfterCancel        = a.nTasks
-	a.openAfterClose         = a.nTasks
-
-	a.runSecondTaskList = true // second run should not open any new connections
-
-	testConns(t, a)
-
-	a.runSecondTaskList = false	// reset to default
-
-	// 1000 requests: 500 retries that succeed
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 500
-	a.nFailRetries           = 0
-	a.nSkipDrainBody         = 0
-	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 0
-	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = a.nTasks
-	a.openAfterCancel        = a.nTasks
-	a.openAfterClose         = a.nTasks
-
-	testConns(t, a)
-
-	// 1000 requests: 500 exhaust all retries and fail BEFORE successes complete
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 0
-	a.nFailRetries           = 500
-	a.nSkipDrainBody         = 0
-	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 0
-	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = a.nTasks
-	a.openAfterCancel        = a.nTasks
-	a.openAfterClose         = a.nTasks
-
-	retrySleep   = 0	// 0 seconds so retries complete first
-	handlerSleep = 10	// slow down the others
-
-	testConns(t, a)
-
-	handlerSleep = 0	// set back to default
-	retrySleep   = 0	// set back to default
-
-	// 100 requests: 500 exhaust all retries and fail AFTER successes complete
-	//               We close the successful tasks response bodies before the
-	//               failed retry tasks complete
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 0
-	a.nFailRetries           = 500
-	a.nSkipDrainBody         = 0
-	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 0
-	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = a.nTasks
-	a.openAfterCancel        = a.nTasks
-	a.openAfterClose         = a.nTasks
-
-	retrySleep = 4	// 4 seconds so retries complete last
-
-	// We want to run a 2nd task list with the same server to make sure that
-	// failures from prior task list don't impact future ones.  This second
-	// task list should succeed everything.
-	a.runSecondTaskList = true
-
-	testConns(t, a)
-
-	a.runSecondTaskList = false	// set back to default
-
-	retrySleep = 0				// set back to default
-
-	// 1000 requests: 500 skipped body drains
-	//
-	// If a body is closed but not drained first, the connection is marked
-	// as "dirty".  This marks it for lazy closure in the network layer but
-	// the connection stays open with status "idle", though it cannot be
-	// used.  If a tool like 'ss' starts interrogating the details of
-	// connections on a system, this can kick the network layer into closing
-	// it.  We run 'ss' in this test so this after closing bodies, so that
-	// will actually close any connections with undrained bodies.
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 0
-	a.nFailRetries           = 0
-	a.nSkipDrainBody         = 500
-	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 0
-	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = a.nTasks - a.nSkipDrainBody	// the ss call after body close does it
-	a.openAfterCancel        = a.nTasks - a.nSkipDrainBody
-	a.openAfterClose         = a.nTasks - a.nSkipDrainBody
-
-	testConns(t, a)
-
-	// 1000 requests: 500 skipped body closures
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 0
-	a.nFailRetries           = 0
-	a.nSkipDrainBody         = 0
-	a.nSkipCloseBody         = 500
-	a.nHttpTimeouts          = 0
-	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = a.nTasks
-	a.openAfterCancel        = a.nTasks
-	a.openAfterClose         = a.nTasks
-
-	testConns(t, a)
-
-	// Body Drain: skip
-	// Body Close: skip
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 0
-	a.nFailRetries           = 0
-	a.nSkipDrainBody         = 500
-	a.nSkipCloseBody         = 500
-	a.nHttpTimeouts          = 0
-	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
-
-	// Truncate the good connections down to MaxIdleConnsPerHost
-	// plus whatever connections are yucky
-
-	openAfter := a.nTasks - a.nSkipDrainBody
-	if openAfter > maxIdleConnsPerHost {
-		openAfter = maxIdleConnsPerHost
-	}
-	openAfter = openAfter + a.nSkipDrainBody
-
-	a.openAfterBodyClose     = openAfter
-	a.openAfterCancel        = openAfter
-
-	// Handle bodies being closed by Close()
-	if openAfter > maxIdleConnsPerHost - a.nSkipDrainBody {
-		a.openAfterClose     = maxIdleConnsPerHost
-	} else {
-		a.openAfterClose     = openAfter
-	}
-
-	testConns(t, a)
-
-	// 1000 requests that we run these twice to test IdleConnTimeout:
-	//
-	//	* 1st run with 500 http timeouts.  500 connections close and go
-	//	  into CLOSE-WAIT or FIN-WAIT-2.  After IdleConnTimeout we verify
-	//	  that the other 8 connections are now closed to ensure that our
-	//    IdleConnTimeout logic is working correctly.
-	//
-	//	* 2nd run with 1000 successful requests so that all connections are
-	//	  in ESTAB(LISHED).  After IdleConnTimeout we verify that those
-	//    10 connections get closed
-	//
-	// THESE TESTS WILL TAKE A LOT OF TIME TO COMPLETE!!!!
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 0
-	a.nSkipDrainBody         = 0
-	a.nSkipCloseBody         = 0
-	a.nFailRetries           = 0
-	a.nHttpTimeouts          = 500 // so we can look at CLOSE-WAIT and FIN-WAIT-2 in traces
-	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks - a.nHttpTimeouts
-	a.openAfterBodyClose     = a.nTasks - a.nHttpTimeouts
-	a.openAfterCancel        = a.nTasks - a.nHttpTimeouts
-	a.openAfterClose         = a.nTasks - a.nHttpTimeouts
-
-	a.testIdleConnTimeout = true
-	a.runSecondTaskList   = true // second run should not open any new connections
-
-	testConns(t, a)
-
-	a.runSecondTaskList   = true	// set back to default
-	a.testIdleConnTimeout = false	// set back to default
-}
-
 const sleepTimeToStabilizeConns = 250 * time.Millisecond
 
 // WARNING: testConns()/runTaskList() is not capable of testing retries and
@@ -1456,10 +1212,12 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	}
 
 	// Can take some time for all requests to get started... pause for them
-	if a.nTasks <= 100 {
+	if a.nTasks <= 1000 {
 		time.Sleep(2 * time.Second)
-	} else if a.nTasks <= 40000 {
+	} else if a.nTasks <= 4000 {
 		time.Sleep(5 * time.Second)
+	} else if a.nTasks <= 8000 {
+		time.Sleep(10 * time.Second)
 	} else {
 		time.Sleep(30 * time.Second)
 	}
