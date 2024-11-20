@@ -1681,6 +1681,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 					if logLevel == logrus.DebugLevel {
 						t.Logf("Skipping draining response body for task %v", tsk.GetID())
+t.Logf("Skipping draining response body for task %v", tsk.GetID())
 					}
 				} else {
 					_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
@@ -1690,6 +1691,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 				if logLevel == logrus.DebugLevel {
 					t.Logf("Skipping closing response body for task %v", tsk.GetID())
+t.Logf("Skipping closing response body for task %v", tsk.GetID())
 				}
 				continue
 			}
@@ -1702,6 +1704,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 				if logLevel == logrus.DebugLevel {
 					t.Logf("Skipping draining response body for task %v", tsk.GetID())
+t.Logf("Skipping draining response body for task %v", tsk.GetID())
 				}
 			} else {
 				_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
@@ -1713,6 +1716,8 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 				// Response headers can be  helpful for debug
 				t.Logf("Closed response body for task %v with response headers: %s",
 					   tsk.GetID(), tsk.Request.Response.Header)
+t.Logf("Closed response body for task %v with response headers: %s",
+	   tsk.GetID(), tsk.Request.Response.Header)
 			}
 		}
 	}
