@@ -43,10 +43,12 @@ import (
 
 	base "github.com/Cray-HPE/hms-base/v2"
 	"github.com/sirupsen/logrus"
-)
+
 
 var svcName = "TestMe"
 
+// Note for unit test and TRS loggers: Log level can be controlled by
+// by modifying the 
 var logLevel logrus.Level	// use this for more than logrus
 
 func TestMain(m *testing.M) {
@@ -67,7 +69,8 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// Create a logger for trs_http_api (not unit tests)
+// Create a logger for trs_http_api (not unit tests) so we can see what's
+// going on in TRS when we hit errors
 func createLogger() *logrus.Logger {
 	trsLogger := logrus.New()
 
@@ -128,6 +131,7 @@ func TestCreateTaskList(t *testing.T) {
 	}
 }
 
+// Check header for "User-Agent"
 func hasUserAgentHeader(r *http.Request) bool {
     if (len(r.Header) == 0) {
         return false
@@ -137,6 +141,7 @@ func hasUserAgentHeader(r *http.Request) bool {
 	return ok
 }
 
+// Check header for "Trs-Fail-All-Retries"
 func hasTRSAlwaysRetryHeader(r *http.Request) bool {
     if (len(r.Header) == 0) {
         return false
@@ -152,6 +157,7 @@ func hasTRSAlwaysRetryHeader(r *http.Request) bool {
 	return ok
 }
 
+// Check header for "Trs-Context-Timeout"
 func hasTRSStallHeader(r *http.Request) bool {
     if (len(r.Header) == 0) {
         return false
@@ -168,7 +174,17 @@ func hasTRSStallHeader(r *http.Request) bool {
 	return ok
 }
 
-var handlerLogger *testing.T
+// launchHandler is the general handler used by the unittest http servers
+// to handle incoming requests.  Depending on the request headers, it can:
+//
+//	* Return a 503 error for a specific request once
+//	* Return a 503 error for a specific request multiple times so it burns
+//	  through all its retries
+//	* Stall indefinitly until a unit test signals to return a successful
+//	  response
+//	* Return a successful response immediately
+
+var handlerLogger *testing.T	// Allows logging in the handlers
 var handlerSleep int    = 2 // time to sleep to simulate network/BMC delays
 var retrySleep int      = 0 // time to sleep before returning 503 for retry
 var nRetries int32      = 0 // how many retries before returning success
@@ -242,6 +258,9 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 
 }
 
+// stallHandler is handler used by the unittest http servers to simulate
+// stalls in handling requests. It simply sits on a channel until the unit
+// test in question signals it to return
 var stallCancel chan bool
 
 func stallHandler(w http.ResponseWriter, req *http.Request) {
@@ -409,6 +428,8 @@ func TestLaunchTimeout(t *testing.T) {
 	close(stallCancel)
 }
 
+///////////////////////////////////////////////////////////////////////////
+//
 // Documented treatment of connections due to handling of response bodies here
 // as its as good of place as any to put this information.
 //
@@ -416,72 +437,103 @@ func TestLaunchTimeout(t *testing.T) {
 //
 //		And body was drained before closure:
 //
-//			* Go connection state:    open, idle, reusable
-//			* OS connection state:    open, idle, reusable
-//			* Istio connection state: open, idle, reusable
+//			* Go client connection state: open, idle, reusable
+//			* OS connection state:        open, idle, reusable
+//			* Istio connection state:     open, idle, reusable
 //
 //		And body was NOT drained before closure
 //
-//			* Go connection state:    closed
-//			* OS connection state:    closed
-//			* Istio connection state: closed
+//			* Go client connection state: closed
+//			* OS connection state:        closed
+//			* Istio connection state:     closed
 //
 // If response body is NOT closed
 //
 //		And body was drained
 //
-//			* Go connection state:    open, unusable (resource leak) (dirty)
-//			* OS connection state:    open, unusable (resource leak) (dirty)
-//			* Istio connection state: open, unusable (resource leak) (dirty)
+//			* Go client connection state: open, unusable (resource leak) (dirty)
+//			* OS connection state:        open, unusable (resource leak) (dirty)
+//			* Istio connection state:     open, unusable (resource leak) (dirty)
 //
 //			* Marked "dirty" and could get cleaned up any time since the
 //			  body was drained
-//			* Additionally, if IdleConnTimeout is exceeded, it will be closed
+//
+//			* If/wen IdleConnTimeout is exceeded (by default is 0 which means
+//			  no timeout in place), it will be closed and:
+//
+//			  	* I couldn't find a definitive answer if a minimal
+//				  resource leak (which would NOT include body data) would
+//			      be permanent or not in the Go client
+//				* Prior OS resource leak should now be freed (not sure I believe)
+//				* Prior Istio resource leak should now be freed (not sure I believe)
 //
 //		And body was NOT drained
 //
-//			* Go connection state:    open, unusable (resource leak)
-//			* OS connection state:    open, unusable (resource leak)
-//			* Istio connection state: open, unusable (resource leak)
+//			* Go client connection state: open, unusable (resource leak)
+//			* OS connection state:        open, unusable (resource leak)
+//			* Istio connection state:     open, unusable (resource leak)
 //
-//			* If IdleConnTimeout is exceeded, it will be closed and:
+//			* If/wen IdleConnTimeout is exceeded (by default is 0 which means
+//			  no timeout in place), it will be closed and:
 //
-//				* Client resource leak will remain
-//				* OS resource leak will ??? (likely freed)
-//				* Istio resource leak should be freed
+//				* Go client resource leak (including body data) will remain
+//				* Prior OS resource leak should now be freed (not sure I believe)
+//				* Prior Istio resource leak should now be freed (not sure I believe)
+//
+///////////////////////////////////////////////////////////////////////////
 
-// Test connection states using 'ss' utility
+// CustomConnState is a hook into httptest http servers that the unit tests
+// below spin up.  It allows is to log changes to connection states.  This
+// is critical when debugging connection state issues
+
+func CustomConnState(conn net.Conn, state http.ConnState) {
+	if logLevel >= logrus.DebugLevel {
+		log.Printf("HTTP_SERVER %v Connection -> %v\t%v",
+				   conn.LocalAddr(), state, conn.RemoteAddr())
+	}
+}
+
+// testOpenConnections is called with an argument representing the number
+// of connections in the ESTAB(LISTHED) that we hope to find at the current
+// moment. It does this by executing the 'ss' tool in the unit test vm and
+// using the output to count various connection states.
+
 func testOpenConnections(t *testing.T, clientEstabExp int) {
+	// Set up 'ss' command and arguments
 	cmd := exec.Command( "ss", "--tcp", "--resolve", "--processes", "--all")
 
-	output, err := cmd.CombinedOutput()
+	// Execute the command
+	fullOutput, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Errorf("=====> ERROR: error running ss utility: %v <=====", err)
 		return
 	}
 
+	// srvrPorts - Map of every server port for trs_http_api
 	srvrPorts := map[string]bool{}
-	debugOutput := map[string][]string{}
 
-	// Use a scanner to read output line-by-line
-	scanner := bufio.NewScanner(bytes.NewReader(output))
+	// output - Map used to collect different buckets of output that we care about
+	output := map[string][]string{}
+
+	// Use a scanner to parse through fullOutput line-by-line
+	scanner := bufio.NewScanner(bytes.NewReader(fullOutput))
 	for scanner.Scan() {
 		line := scanner.Text()
 
 		if strings.Contains(line, "Recv-Q") {
-			// Header line
-			debugOutput["header"] = append(debugOutput["header"], line)
+			// Header line. Save it as it helps when reading output
+			output["header"] = append(output["header"], line)
 			continue
 		} else if strings.Contains(line, "LISTEN") {
 			// This is a server. LISTEN lines always comes first in the output.
 			// Ignore anything that isn't our test process
 			if !strings.Contains(line, "trs_http_api") {
-				debugOutput["ignoredListen"] = append(debugOutput["ignoredListen"], line)
+				output["ignoredListen"] = append(output["ignoredListen"], line)
 				continue
 			}
 
 			// Grab the port so we can filter on it later
-			debugOutput["serverListen"] = append(debugOutput["serverListen"], line)
+			output["serverListen"] = append(output["serverListen"], line)
 
 			re := regexp.MustCompile(`localhost:(\d+)`)
 
@@ -492,7 +544,8 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 				t.Errorf("=====> ERROR: Failed to find port in LISTEN line: %v <=====", line)
 			}
 		} else {
-			// Distinguish client connections from server connections
+			// This is a connection. We now need to distinguish client
+			// connections from server connections
 			re := regexp.MustCompile(`localhost:(\d+)\s+localhost:(\d+)`)
 
 			match := re.FindStringSubmatch(line)
@@ -502,92 +555,101 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 
 				if _, exists := srvrPorts[srcPort]; exists {
 					// This is a server connection
-					debugOutput["serverOther"] = append(debugOutput["serverOther"], line)
+					output["serverOther"] = append(output["serverOther"], line)
 				} else {
 					// This is might be a client connection.  Test to see
 					// if it targets one of our server ports
 					if _, exists := srvrPorts[dstPort]; exists {
 						// It's one of our client connections
 						if strings.Contains(line, "ESTAB") {
-							debugOutput["clientEstab"] = append(debugOutput["clientEstab"], line)
+							output["clientEstab"] = append(output["clientEstab"], line)
 						} else {
-							debugOutput["clientOther"] = append(debugOutput["clientOther"], line)
+							output["clientOther"] = append(output["clientOther"], line)
 						}
 					} else {
-						debugOutput["ignoredConn"] = append(debugOutput["ignoredConn"], line)
+						// An unrelated connection.  Ignore
+						output["ignoredConn"] = append(output["ignoredConn"], line)
 					}
 				}
 			} else {
-				debugOutput["ignoredMisc"] = append(debugOutput["ignoredMisc"], line)
+				// An unrelated line of output.  Ignore
+				output["ignoredMisc"] = append(output["ignoredMisc"], line)
 			}
 		}
 	}
 
-	if (len(debugOutput["clientEstab"]) != clientEstabExp) {
+	// This is the critical test for this routine
+	if (len(output["clientEstab"]) != clientEstabExp) {
 		t.Errorf("=====> ERROR: Expected %v ESTABLISH(ED) connections, but got %v <=====",
-				 clientEstabExp, len(debugOutput["clientEstab"]))
+				 clientEstabExp, len(output["clientEstab"]))
 		if logLevel == logrus.TraceLevel {
-			t.Logf("Full 'ss' output:\n%s", output)
+			t.Logf("Full 'ss' output:\n%s", fullOutput)
 		}
 	}
 
-	if logLevel >= logrus.DebugLevel {
-		if len(debugOutput["header"]) > 0 {
+	// All other output as follows is for debug only
+
+	if logLevel >= logrus.InfoLevel {
+		if len(output["header"]) > 0 {
 			t.Logf("")
-			for _,v := range(debugOutput["header"]) {
+			for _,v := range(output["header"]) {
 				t.Log(v)
 			}
 			t.Logf("")
 		}
+		if len(output["clientEstab"]) > 0 {
+			sort.Strings(output["clientEstab"])
+
+			t.Logf("- Client ESTAB Connections: (%v)", len(output["clientEstab"]))
+
+			if logLevel > logrus.InfoLevel {
+				t.Logf("")
+				for _,v := range(output["clientEstab"]) {
+					t.Log(v)
+				}
+				t.Logf("")
+			}
+		}
+	}
+	if logLevel >= logrus.DebugLevel {
+		if len(output["clientOther"]) > 0 {
+			sort.Strings(output["clientOther"])
+
+			t.Logf("- Client Other Connections: (%v)", len(output["clientOther"]))
+
+			if logLevel > logrus.InfoLevel {
+				t.Logf("")
+				for _,v := range(output["clientOther"]) {
+					t.Log(v)
+				}
+				t.Logf("")
+			}
+		}
 	}
 	if logLevel >= logrus.InfoLevel {
-		if len(debugOutput["clientEstab"]) > 0 {
-			sort.Strings(debugOutput["clientEstab"])
+		if len(output["serverListen"]) > 0 {
+			sort.Strings(output["serverListen"])
 
-			t.Logf("- Client ESTAB Connections: (%v)", len(debugOutput["clientEstab"]))
+			t.Logf("- Server LISTEN Connections: (%v)", len(output["serverListen"]))
 
 			if logLevel > logrus.InfoLevel {
 				t.Logf("")
-				for _,v := range(debugOutput["clientEstab"]) {
+				for _,v := range(output["serverListen"]) {
 					t.Log(v)
 				}
 				t.Logf("")
 			}
 		}
-		if len(debugOutput["clientOther"]) > 0 {
-			sort.Strings(debugOutput["clientOther"])
+	}
+	if logLevel >= logrus.DebugLevel {
+		if len(output["serverOther"]) > 0 {
+			sort.Strings(output["serverOther"])
 
-			t.Logf("- Client Other Connections: (%v)", len(debugOutput["clientOther"]))
-
-			if logLevel > logrus.InfoLevel {
-				t.Logf("")
-				for _,v := range(debugOutput["clientOther"]) {
-					t.Log(v)
-				}
-				t.Logf("")
-			}
-		}
-		if len(debugOutput["serverListen"]) > 0 {
-			sort.Strings(debugOutput["serverListen"])
-
-			t.Logf("- Server LISTEN Connections: (%v)", len(debugOutput["serverListen"]))
+			t.Logf("- Server Other Connections: (%v)", len(output["serverOther"]))
 
 			if logLevel > logrus.InfoLevel {
 				t.Logf("")
-				for _,v := range(debugOutput["serverListen"]) {
-					t.Log(v)
-				}
-				t.Logf("")
-			}
-		}
-		if len(debugOutput["serverOther"]) > 0 {
-			sort.Strings(debugOutput["serverOther"])
-
-			t.Logf("- Server Other Connections: (%v)", len(debugOutput["serverOther"]))
-
-			if logLevel > logrus.InfoLevel {
-				t.Logf("")
-				for _,v := range(debugOutput["serverOther"]) {
+				for _,v := range(output["serverOther"]) {
 					t.Log(v)
 				}
 				t.Logf("")
@@ -595,32 +657,32 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 		}
 	}
 	if logLevel == logrus.TraceLevel {
-		if len(debugOutput["ignoredConn"]) > 0 {
-			sort.Strings(debugOutput["ignoredConn"])
+		if len(output["ignoredConn"]) > 0 {
+			sort.Strings(output["ignoredConn"])
 
-			t.Logf("- Ignored Connections: (%v)", len(debugOutput["ignoredConn"]))
+			t.Logf("- Ignored Connections: (%v)", len(output["ignoredConn"]))
 			t.Logf("")
-			for _,v := range(debugOutput["ignoredConn"]) {
+			for _,v := range(output["ignoredConn"]) {
 				t.Log(v)
 			}
 			t.Logf("")
 		}
-		if len(debugOutput["ignoredListen"]) > 0 {
-			sort.Strings(debugOutput["ignoredListen"])
+		if len(output["ignoredListen"]) > 0 {
+			sort.Strings(output["ignoredListen"])
 
-			t.Logf("- Ignored LISTEN Connections: (%v)", len(debugOutput["ignoredListen"]))
+			t.Logf("- Ignored LISTEN Connections: (%v)", len(output["ignoredListen"]))
 			t.Logf("")
-			for _,v := range(debugOutput["ignoredListen"]) {
+			for _,v := range(output["ignoredListen"]) {
 				t.Log(v)
 			}
 			t.Logf("")
 		}
-		if len(debugOutput["ignoredMisc"]) > 0 {
-			sort.Strings(debugOutput["ignoredMisc"])
+		if len(output["ignoredMisc"]) > 0 {
+			sort.Strings(output["ignoredMisc"])
 
-			t.Logf("- Ignored Misc Output: (%v)", len(debugOutput["ignoredMisc"]))
+			t.Logf("- Ignored Misc Output: (%v)", len(output["ignoredMisc"]))
 			t.Logf("")
-			for _,v := range(debugOutput["ignoredMisc"]) {
+			for _,v := range(output["ignoredMisc"]) {
 				t.Log(v)
 			}
 			t.Logf("")
@@ -628,16 +690,9 @@ func testOpenConnections(t *testing.T, clientEstabExp int) {
 	}
 }
 
-// CustomConnState logs changes to connection states - Useful for debugging
-func CustomConnState(conn net.Conn, state http.ConnState) {
-	if logLevel >= logrus.DebugLevel {
-		log.Printf("HTTP_SERVER %v Connection -> %v\t%v",
-				   conn.LocalAddr(), state, conn.RemoteAddr())
-	}
-}
+// CustomReadCloser wraps an io.ReadCloser so we can track if response
+// bodies get closed in the unit tests below.
 
-// CustomReadCloser wraps an io.ReadCloser and tracks if it was closed.
-// This is used to test if response bodies are being closed properly.
 type CustomReadCloser struct {
     io.ReadCloser
 	closed bool
@@ -651,6 +706,9 @@ func (c *CustomReadCloser) Close() error {
 func (c *CustomReadCloser) WasClosed() bool {
 	return c.closed
 }
+
+// testConnsArg is the struct used to hold arguments to the lower layer
+// connection tests so that that code can be reused for many tests
 
 type testConnsArg struct {
 	tListProto             *HttpTask // Initialization to pass to tloc.CreateTaskList()
@@ -671,6 +729,8 @@ type testConnsArg struct {
 	openAfterCancel        int       // Expected number of ESTAB connections after cancelling tasks
 	openAfterClose         int       // Expected number of ESTAB connections after closing task list
 }
+
+// logConnTestHeader prints header for each connection related test
 
 func logConnTestHeader(t *testing.T, a testConnsArg) {
 	t.Logf("")
@@ -712,6 +772,30 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 	t.Logf("")
 }
 
+///////////////////////////////////////////////////////////////////////////
+//
+// MANY CONNECTION TESTS BELOW ARE MARKED AS SKIP BECAUSE:
+//
+//	* The unit test framework in GitHub only allows 10 minutes for ALL
+//	  unit tests to complete
+//
+//	* Connection and task counts of more than 1000 sometimes do not match
+//	  what one would expect to see based on observations at smaller
+//	  connection and task counts. That is not to say that things are not
+//	  behaving correctly. It's more likely the case that at higher counts
+//	  the underlying logic and timing of that logic is not as simplistic
+//	  as it is at smaller counts for outside observers.  Trying to write
+//	  tests to precisely match what's going on in the black box at the
+//	  system level is nearly impossible. The counts that the unit tests
+//	  do detect at these higher counts are within a very reasonable small
+//	  deviation from what one would expect. For these reasons, the tests
+//	  at higher counts are not enabled by default.  When changes to TRS
+//	  are made in the future, developers should re-enable them and
+//	  reconfirm that the resultant behavior is still within a reasonable
+//	  deviation.
+//
+///////////////////////////////////////////////////////////////////////////
+
 // TestConnsWithNoHttpTxPolicy* tests use by TRS users that do NOT
 // configure the http transport.  This would be the case for TRS users
 // if they updated to the latest TRS without configuring the transport,
@@ -724,32 +808,37 @@ func TestConnsWithNoHttpTxPolicy_Idle(t *testing.T) {
 	testConnsWithNoHttpTxPolicy(t, nTasks, nIssues)
 }
 
+func TestConnsWithNoHttpTxPolicy_ModeratlyBusy(t *testing.T) {
+
+	nTasks  := 1000
+	nIssues := 1
+
+	testConnsWithNoHttpTxPolicy(t, nTasks, nIssues)
+}
+
 func TestConnsWithNoHttpTxPolicy_Busy(t *testing.T) {
+
+	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+
 	nTasks  := 4000
 	nIssues := 1
 
 	testConnsWithNoHttpTxPolicy(t, nTasks, nIssues)
 }
 
-// func TestConnsWithNoHttpTxPolicy_VeryBusy()
-//
-// THIS TEST MARKED SKIP BECAUSE:
-//
-//	* Unit test framefork only allows 10 minutes for ALL unit tests to complete
-//	* Connection counts not exact at higher levels (but close to expected)
-//	  Likely additional low level rules kicking in at those higher levels
-//
-// REMOVE SKIP TO TEST WITH ANY NEW CHANGES TO TRS
 func TestConnsWithNoHttpTxPolicy_VeryBusy(t *testing.T) {
+
+	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+
 	nTasks  := 8000
 	nIssues := 40
-
-	t.Skip()	// REMOVE TO RUN TEST
 
 	testConnsWithNoHttpTxPolicy(t, nTasks, nIssues)
 }
 
-// testConnsWithNoHttpTxPolicy() is next call level down for above tests
+// testConnsWithNoHttpTxPolicy() is the next call level down for the above
+// tests that don't configure an HttpTxPolicy
+
 func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int, nIssues int) {
 	httpRetries             := 3
 	pcsStatusTimeout        := 30
@@ -786,64 +875,73 @@ func TestConnsWithHttpTxPolicy_PcsSmallIdle(t *testing.T) {
 	nIssues             := 4
 	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
 	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
-	pcsStatusTimeout    := 30
+	pcsStatusTimeout    := 30   // PCS default
+
+	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
+}
+
+func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusy(t *testing.T) {
+	nTasks              := 1000
+	nIssues             := 10
+	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
+	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
+	pcsStatusTimeout    := 30   // PCS default
+
+	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
+}
+
+func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusyLotsOfErrors(t *testing.T) {
+	nTasks              := 1000
+	nIssues             := 900
+	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
+	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
+	pcsStatusTimeout    := 30   // PCS default
 
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
 
 func TestConnsWithHttpTxPolicy_PcsSmallBusy(t *testing.T) {
+
+	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+
 	nTasks              := 4000
-	nIssues             := 100
+	nIssues             := 10
 	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
 	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
-	pcsStatusTimeout    := 60    // Increase for pitiful unit test vm 
+	pcsStatusTimeout    := 30   // PCS default
 
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
 
-// func TestConnsWithHttpTxPolicy_PcsLargeBusy()
-//
-// THIS TEST MARKED SKIP BECAUSE:
-//
-//	* Unit test framefork only allows 10 minutes for ALL unit tests to complete
-//	* Connection counts not exact at higher levels (but close to expected)
-//	  Likely additional low level rules kicking in at those higher levels
-//
-// REMOVE SKIP TO TEST WITH ANY NEW CHANGES TO TRS
 func TestConnsWithHttpTxPolicy_PcsLargeBusy(t *testing.T) {
+
+	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+
 	nTasks              := 8000
 	nIssues             := 10
 	maxIdleConnsPerHost := 8000  // We're only using one Host server so pretend
 	maxIdleConns        := 8000  // 8000 requests / 4 per host = 2000 BMCs
 	pcsStatusTimeout    := 60    // Increase for pitiful unit test vm 
 
-	t.Skip()	// REMOVE TO RUN TEST
-
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
 
-// func TestConnsWithHttpTxPolicy_PcsHugeBusy()
-//
-// THIS TEST MARKED SKIP BECAUSE:
-//
-//	* Unit test framefork only allows 10 minutes for ALL unit tests to complete
-//	* Connection counts not exact at higher levels (but close to expected)
-//	  Likely additional low level rules kicking in at those higher levels
-//
-// REMOVE SKIP TO TEST WITH ANY NEW CHANGES TO TRS
 func TestConnsWithHttpTxPolicy_PcsHugeBusy(t *testing.T) {
+
+	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+
 	nTasks               := 24000  // TRS can handle larger but unit test vm can't
 	nIssues              := 2
 	maxIdleConnsPerHost  := 24000  // We're only using one Host server so pretend
 	maxIdleConns         := 24000  // 24000 requests / 4 per host = 6000 BMCs
 	pcsStatusTimeout     := 60     // Larger so we have more time to sleep to wait
 
-	t.Skip()	// REMOVE TO RUN TEST
-
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
 
-// func testConnsWithHttpTxPolicy() is next call level down for above tests
+// testConnsWithHttpTxPolicy() is the next call level down for the above
+// tests that do configure the http transport
+
 func testConnsWithHttpTxPolicy(t *testing.T, nTasks int, nIssues int,
 	                           maxIdleConnsPerHost int, maxIdleConns int,
 							   pcsStatusTimeout int) {
@@ -892,6 +990,10 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int, nIssues int,
 
 	testConnsPrep(t, a, nTasks, nIssues)
 }
+
+// testConnsPrep is the next call level down for ALL conection related
+// unit tests.  It configures each of the sub-tests to send down to yet
+// another call level
 
 func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 
@@ -1018,7 +1120,9 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 
-	// This test closes drained bodies
+	// This test closes drained bodies so account for that along with the
+	// max number of connections allowed per host
+
 	openAfter := a.nTasks - a.nSkipDrainBody
 	if openAfter > a.maxIdleConnsPerHost {
 		openAfter = a.maxIdleConnsPerHost
@@ -1116,8 +1220,10 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 
 	a.openAtStart            = 0
 
-	openAfter = a.nTasks - a.nHttpTimeouts
+	// Timed out connections will close but we also need to account for
+	// the max idle connections allowed per host
 
+	openAfter = a.nTasks - a.nHttpTimeouts
 	if openAfter > a.maxIdleConnsPerHost {
 		openAfter = a.maxIdleConnsPerHost
 	}
@@ -1126,6 +1232,10 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.openAfterBodyClose     = openAfter
 	a.openAfterCancel        = openAfter
 	a.openAfterClose         = openAfter
+
+	// We run a second task list through the client to verify that the prior
+	// task list, which had issues, has no effect on subsequent task list
+	// execution
 
 	a.runSecondTaskList = true
 
@@ -1136,9 +1246,15 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 
 const sleepTimeToStabilizeConns = 250 * time.Millisecond
 
+// testConns runs tloc.Init() to set up a task list service.  It starts
+// the http server and creates the retryablehttp clients.  It can issue
+// multiple sets of task list requests to one final lower layer if the
+// upper layers request it.
+//
 // WARNING: testConns()/runTaskList() is not capable of testing retries and
 //          timeouts within the same call.  Please use different tests to
 //          test each
+
 func testConns(t *testing.T, a testConnsArg) {
 	logConnTestHeader(t, a)
 
@@ -1146,10 +1262,12 @@ func testConns(t *testing.T, a testConnsArg) {
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger())
 
-	// Copy logger into global namespace for the http server handlers
+	// Copy logger into global namespace so that the http server handlers
+	// can use it
 	handlerLogger = t
 
-	// Create http server.
+	// Create http server.  We should probably make an addition later to
+	// create multiple servers.
 	srv := httptest.NewServer(http.HandlerFunc(a.srvHandler))
 
 	// Configure server to log changes to connection states
@@ -1160,23 +1278,36 @@ func testConns(t *testing.T, a testConnsArg) {
 
 	// If a second task list is requested, run it
 	if (a.runSecondTaskList) {
-		// Overwrite args as a 2nd task list should always succeed everything
-		// The only impact might be open connections at the start (or not)
+		// Overwrite prior args.  Any second task list run should always
+		// always succeed everything as we're testing to see if any problems
+		// caused by the prior run can affect a future run. The only valid
+		// impact we should see are open connections from the prior run,
+		// which is actually a good thing!
 
-		// a.nTasks stays the same
+		// a.nTasks              stays the same
 		// a.testIdleConnTimeout stays the same
 
-		a.nSkipDrainBody         = 0
-		a.nSkipCloseBody         = 0
-		a.nSuccessRetries        = 0
-		a.nHttpTimeouts          = 0
-		a.nFailRetries           = 0
+		a.nSkipDrainBody         = 0	// We want no issues
+		a.nSkipCloseBody         = 0	// We want no issues
+		a.nSuccessRetries        = 0	// We want no issues
+		a.nHttpTimeouts          = 0	// We want no issues
+		a.nFailRetries           = 0	// We want no issues
+
+		// If we tested that exceeding IdleConnTimeout closes all connections
+		// during the first task list run, we should have no open collections
+		// at the start of this run
 
 		if (a.testIdleConnTimeout) {
-			a.openAtStart        = 0 // should have all timeed out
+			// They should have all timeed out and closed
+			a.openAtStart        = 0
 		} else {
-			a.openAtStart        = a.openAfterClose // carry forward at end of last run
+			// What was open at the end of the last run should still be open
+			a.openAtStart        = a.openAfterClose
 		}
+
+		// Carry forward the same number of tasks.  Since there will be no
+		// issues or errors in the second run, open connections should be
+		// truncated down to MaxIdleConnsPerHost after bodies get closed
 
 		a.openAfterTasksComplete = a.nTasks
 		a.openAfterBodyClose     = a.maxIdleConnsPerHost
@@ -1191,7 +1322,8 @@ func testConns(t *testing.T, a testConnsArg) {
 	t.Logf("Calling tloc.Cleanup to clean up task system")
 	tloc.Cleanup()
 
-	// Cleaking up the task list system should close all connections
+	// Cleaning up the task list system should close all connections.  Verify
+
 	time.Sleep(sleepTimeToStabilizeConns)
 	t.Logf("Testing connections after task list cleaned up")
 	testOpenConnections(t, 0)
@@ -1200,30 +1332,44 @@ func testConns(t *testing.T, a testConnsArg) {
 	srv.Close()
 }
 
-// runTaskList runs a task list from CreateTaskList() through Close()
+// runTaskList runs a task list from CreateTaskList() through to Close()
 // It assumes a server is already running
 
 func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest.Server) {
+	// Verify correct number of open conections at start
 
 	t.Logf("Testing connections at start")
 	testOpenConnections(t, a.openAtStart)
 
 	// Create an http request
+
 	req, err := http.NewRequest(http.MethodGet, srv.URL, nil)
 	if err != nil {
         t.Fatalf("=====> ERROR: Failed to create request: %v <=====", err)
     }
+
+	// Set any necessary headers
+
 	req.Header.Set("Accept", "*/*")
 	//req.Header.Set("Connection","keep-alive")
+
+	// Create the task list
 
 	a.tListProto.Request = req
 	t.Logf("Calling tloc.CreateTaskList() to create %v tasks for URL %v", a.nTasks, srv.URL)
 	tList := tloc.CreateTaskList(a.tListProto, a.nTasks)
 
-	// Configure any requested retries (put at beginning of list)
-	nRetries = a.nSuccessRetries
+	// Configure any requested retries and put at start of task list
+
+	nRetries = a.nSuccessRetries	// this signals the handler
+
 	for i := 0; i < a.nFailRetries; i++ {
+		// Let handler know if it should fail all retries by this request
+		// as apposed to just failing it once
+
 		tList[i].Request.Header.Set("Trs-Fail-All-Retries", "true")
+
+		// TODO: Could put nRetries into header to reduce complexity
 
 		if (logLevel == logrus.DebugLevel) {
 			t.Logf("Set request header %v for task %v",
@@ -1231,29 +1377,38 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		}
 	}
 
-	// Configure any requested http timeouts (put at end of list)
-	nHttpTimeouts = a.nHttpTimeouts
+	// Configure any requested http timeouts and put at end of task list
+
+	nHttpTimeouts = a.nHttpTimeouts	// this signals the handler
+
 	for i := len(tList) - 1; i > len(tList) - 1 - a.nHttpTimeouts; i-- {
+		// This header is what identifies this request to the handler
+
 		tList[i].Request.Header.Set("Trs-Context-Timeout", "true")
+
+		// TODO: Could put nHttpTimeouts into header to reduce complexity
 
 		if (logLevel == logrus.DebugLevel) {
 			t.Logf("Set request header %v for task %v",
 					 tList[i].Request.Header, tList[i].GetID())
 		}
 
-		// Create a channel to signal the stalled server handlers to complete
+		// Create a channel which will allow us to later signal the stalled
+		// server handlers to return the response
+
 		stallCancel = make(chan bool, a.nHttpTimeouts * 2)
 	}
 
-	// All connections should be in ESTAB(LISHED) and should stay there
-	// until response bodies are closed or Cancel is called
+	// Launch the task list
+
 	t.Logf("Calling tloc.Launch() to launch all tasks")
 	taskListChannel, err := tloc.Launch(&tList)
 	if (err != nil) {
 		t.Errorf("=====> ERROR: tloc.Launch() failed: %v <=====", err)
 	}
 
-	// Can take some time for all requests to get started... pause for them
+	// Pause so that all tasks can be started and open their connections
+
 	if a.nTasks <= 1000 {
 		time.Sleep(2 * time.Second)
 	} else if a.nTasks <= 4000 {
@@ -1263,15 +1418,22 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	} else {
 		time.Sleep(30 * time.Second)
 	}
+
+	// All tasks should now be runnind and all connections should be in
+	// the ESTAB(LISHED) state
+
 	t.Logf("Testing connections after Launch")
 	testOpenConnections(t, (a.nTasks))
 
-	// If asked, here we attempt to close task bodies for tasks that have
-	// already completed, prior to tasks that will fail retries.  We do this
-	// to test if the completed tasks have their connections closed
+	// If asked, here we attempt to close response bodies for tasks that have
+	// already completed, prior to tasks that will fail retries.  This is
+	// only done if we were asked to test retries.  We do it to verify that
+	// the completed tasks had their connections closed
+
 	tasksToWaitFor := a.nTasks
 	if a.nFailRetries > 0 && retrySleep > 0 {
 		t.Logf("Waiting for %v non-retry tasks to complete", a.nTasks - a.nFailRetries)
+
 		nWaitedFor := 0
 		for i := 0; i < (a.nTasks - a.nFailRetries); i++ {
 			<-taskListChannel
@@ -1280,11 +1442,9 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		}
 
 		t.Logf("Draining/closing non-retry response bodies early before retry failures")
+
 		for _, tsk := range(tList) {
 			if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
-				// Must fully read the body in order to close the body so that
-				// the underlying libraries/modules don't close the connection.
-				// If body not fully conusmed they assume the connection had issues
 				_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
 
 				tsk.Request.Response.Body.Close()
@@ -1296,7 +1456,9 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 			}
 		}
 
+		// Wait for underlying system to perform actions on connections
 		time.Sleep(sleepTimeToStabilizeConns)
+
 		t.Logf("Testing connections after non-retry request bodies closed (oabc=%v nfr=%v)",
 			    a.openAfterBodyClose, a.nFailRetries)
 
@@ -1310,12 +1472,13 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	}
 
 	// Here we attempt to close task bodies and cancel context for tasks that
-	// have already completed, prior to tasks that will time.  We do this to
-	// test if the completed tasks have their connections closed before the
-	// HTTPClient.Timeout expires
+	// have already completed, prior to tasks that will timeout.  This is
+	// only done if we were asked to test timeouts.  We do it to verify that
+	// the completed tasks had their connections closed at the right time
 
 	if a.nHttpTimeouts > 0 {
 		t.Logf("Waiting for %v non-timeout tasks to complete", a.nTasks - a.nHttpTimeouts)
+
 		nWaitedFor := 0
 		for i := 0; i < (a.nTasks - a.nHttpTimeouts); i++ {
 			<-taskListChannel
@@ -1324,11 +1487,9 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		}
 
 		t.Logf("Draining/closing non-timeout response bodies early and canceling their contexts")
+
 		for i := 0; i < len(tList) - a.nHttpTimeouts; i++ {
 			if tList[i].Request.Response != nil && tList[i].Request.Response.Body != nil {
-				// Must fully read the body in order to close the body so that
-				// the underlying libraries/modules don't close the connection.
-				// If body not fully conusmed they assume the connection had issues
 				_, _ = io.Copy(io.Discard, tList[i].Request.Response.Body)
 
 				tList[i].Request.Response.Body.Close()
@@ -1341,7 +1502,8 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 			tList[i].contextCancel()
 		}
 
-		// Test proper number of open connections
+		// Wait for underlying system to perform actions on connections
+
 		time.Sleep(sleepTimeToStabilizeConns)
 		t.Logf("Testing connections after non-timeout request bodies closed")
 
@@ -1354,24 +1516,31 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		testOpenConnections(t, oConns)
 	}
 
+	// Now wait for ALL tasks to complete
+
 	t.Logf("Waiting for %d tasks to complete", tasksToWaitFor)
 	for i := 0; i < tasksToWaitFor; i++ {
 		<-taskListChannel
 	}
 
+	// Close the task list channel to prevent resource leakage
+
 	t.Logf("Closing the task list channel")
 	close(taskListChannel)
 
-	// Can take some time for all requests to complete... pause for them
+	// Wait for underlying system to perform actions on connections
+
 	if a.nTasks <= 4000 {
 		time.Sleep(sleepTimeToStabilizeConns)
 	} else {
 		time.Sleep(5 * time.Second)
 	}
+
 	t.Logf("Testing connections after tasks complete")
 	testOpenConnections(t, a.openAfterTasksComplete)
 
-	// Set up custom read closer to test if all response bodies get closed
+	// Set up custom read closer to test response body closure
+
 	for _, tsk := range(tList) {
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 			tsk.Request.Response.Body = &CustomReadCloser{tsk.Request.Response.Body, false}
@@ -1380,13 +1549,17 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 	// Now drain and close response bodies per configurated request.
 
+	t.Logf("Draining/Closing response bodies (skipClose=%v skipDrain=%v)", a.nSkipCloseBody, a.nSkipDrainBody)
+
 	nBodyClosesSkipped := 0
 	nBodyDrainSkipped := 0
-	t.Logf("Draining/Closing response bodies (skipClose=%v skipDrain=%v)", a.nSkipCloseBody, a.nSkipDrainBody)
+
 	for _, tsk := range(tList) {
+		// Skip closing any requested response bodies
+
 		if nBodyClosesSkipped < a.nSkipCloseBody {
 			if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
-				// May also want to drain body before skipping closure
+				// May also want to skip drainind the body before skipping closure
 				if nBodyDrainSkipped < a.nSkipDrainBody {
 
 					nBodyDrainSkipped++
@@ -1406,6 +1579,9 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 				continue
 			}
 		}
+
+		// Close and (maybe) drain the remaining response bodies
+
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 			// Skip draining the body if requested
 			if nBodyDrainSkipped < a.nSkipDrainBody {
@@ -1419,6 +1595,8 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 				_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
 			}
 
+			// Do the close
+
 			tsk.Request.Response.Body.Close()
 
 			if logLevel == logrus.TraceLevel {
@@ -1429,12 +1607,15 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		}
 	}
 
-	// Closing the body affects the number of ESTAB(LISHED) connections
-	// based on the Transport configuration
+	// Closing the body may affect the state of open connections
+
+	// Wait for underlying system to perform actions on connections
 	time.Sleep(sleepTimeToStabilizeConns)
+
 	t.Logf("Testing connections after response bodies closed")
 	testOpenConnections(t, a.openAfterBodyClose)
 
+	// TRS users are not required to call tloc.Cancel() so lets test both ways
 	if a.skipCancel {
 		t.Logf("Skipping tloc.Cancel()")
 	} else {
@@ -1442,28 +1623,32 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		t.Logf("Calling tloc.Cancel() to cancel all tasks (skipCancel=false)")
 		tloc.Cancel(&tList)
 
-		// Cancelling the task list should not alter existing ESTAB(LISHED)
-		// connections except for connections where a response body was not
-		// previously closed.  The lower level libraries assume this means
-		// that there's a problem with the connection if the body was not closed.
+		// Cancelling the task list should not alter connection state
+
 		time.Sleep(sleepTimeToStabilizeConns)
+
 		t.Logf("Testing connections after task list cancelled")
 		testOpenConnections(t, a.openAfterCancel)
 	}
 
 	// tloc.Close() cancels all contexts, closes any reponse bodies left
 	// open, and removes all of the tasks from the task list
+
 	t.Logf("Calling tloc.Close() to close out the task list")
 	tloc.Close(&tList)
 
-	// Closing the task list should not alter existing ESTAB(LISHED) connections
+	// Closing the task list should not alter connection state
+
 	time.Sleep(sleepTimeToStabilizeConns)
+
 	t.Logf("Testing connections after task list closed")
 	testOpenConnections(t, a.openAfterClose)
 
 	// Verify that tloc.Close() did indeed close the response bodies that
-	// we left open to test it
+	// we left open to verify that it WOULD close them
+
 	t.Logf("Checking for closed response bodies")
+
 	for _, tsk := range(tList) {
 		if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
 			if !tsk.Request.Response.Body.(*CustomReadCloser).WasClosed() {
@@ -1472,10 +1657,17 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		}
 	}
 
+	// Verify task list was closed
+
 	t.Logf("Checking that the task list was closed")
+
 	if (len(tloc.taskMap) != 0) {
 		t.Errorf("=====> ERROR: Expected task list map to be empty <=====")
 	}
+
+	// If we stalled any requests, they are still stalled in the server
+	// handler.  Lets release them now so that we can cleanly stop the
+	// servers
 
 	if (a.nHttpTimeouts > 0) {
 		t.Logf("Signaling stalled handlers ")
@@ -1484,10 +1676,15 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		}
 	}
 
+	// We likely have many connections open and idle.  If requested, pause
+	// until IdleConnTimeout expires so that we verify they then close
+
 	if (a.testIdleConnTimeout) {
 		// TODO: Should also comfirm no client "other" connections as well
 		t.Logf("Testing connections after idleConnTimeout")
+
 		time.Sleep(a.tListProto.CPolicy.Tx.IdleConnTimeout)
+
 		testOpenConnections(t, 0)
 	}
 }

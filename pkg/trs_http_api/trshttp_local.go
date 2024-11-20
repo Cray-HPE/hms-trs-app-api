@@ -421,7 +421,9 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 	// Wrap base transport with retryablehttp
 	retryabletr := &trsRoundTripper{
 		transport:                             tr,
+// TODO: ONLY CONFIG IF NO TX POLICY SO IT CAN BE DISABLED IN FIELD BY DEPLOYMENT CHANGE
 		closeIdleConnectionsFn:                tr.CloseIdleConnections,
+// TODO: ONLY CONFIG IF NO TX POLICY SO IT CAN BE DISABLED IN FIELD BY DEPLOYMENT CHANGE
 		timeLastClosedOrReachedZeroCloseCount: time.Now(),
 	}
 
@@ -429,9 +431,11 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 	client = retryablehttp.NewClient()
 
 	client.HTTPClient.Transport = retryabletr
+// TODO: ONLY CONFIG IF NO TX POLICY SO IT CAN BE DISABLED IN FIELD BY DEPLOYMENT CHANGE
 	client.HTTPClient.Timeout   = task.Timeout * 9 / 10 // 90% of the task's context timeout
 
 	// Wrap httpretryable's DefaultRetryPolicy() so we can prevent retries when desired
+// TODO: ONLY CONFIG IF NO TX POLICY SO IT CAN BE DISABLED IN FIELD BY DEPLOYMENT CHANGE
 	client.CheckRetry = retryabletr.trsCheckRetry
 
 	// Configure the httpretryable client retry count
