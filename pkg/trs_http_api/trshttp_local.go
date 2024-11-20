@@ -228,9 +228,9 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 // Our replacement for the standard http.Client's CloseIdleConnections()
 func (c *trsRoundTripper) CloseIdleConnections() {
 	TESTLOGGER.Warnf("=================> CloseIdleConnections:")
-	c.skipCloseMutex.Lock()
 
 	// Skip closing idle connections if counter > 0
+	c.skipCloseMutex.Lock()
 	if c.skipCloseCount > 0 {
 		c.skipCloseCount--
 		TESTLOGGER.Warnf("                                          NOT CLOSING: skipCloseCount now %v", c.skipCloseCount)
@@ -238,7 +238,6 @@ func (c *trsRoundTripper) CloseIdleConnections() {
 
 		return
 	}
-
 	c.skipCloseMutex.Unlock()
 
 	// Otherwise, close them
