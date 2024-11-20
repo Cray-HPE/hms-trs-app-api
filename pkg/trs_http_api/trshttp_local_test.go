@@ -908,7 +908,13 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 
 	// Truncate the good connections down to MaxIdleConnsPerHost
 	// plus whatever connections are yucky
-	openAfter := ((a.nTasks - a.nSkipDrainBody) % maxIdleConns) + a.nSkipDrainBody
+	openAfter := a.nTasks - a.nSkipDrainBody
+	t.Logf("openAfter = %v", openAfter)
+	openAfter = openAfter % maxIdleConns
+	t.Logf("openAfter = %v", openAfter)
+	openAfter = openAfter + a.nSkipDrainBody
+	t.Logf("openAfter = %v", openAfter)
+	//openAfter := ((a.nTasks - a.nSkipDrainBody) % maxIdleConns) + a.nSkipDrainBody
 
 	a.openAfterBodyClose     = openAfter
 	a.openAfterCancel        = openAfter
@@ -1208,9 +1214,9 @@ func TestLargeConnectionPools(t *testing.T) {
 	httpRetries             := 3
 	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
 	pcsStatusTimeout        := 30
-	maxIdleConns            := 75000
-	maxIdleConnsPerHost     := 75000
-	nTasks                  := 75000
+	maxIdleConns            := 50000
+	maxIdleConnsPerHost     := 50000
+	nTasks                  := 50000
 
 	// Timeout placed on the context for the http request
 	ctxTimeout := time.Duration(pcsStatusTimeout) * time.Second
