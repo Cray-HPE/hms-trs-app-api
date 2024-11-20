@@ -760,7 +760,7 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	t.Logf("httpRetries             = %v", httpRetries)
 	t.Logf("")
 
-	testConnsPrep(t, a, nTasks, 1)
+	testConnsPrep(t, a, nTasks, nIssues)
 }
 
 func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
@@ -994,7 +994,7 @@ func TestConnsWithHttpTxPolicyAndOneThousandTasks(t *testing.T) {
 }
 
 func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
-	// PCS defaults
+	nIssues                 := 2
 	httpRetries             := 3
 	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
 	pcsStatusTimeout        := 30
@@ -1055,6 +1055,9 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 	t.Logf("httpRetries             = %v", httpRetries)
 	t.Logf("")
 
+	testConnsPrep(t, a, nTasks, nIssues)
+
+/*
 	// All success
 
 	a.nTasks                 = nTasks
@@ -1234,6 +1237,7 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 	testConns(t, a)
 
 	a.runSecondTaskList    = false
+*/
 }
 
 // TestLargeConnectionPools tests very large connection pools
@@ -1618,7 +1622,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	// Can take some time for all requests to get started... pause for them
 	if a.nTasks <= 100 {
 		time.Sleep(2 * time.Second)
-	} else if a.nTasks <= 10000 {
+	} else if a.nTasks <= 40000 {
 		time.Sleep(5 * time.Second)
 	} else {
 		time.Sleep(30 * time.Second)
@@ -1723,7 +1727,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	close(taskListChannel)
 
 	// Can take some time for all requests to complete... pause for them
-	if a.nTasks <= 1000 {
+	if a.nTasks <= 4000 {
 		time.Sleep(sleepTimeToStabilizeConns)
 	} else {
 		time.Sleep(5 * time.Second)
