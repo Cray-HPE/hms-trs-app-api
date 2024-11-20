@@ -820,7 +820,7 @@ func TestConnsWithNoHttpTxPolicy_ModeratlyBusy(t *testing.T) {
 
 func TestConnsWithNoHttpTxPolicy_Busy(t *testing.T) {
 
-	//t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 	nTasks  := 4000
 	nIssues := 200
@@ -899,7 +899,7 @@ func TestConnsWithHttpTxPolicy_PcsSimulatedMedium(t *testing.T) {
 	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
 	pcsStatusTimeout    := 30   // PCS default
 
-	//t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
@@ -1040,7 +1040,11 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.openAfterCancel        = a.maxIdleConnsPerHost
 	a.openAfterClose         = a.maxIdleConnsPerHost
 
+	a.testIdleConnTimeout = true	// Let's test IdleConnTimeout
+
 	testConns(t, a)
+
+	a.testIdleConnTimeout = false	// Reset to default
 
 	///////////////////////////////////////////////////////
 	// Successful retries
