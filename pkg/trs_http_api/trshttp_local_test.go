@@ -796,7 +796,7 @@ func TestConnsWithHttpTxPolicy_PcsSmallBusy(t *testing.T) {
 	nIssues             := 100
 	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
 	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
-	pcsStatusTimeout    := 30
+	pcsStatusTimeout    := 60    // Increase for pitiful unit test vm 
 
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
@@ -995,7 +995,7 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.openAfterCancel        = a.maxIdleConnsPerHost
 	a.openAfterClose         = a.maxIdleConnsPerHost
 
-	retrySleep = 4	// 0 seconds so retries complete after
+	retrySleep = 10	// So retries complete after
 
 	testConns(t, a)
 
@@ -1018,7 +1018,7 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 
-	// Thes test closes drained bodies
+	// This test closes drained bodies
 	openAfter := a.nTasks - a.nSkipDrainBody
 	if openAfter > a.maxIdleConnsPerHost {
 		openAfter = a.maxIdleConnsPerHost
