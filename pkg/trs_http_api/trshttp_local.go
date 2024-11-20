@@ -420,9 +420,17 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	var cpack *clientPack
 	tloc.clientMutex.Lock()
 	if _, ok := tloc.clientMap[tct.task.CPolicy]; !ok {
-		log := logrus.New()
-		log.SetLevel(tloc.Logger.GetLevel())
-		httpLogger := retryablehttp.LeveledLogger(&leveledLogrus{log})
+		httpLogger := logrus.New()
+		httpLogger.SetLevel(tloc.Logger.GetLevel())
+
+		// While having a leveled logger is super nice for seeing what is
+		// happening in retryablehttp, it comes with the cost of massive
+		// logging on large systems even for the highest error log level.
+		// Because it is so overly verbose, we keep to a non-leveled logger
+		// for now. Maybe a future version of retryablehttp will be less
+		// loggy.
+		//
+		//retryablehttpLogger := retryablehttp.LeveledLogger(&leveledLogrus{httpLogger})
 
 		cpack = new(clientPack)
 
@@ -438,7 +446,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		tloc.clientMap[tct.task.CPolicy] = cpack
 	} else {
 		cpack = tloc.clientMap[tct.task.CPolicy]
-	}
+	}h
 	tloc.clientMutex.Unlock()
 
 	// Found a client to use, now set up a request
