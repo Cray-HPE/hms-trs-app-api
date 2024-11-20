@@ -87,7 +87,6 @@ type HttpTxPolicy struct {
 	TLSHandshakeTimeout		time.Duration
 	DisableKeepAlives		bool
 }
-// {{6 0s} {true 4 4 2251808h52m22.580896768s 0s 0s false}}
 
 type ClientPolicy struct {
 	Retry    RetryPolicy

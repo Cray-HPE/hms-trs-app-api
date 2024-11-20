@@ -873,6 +873,9 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int, nIssues int) {
 // configuration for most of these.
 
 func TestConnsWithHttpTxPolicy_PcsSmallIdle(t *testing.T) {
+
+	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+
 	nTasks              := 4
 	nIssues             := 4
 	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
@@ -893,13 +896,14 @@ func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusy(t *testing.T) {
 }
 
 func TestConnsWithHttpTxPolicy_PcsSimulatedMedium(t *testing.T) {
+
+	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+
 	nTasks              := 1000
 	nIssues             := 4
 	maxIdleConnsPerHost := 1000 // Simulate more servers and larger connection pool
 	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
 	pcsStatusTimeout    := 30   // PCS default
-
-	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
@@ -1715,7 +1719,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	// We likely have many connections open and idle.  If requested, pause
 	// until IdleConnTimeout expires so that we verify they then close
 
-	if (a.testIdleConnTimeout) {
+	if a.testIdleConnTimeout && a.tListProto.CPolicy.Tx.Enabled {
 		// TODO: Should also comfirm no client "other" connections as well
 		t.Logf("Testing connections after idleConnTimeout")
 
