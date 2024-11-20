@@ -174,11 +174,11 @@ func (l *leveledLogrus) Debug(msg string, keysAndValues ...interface{}) {
 // wrap various retryablehttp and http interfaces to prevent this.
 
 type trsRoundTripper struct {
-	transport              *http.Transport
-	closeIdleConnectionsFn func()
-	skipCloseCount         uint64
-	skipCloseMutex         sync.Mutex
-	timeSince              time.Time
+	transport                             *http.Transport
+	closeIdleConnectionsFn                func()
+	skipCloseCount                        uint64
+	skipCloseMutex                        sync.Mutex
+	timeLastClosedOrReachedZeroCloseCount time.Time
 }
 
 // Our RoundTripper(). Just call RoundTrip interface at next level down.
@@ -228,6 +228,20 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 // counter is zero. This counter is decremented by our CheckRetry
 // wrapper (further below) if it detects a http timeout, context
 // timeout, or retry limit exceeded for a request.
+//
+// There may be a hole in the logic whereby a request sets the skip
+// counter but is then killed for whatever reason before it can call into
+// this wrapper. This would leave the counter at non-zero forever.  It
+// would be very unlikely to happen, but logically possible. We guard
+// against this by resetting the counter to zero if its been 2 hours since:
+//
+//	* The last call to c.CloseIdleConnectionsFn()
+//	* The last time the c.skipCloseCount reached zero
+//
+// Prior to this change, the TRS module would ALWAYS closing all idle
+// connections after every single http timeout, context timeout, or retry
+// count exceeded condition.  So, if we close out all the connections
+// occasionally after a two hour period, not a big deal.
 
 func (c *trsRoundTripper) CloseIdleConnections() {
 	TESTLOGGER.Warnf("=================> CloseIdleConnections:")
@@ -235,16 +249,38 @@ func (c *trsRoundTripper) CloseIdleConnections() {
 	// Skip closing idle connections if counter > 0
 	c.skipCloseMutex.Lock()
 	if c.skipCloseCount > 0 {
-		c.skipCloseCount--
 		TESTLOGGER.Warnf("                                          NOT CLOSING: skipCloseCount now %v", c.skipCloseCount)
+
+		c.skipCloseCount--
+
+		if c.skipCloseCount == 0 {
+			// Mark the time the counter last reached zero
+			c.timeLastClosedOrReachedZeroCloseCount = time.Now()
+		}
+
+		if time.Since(c.timeLastClosedOrReachedZeroCloseCount) > (2 * time.Hour) {
+			// If its been two hours since we last closed idle connections
+			// or since the counter last reached zero, reset the counter to
+			// zero and proceed to close idle connections
+TESTLOGGER.Errorf("                                          RESETTING SKIP COUNTER!!!!")
+			c.skipCloseCount = 0
+		} else {
+			c.skipCloseMutex.Unlock()
+
+			return
+		}
+	}
+	// Continue holding mutex until skipCloseCountResetTime is updated
+
+	if c.closeIdleConnectionsFn == nil {
+		// Nothing to do so release mutex
+		c.skipCloseMutex.Unlock()
+	} else {
+		// Mark the time of this call to close connections
+		c.timeLastClosedOrReachedZeroCloseCount = time.Now()
+
 		c.skipCloseMutex.Unlock()
 
-		return
-	}
-	c.skipCloseMutex.Unlock()
-
-	// Otherwise, close them
-	if c.closeIdleConnectionsFn != nil {
 		TESTLOGGER.Warnf("                                          closing")
 		c.closeIdleConnectionsFn()
 	}
@@ -384,8 +420,9 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 
 	// Wrap base transport with retryablehttp
 	retryabletr := &trsRoundTripper{
-		transport:              tr,
-		closeIdleConnectionsFn: tr.CloseIdleConnections,
+		transport:                             tr,
+		closeIdleConnectionsFn:                tr.CloseIdleConnections,
+		timeLastClosedOrReachedZeroCloseCount: time.Now(),
 	}
 
 	// Create the httpretryable client and start configuring it
