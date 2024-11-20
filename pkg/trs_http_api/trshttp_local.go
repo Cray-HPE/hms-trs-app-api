@@ -420,23 +420,27 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 
 	// Wrap base transport with retryablehttp
 	retryabletr := &trsRoundTripper{
-		transport:                             tr,
-// TODO: ONLY CONFIG IF NO TX POLICY SO IT CAN BE DISABLED IN FIELD BY DEPLOYMENT CHANGE
-		closeIdleConnectionsFn:                tr.CloseIdleConnections,
-// TODO: ONLY CONFIG IF NO TX POLICY SO IT CAN BE DISABLED IN FIELD BY DEPLOYMENT CHANGE
-		timeLastClosedOrReachedZeroCloseCount: time.Now(),
+		transport: tr,
+	}
+
+	// Only wrap these lower level hooks if we're configuring the full transport
+	if httpTxPolicy.Enabled {
+		retryabletr.closeIdleConnectionsFn                = tr.CloseIdleConnections
+		retryabletr.timeLastClosedOrReachedZeroCloseCount = time.Now()
 	}
 
 	// Create the httpretryable client and start configuring it
 	client = retryablehttp.NewClient()
 
 	client.HTTPClient.Transport = retryabletr
-// TODO: ONLY CONFIG IF NO TX POLICY SO IT CAN BE DISABLED IN FIELD BY DEPLOYMENT CHANGE
 	client.HTTPClient.Timeout   = task.Timeout * 9 / 10 // 90% of the task's context timeout
 
-	// Wrap httpretryable's DefaultRetryPolicy() so we can prevent retries when desired
-// TODO: ONLY CONFIG IF NO TX POLICY SO IT CAN BE DISABLED IN FIELD BY DEPLOYMENT CHANGE
-	client.CheckRetry = retryabletr.trsCheckRetry
+	// Only wrap lower level hooks if we're configurind the full transport
+	if httpTxPolicy.Enabled {
+		// Wrap httpretryable's DefaultRetryPolicy() so we can prevent
+		// retries when desired
+		client.CheckRetry = retryabletr.trsCheckRetry
+	}
 
 	// Configure the httpretryable client retry count
 	if (task.CPolicy.Retry.Retries > 0) {
@@ -452,11 +456,12 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 		client.RetryWaitMax = DFLT_BACKOFF_MAX * time.Second
 	}
 
-	// Log the configuration we're going to use. Clients are generally long
-	// lived so this shouldn't be too spammy. Knowing this information can
-	// be pretty critical when debugging issues on site
-	tloc.Logger.Errorf("Created %s client with incoming policy %v (to's %s and %s) (ll %v)",
-					   clientType, task.CPolicy, task.Timeout, client.HTTPClient.Timeout, tloc.Logger.GetLevel())
+	// Log this client's configuration
+	tloc.Logger.Errorf("Created %s client with incoming policy %v " +
+					   "(to's %s and %s) (ll %v) (cnum=%v)",
+					   clientType, task.CPolicy, task.Timeout,
+					   client.HTTPClient.Timeout, tloc.Logger.GetLevel(),
+					   len(tloc.clientMap) + 1)
 
 	return client
 }
@@ -535,6 +540,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		return
 	}
 
+// TODO: ONLY CONFIG IF NO TX POLICY SO IT CAN BE DISABLED IN FIELD BY DEPLOYMENT CHANGE
 	// Add our own retry counter to the context
 	trsWR := &trsWrappedReq{
 		orig:       tct.task.Request, // Assign the original request

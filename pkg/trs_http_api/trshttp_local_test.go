@@ -1073,7 +1073,12 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.openAfterClose         = a.maxIdleConnsPerHost
 
 	retrySleep   = 0	// 0 seconds so retries complete first
-	handlerSleep = 20	// slow down the others
+
+	if a.nTasks < 1000 && a.nFailRetries < 10 {
+		handlerSleep = 5	// slow down the others
+	} else {
+		handlerSleep = 20	// slow down the others
+	}
 
 	testConns(t, a)
 
