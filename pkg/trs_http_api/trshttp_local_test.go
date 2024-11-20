@@ -482,6 +482,22 @@ func TestLaunchTimeout(t *testing.T) {
 //
 ///////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////
+//
+// WARNING!  The Go runtime behavior surrounding connections has changed in
+//			 more recent versions of Go.  Prior to version 1.23.X, if any
+//			 connection in the connection pool experiences a timeout, the
+//			 Go runtime closes all idle connections.  There is nothing we
+//			 can do about this in TRS, other than use a newer version of Go
+//			 that doesn't exhibit this (horrible) behavior.
+//
+//			 In our unit tests, we can change the version of Go used by
+//			 specifying it in the Makefile.  There are further instructions
+//			 in the Makefile on how to do this.
+//
+///////////////////////////////////////////////////////////////////////////
+
+
 // CustomConnState is a hook into httptest http servers that the unit tests
 // below spin up.  It allows is to log changes to connection states.  This
 // is critical when debugging connection state issues
