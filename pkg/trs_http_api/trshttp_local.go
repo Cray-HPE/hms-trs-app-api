@@ -417,7 +417,7 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 
 	// Log this client's configuration
 	tloc.Logger.Errorf("Created %s client with incoming policy %v " +
-					   "(to's %s and %s) (ll %v) (cnum=%v)",
+					   "(to's %s and %s) (ll %v) (cpnum=%v)",
 					   clientType, task.CPolicy, task.Timeout,
 					   client.HTTPClient.Timeout, tloc.Logger.GetLevel(),
 					   len(tloc.clientMap) + 1)

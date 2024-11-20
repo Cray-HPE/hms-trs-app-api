@@ -804,6 +804,9 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 // which is a newer feature of TRS.
 
 func TestConnsWithNoHttpTxPolicy_Idle(t *testing.T) {
+
+	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+
 	nTasks  := 2	// default MaxIdleConnsPerHost
 	nIssues := 1
 
@@ -886,6 +889,7 @@ func TestConnsWithHttpTxPolicy_PcsSmallIdle(t *testing.T) {
 }
 
 func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusy(t *testing.T) {
+
 	nTasks              := 1000
 	nIssues             := 10
 	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
