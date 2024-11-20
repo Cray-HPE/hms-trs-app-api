@@ -906,17 +906,13 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 
-//	// Truncate the good connections down to MaxIdleConnsPerHost
-//	openAfter = a.nTasks - a.nSkipDrainBody
-//	if openAfter > maxIdleConnsPerHost {
-//		openAfter = maxIdleConnsPerHost
-//	}
-//	// And add in the unusable open connections
-//	openAfter += a.nSkipDrainBody	// must be same as a.nSkipCloseBody
+	// Truncate the good connections down to MaxIdleConnsPerHost
+	// plus whatever connections are yucky
+	openAfter := ((a.nTasks - a.nSkipDrainBody) % maxIdleConns) + a.nSkipDrainBody
 
-	a.openAfterBodyClose     = maxIdleConnsPerHost
-	a.openAfterCancel        = maxIdleConnsPerHost
-	a.openAfterClose         = maxIdleConnsPerHost
+	a.openAfterBodyClose     = openAfter
+	a.openAfterCancel        = openAfter
+	a.openAfterClose         = openAfter
 
 	testConns(t, a)
 
@@ -1165,10 +1161,11 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 //	}
 //	// And add in the unusable open connections
 //	openAfter += a.nSkipDrainBody	// must be same as a.nSkipCloseBody
+	openAfter := ((a.nTasks - a.nSkipDrainBody) % maxIdleConns) + a.nSkipDrainBody
 
-	a.openAfterBodyClose     = maxIdleConnsPerHost
-	a.openAfterCancel        = maxIdleConnsPerHost
-	a.openAfterClose         = maxIdleConnsPerHost
+	a.openAfterBodyClose     = openAfter
+	a.openAfterCancel        = openAfter
+	a.openAfterClose         = openAfter
 
 	testConns(t, a)
 
@@ -1557,7 +1554,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	} else if a.nTasks <= 10000 {
 		time.Sleep(5 * time.Second)
 	} else {
-		time.Sleep(10 * time.Second)
+		time.Sleep(20 * time.Second)
 	}
 	t.Logf("Testing connections after Launch")
 	testOpenConnections(t, (a.nTasks))
