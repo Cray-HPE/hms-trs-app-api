@@ -446,7 +446,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		tloc.clientMap[tct.task.CPolicy] = cpack
 	} else {
 		cpack = tloc.clientMap[tct.task.CPolicy]
-	}h
+	}
 	tloc.clientMutex.Unlock()
 
 	// Found a client to use, now set up a request
