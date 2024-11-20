@@ -724,9 +724,9 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	httpRetries             := 3
 	pcsStatusTimeout        := 30
 	ctxTimeout              := time.Duration(pcsStatusTimeout) * time.Second
-	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
-	idleConnTimeout         := 0	// default when not using HttpTxPolicy (no timeout)
-	maxIdleConns            := 100	// default when not using HttpTxPolicy
+	//pcsTimeToNextStatusPoll := 30	// pmSampleInterval
+	//idleConnTimeout         := 0	// default when not using HttpTxPolicy (no timeout)
+	//maxIdleConns            := 100	// default when not using HttpTxPolicy
 	maxIdleConnsPerHost     := 2	// default when not using HttpTxPolicy
 
 	// Default prototype to initialize each task in the task list with
@@ -745,6 +745,11 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 		srvHandler:             launchHandler,	// always returns success
 	}
 
+	testConnsPrep(t, a, nTasks, nIssues)
+}
+
+func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
+
 	t.Logf("")
 	t.Logf("============================================================")
 	t.Logf("=                  Test Configuration                    ===")
@@ -752,18 +757,21 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	t.Logf("")
 	t.Logf("nTasks                  = %v", nTasks)
 	t.Logf("nIssues                 = %v", nIssues)
-	t.Logf("ctxTimeout              = %v", ctxTimeout)
-	t.Logf("idleConnTimeout         = %v", idleConnTimeout)
-	t.Logf("pcsTimeToNextStatusPoll = %v", pcsTimeToNextStatusPoll)
-	t.Logf("MaxIdleConns            = %v", maxIdleConns)
-	t.Logf("MaxIdleConnsPerHost     = %v", maxIdleConnsPerHost)
-	t.Logf("httpRetries             = %v", httpRetries)
+	t.Logf("Retries                 = %v", a.tListProto.CPolicy.Retry.Retries)
+	t.Logf("ctxTimeout              = %v", a.tListProto.Timeout)
+
+	if a.tListProto.CPolicy.Tx.Enabled {
+		t.Logf("idleConnTimeout         = %v", a.tListProto.CPolicy.Tx.IdleConnTimeout)
+		t.Logf("MaxIdleConns            = %v", a.tListProto.CPolicy.Tx.MaxIdleConns)
+		t.Logf("MaxIdleConnsPerHost     = %v", a.tListProto.CPolicy.Tx.MaxIdleConnsPerHost)
+	} else {
+		t.Logf("idleConnTimeout         = 0 (default - unlimited)")
+		t.Logf("MaxIdleConnsPerHost     = 2 (default)")
+		t.Logf("MaxIdleConns            = 100 (default)")
+	}
+
 	t.Logf("")
 
-	testConnsPrep(t, a, nTasks, nIssues)
-}
-
-func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 
 	///////////////////////////////////////////////////////
 	// All successes
@@ -989,16 +997,16 @@ func TestConnsWithHttpTxPolicyAndFourTasks(t *testing.T) {
 	testConnsWithHttpTxPolicy(t, 4)	// default MaxIdleConnsPerHost
 }
 
-func TestConnsWithHttpTxPolicyAndOneThousandTasks(t *testing.T) {
+func TestConnsWithHttpTxPolicyAndFourThousandTasks(t *testing.T) {
 	testConnsWithHttpTxPolicy(t, 1000)
 }
 
 func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
-	nIssues                 := 2
+	nIssues                 := 4
 	httpRetries             := 3
-	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
 	pcsStatusTimeout        := 30
 	ctxTimeout              := time.Duration(pcsStatusTimeout) * time.Second
+	pcsTimeToNextStatusPoll := 30	// pmSampleInterval
 	maxIdleConns            := 1000	// default when using HttpTxPolicy
 	maxIdleConnsPerHost     := 4	// default when using HttpTxPolicy
 
@@ -1056,188 +1064,6 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 	t.Logf("")
 
 	testConnsPrep(t, a, nTasks, nIssues)
-
-/*
-	// All success
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 0
-	a.nFailRetries           = 0
-	a.nSkipDrainBody         = 0
-	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 0
-	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = maxIdleConnsPerHost
-	a.openAfterCancel        = maxIdleConnsPerHost
-	a.openAfterClose         = maxIdleConnsPerHost
-
-	testConns(t, a)
-
-	// Two successful retries
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 2
-	a.nFailRetries           = 0
-	a.nSkipDrainBody         = 0
-	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 0
-	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = maxIdleConnsPerHost
-	a.openAfterCancel        = maxIdleConnsPerHost
-	a.openAfterClose         = maxIdleConnsPerHost
-
-	testConns(t, a)
-
-	// Two failed due to retries exceeded that complete before the
-	// successful reception of responses
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 0
-	a.nFailRetries           = 2
-	a.nSkipDrainBody         = 0
-	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 0
-	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = maxIdleConnsPerHost
-	a.openAfterCancel        = maxIdleConnsPerHost
-	a.openAfterClose         = maxIdleConnsPerHost
-
-	retrySleep   = 0	// 0 seconds so retries complete first
-	handlerSleep = 10	// slow down the others
-
-	testConns(t, a)
-
-	handlerSleep = 2	// slow down the others
-	retrySleep   = 0	// set back to default
-
-	// Two failed due to retries exceeded that complete after the
-	// successful reception of a response
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 0
-	a.nFailRetries           = 2
-	a.nSkipDrainBody         = 0
-	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 0
-	a.openAtStart            = 0
-	a.openAfterTasksComplete = maxIdleConnsPerHost	// successful tasks closed bodies already
-	a.openAfterBodyClose     = maxIdleConnsPerHost
-	a.openAfterCancel        = maxIdleConnsPerHost
-	a.openAfterClose         = maxIdleConnsPerHost
-
-	retrySleep = 4	// 4 seconds so retries complete last
-
-	testConns(t, a)
-
-	retrySleep = 0				// set back to default
-
-	// Body Drain: skip
-	// Body Close: yes
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 0
-	a.nFailRetries           = 0
-	a.nSkipDrainBody         = 2
-	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 0
-	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
-
-	openAfter := a.nTasks - a.nSkipDrainBody
-
-	if openAfter > maxIdleConnsPerHost {
-		openAfter = maxIdleConnsPerHost
-	}
-
-	a.openAfterBodyClose     = openAfter
-	a.openAfterCancel        = openAfter
-	a.openAfterClose         = openAfter
-
-	testConns(t, a)
-
-	// Body Drain: yes
-	// Body Close: skip
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 0
-	a.nFailRetries           = 0
-	a.nSkipDrainBody         = 0
-	a.nSkipCloseBody         = 2
-	a.nHttpTimeouts          = 0
-	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
-	a.openAfterBodyClose     = maxIdleConnsPerHost
-	a.openAfterCancel        = maxIdleConnsPerHost
-	a.openAfterClose         = maxIdleConnsPerHost
-
-	testConns(t, a)
-
-	// Body Drain: skip
-	// Body Close: skip
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 0
-	a.nFailRetries           = 0
-	a.nSkipDrainBody         = 2
-	a.nSkipCloseBody         = 2
-	a.nHttpTimeouts          = 0
-	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
-
-	// Truncate the good connections down to MaxIdleConnsPerHost
-	// plus whatever connections are yucky
-
-	openAfter = a.nTasks - a.nSkipDrainBody
-	if openAfter > maxIdleConnsPerHost {
-		openAfter = maxIdleConnsPerHost
-	}
-	openAfter = openAfter + a.nSkipDrainBody
-
-	a.openAfterBodyClose     = openAfter
-	a.openAfterCancel        = openAfter
-
-	// Handle bodies being closed by Close()
-	if openAfter > maxIdleConnsPerHost - a.nSkipDrainBody {
-		a.openAfterClose     = maxIdleConnsPerHost
-	} else {
-		a.openAfterClose     = openAfter
-	}
-
-	testConns(t, a)
-
-	// Two context timeouts (not http - can only be consigured if
-	// using HttpTxPolicy).  We also run a second task list to
-	// confirm same number of open connections at start of second
-
-	a.nTasks                 = nTasks
-	a.nSuccessRetries        = 0
-	a.nFailRetries           = 0
-	a.nSkipDrainBody         = 0
-	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 2
-
-	a.openAtStart            = 0
-
-	openAfter = a.nTasks - a.nHttpTimeouts
-
-	if openAfter > maxIdleConnsPerHost {
-		openAfter = maxIdleConnsPerHost
-	}
-
-	a.openAfterTasksComplete = openAfter
-	a.openAfterBodyClose     = openAfter
-	a.openAfterCancel        = openAfter
-	a.openAfterClose         = openAfter
-
-	a.runSecondTaskList   = true
-
-	testConns(t, a)
-
-	a.runSecondTaskList    = false
-*/
 }
 
 // TestLargeConnectionPools tests very large connection pools
