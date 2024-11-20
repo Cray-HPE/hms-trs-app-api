@@ -758,7 +758,6 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	t.Logf("httpRetries             = %v", httpRetries)
 	t.Logf("")
 
-/*
 	// All successes
 
 	a.nTasks                 = nTasks
@@ -896,7 +895,6 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	// When pruning open connections down to maxIdleConnsPerHost, I assume
 	// this unusable connection gets chosen to remain open
 
-*/
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
@@ -927,7 +925,6 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 
 	testConns(t, a)
 
-/*
 	// Basics: One context timeout (not http - can only be consigured if
 	//         using HttpTxPolicy).  We also run a second task list to
 	//		   confirm same number of open connections at start of second
@@ -957,7 +954,6 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	testConns(t, a)
 
 	a.runSecondTaskList = false
-*/
 }
 
 // TestConnsWithHttpTxPolicy* tests use by TRS users that do configure
@@ -1034,7 +1030,6 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 	t.Logf("httpRetries             = %v", httpRetries)
 	t.Logf("")
 
-/*
 	// All success
 
 	a.nTasks                 = nTasks
@@ -1152,7 +1147,6 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 
 	testConns(t, a)
 
-*/
 	// Body Drain: skip
 	// Body Close: skip
 
@@ -1186,7 +1180,6 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 
 	testConns(t, a)
 
-/*
 	// Two context timeouts (not http - can only be consigured if
 	// using HttpTxPolicy).  We also run a second task list to
 	// confirm same number of open connections at start of second
@@ -1216,7 +1209,6 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 	testConns(t, a)
 
 	a.runSecondTaskList    = false
-*/
 }
 
 // TestLargeConnectionPools tests very large connection pools
