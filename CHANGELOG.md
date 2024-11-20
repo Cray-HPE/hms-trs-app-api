@@ -9,14 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Run unit tests in verbose mode so failures are more easily analyzed
+- Created new HttpTxPolicy that callers can use to configure http transport
 - Added additional tracing for debug purposes
 - ExecuteTask(): Reworked for easier readability and maintainability
 - ExecuteTask(): Return immediately when errors are encountered
 - ExecuteTask(): Cancel contexts immediatly after successful responses
-- ExecuteTask(): Pass thru log level to retryablehttp to match TRS's
-- Enable TRS logging from inside unit tests to aid in debugging
-- Created TestPCSUseCase() unit test for full testing of PCS use case
+- Unit tests: Now run in verbose mode so failures are more easily analyzed
+- Unit tests: Enabled TRS logging from inside unit tests
+- Unit tests: Error signature changed to make identifying errors easier
+- Unit tests: Numerous unit tests added to test connection states
 
 ## [2.1.1] - 2024-10-31
 

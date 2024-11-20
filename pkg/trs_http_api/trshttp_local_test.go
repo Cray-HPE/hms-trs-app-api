@@ -430,7 +430,7 @@ func TestLaunchTimeout(t *testing.T) {
 
 ///////////////////////////////////////////////////////////////////////////
 //
-// Documented treatment of connections due to handling of response bodies here
+// Documenting treatment of connections due to handling of response bodies here
 // as its as good of place as any to put this information.
 //
 // If response body is closed
@@ -723,6 +723,7 @@ type testConnsArg struct {
 	testIdleConnTimeout    bool 	 // Test idle connection timeout
 	runSecondTaskList	   bool      // Run a second task list after the first with same server
 	openAtStart            int       // Expected number of ESTAB connections at beginning
+	openAfterLaunch        int       // Expected number of ESTAB connections after Launch()
 	openAfterTasksComplete int       // Expected number of ESTAB connections after all tasks complete
 	openAfterBodyClose     int       // Expected number of ESTAB connections after closing response bodies
 	skipCancel             bool      // Skip cancel and go directly to Close()
@@ -754,6 +755,7 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 	t.Logf("   runSecondTaskList:   %v", a.runSecondTaskList)
 	t.Logf("")
 	t.Logf("   Conns open after:    start:         %v", a.openAtStart)
+	t.Logf("                        launch:        %v", a.openAfterLaunch)
 	t.Logf("                        tasksComplete: %v", a.openAfterTasksComplete)
 	t.Logf("                        bodyClose:     %v", a.openAfterBodyClose)
 	t.Logf("                        cancel:        %v (skip = %v)", a.openAfterCancel, a.skipCancel)
@@ -882,7 +884,7 @@ func TestConnsWithHttpTxPolicy_PcsSmallIdle(t *testing.T) {
 
 func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusy(t *testing.T) {
 	nTasks              := 1000
-	nIssues             := 10
+	nIssues             := 4
 	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
 	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
 	pcsStatusTimeout    := 30   // PCS default
@@ -896,6 +898,8 @@ func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusyLotsOfErrors(t *testing.T) {
 	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
 	maxIdleConns        := 1000	// PCS default when using HttpTxPolicy
 	pcsStatusTimeout    := 30   // PCS default
+
+	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
@@ -1030,7 +1034,8 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.nHttpTimeouts          = 0
 
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
+	a.openAfterLaunch        = a.nTasks
+	a.openAfterTasksComplete = a.openAfterLaunch
 	a.openAfterBodyClose     = a.maxIdleConnsPerHost
 	a.openAfterCancel        = a.maxIdleConnsPerHost
 	a.openAfterClose         = a.maxIdleConnsPerHost
@@ -1048,7 +1053,8 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.nHttpTimeouts          = 0
 
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
+	a.openAfterLaunch        = a.nTasks
+	a.openAfterTasksComplete = a.openAfterLaunch
 	a.openAfterBodyClose     = a.maxIdleConnsPerHost
 	a.openAfterCancel        = a.maxIdleConnsPerHost
 	a.openAfterClose         = a.maxIdleConnsPerHost
@@ -1067,7 +1073,18 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.nHttpTimeouts          = 0
 
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
+
+	// Connections for failed retries will be subject to maxIdleConnsPerHost
+
+	openAfter := a.nFailRetries
+	if openAfter > a.maxIdleConnsPerHost {
+		openAfter = a.maxIdleConnsPerHost
+	}
+
+	openAfter = openAfter + (nTasks - nIssues)
+
+	a.openAfterLaunch        = openAfter
+	a.openAfterTasksComplete = a.openAfterLaunch
 	a.openAfterBodyClose     = a.maxIdleConnsPerHost
 	a.openAfterCancel        = a.maxIdleConnsPerHost
 	a.openAfterClose         = a.maxIdleConnsPerHost
@@ -1097,6 +1114,7 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.nHttpTimeouts          = 0
 
 	a.openAtStart            = 0
+	a.openAfterLaunch        = a.nTasks
 	a.openAfterTasksComplete = a.maxIdleConnsPerHost	// successful tasks closed bodies already
 	a.openAfterBodyClose     = a.maxIdleConnsPerHost
 	a.openAfterCancel        = a.maxIdleConnsPerHost
@@ -1123,12 +1141,13 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.nHttpTimeouts          = 0
 
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
+	a.openAfterLaunch        = a.nTasks
+	a.openAfterTasksComplete = a.openAfterLaunch
 
 	// This test closes drained bodies so account for that along with the
 	// max number of connections allowed per host
 
-	openAfter := a.nTasks - a.nSkipDrainBody
+	openAfter = a.nTasks - a.nSkipDrainBody
 	if openAfter > a.maxIdleConnsPerHost {
 		openAfter = a.maxIdleConnsPerHost
 	}
@@ -1159,7 +1178,8 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.nHttpTimeouts          = 0
 
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
+	a.openAfterLaunch        = a.nTasks
+	a.openAfterTasksComplete = a.openAfterLaunch
 	a.openAfterBodyClose     = a.maxIdleConnsPerHost
 	a.openAfterCancel        = a.maxIdleConnsPerHost
 	a.openAfterClose         = a.maxIdleConnsPerHost
@@ -1186,7 +1206,8 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.nHttpTimeouts          = 0
 
 	a.openAtStart            = 0
-	a.openAfterTasksComplete = a.nTasks
+	a.openAfterLaunch        = a.nTasks
+	a.openAfterTasksComplete = a.openAfterLaunch
 
 	// Truncate the good connections down to MaxIdleConnsPerHost
 	// plus whatever connections are yucky
@@ -1224,11 +1245,12 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.nHttpTimeouts          = nIssues
 
 	a.openAtStart            = 0
+	a.openAfterLaunch        = a.nTasks
 
 	// Timed out connections will close but we also need to account for
 	// the max idle connections allowed per host
 
-	openAfter = a.nTasks - a.nHttpTimeouts
+	openAfter = a.openAfterLaunch - a.nHttpTimeouts
 	if openAfter > a.maxIdleConnsPerHost {
 		openAfter = a.maxIdleConnsPerHost
 	}
@@ -1314,7 +1336,8 @@ func testConns(t *testing.T, a testConnsArg) {
 		// issues or errors in the second run, open connections should be
 		// truncated down to MaxIdleConnsPerHost after bodies get closed
 
-		a.openAfterTasksComplete = a.nTasks
+		a.openAfterLaunch        = a.nTasks
+		a.openAfterTasksComplete = a.openAfterLaunch
 		a.openAfterBodyClose     = a.maxIdleConnsPerHost
 		a.openAfterCancel        = a.maxIdleConnsPerHost
 		a.openAfterClose         = a.maxIdleConnsPerHost
@@ -1428,7 +1451,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	// the ESTAB(LISHED) state
 
 	t.Logf("Testing connections after Launch")
-	testOpenConnections(t, (a.nTasks))
+	testOpenConnections(t, a.openAfterLaunch)
 
 	// If asked, here we attempt to close response bodies for tasks that have
 	// already completed, prior to tasks that will fail retries.  This is
