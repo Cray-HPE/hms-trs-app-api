@@ -913,21 +913,17 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int) {
 	if openAfter > maxIdleConnsPerHost {
 		openAfter = maxIdleConnsPerHost
 	}
-	t.Logf("openAfter = %v", openAfter)
 	openAfter = openAfter + a.nSkipDrainBody
-	t.Logf("openAfter = %v", openAfter)
-
-	//openAfter := a.nTasks - a.nSkipDrainBody
-	//t.Logf("openAfter = %v", openAfter)
-	//openAfter = openAfter % maxIdleConnsPerHost
-	//t.Logf("openAfter = %v", openAfter)
-	//openAfter = openAfter + a.nSkipDrainBody
-	//t.Logf("openAfter = %v", openAfter)
-	//openAfter := ((a.nTasks - a.nSkipDrainBody) % maxIdleConnsPerHost) + a.nSkipDrainBody
 
 	a.openAfterBodyClose     = openAfter
 	a.openAfterCancel        = openAfter
-	a.openAfterClose         = openAfter
+
+	// Handle bodies being closed by Close()
+	if openAfter > maxIdleConnsPerHost - a.nSkipDrainBody {
+		a.openAfterClose     = maxIdleConnsPerHost
+	} else {
+		a.openAfterClose     = openAfter
+	}
 
 	testConns(t, a)
 
@@ -1169,18 +1165,24 @@ func testConnsWithHttpTxPolicy(t *testing.T, nTasks int) {
 	a.openAtStart            = 0
 	a.openAfterTasksComplete = a.nTasks
 
-//	// Truncate the good connections down to MaxIdleConnsPerHost
-//	openAfter = a.nTasks - a.nSkipDrainBody
-//	if openAfter > maxIdleConnsPerHost {
-//		openAfter = maxIdleConnsPerHost
-//	}
-//	// And add in the unusable open connections
-//	openAfter += a.nSkipDrainBody	// must be same as a.nSkipCloseBody
-	openAfter := ((a.nTasks - a.nSkipDrainBody) % maxIdleConnsPerHost) + a.nSkipDrainBody
+	// Truncate the good connections down to MaxIdleConnsPerHost
+	// plus whatever connections are yucky
+
+	openAfter := a.nTasks - a.nSkipDrainBody
+	if openAfter > maxIdleConnsPerHost {
+		openAfter = maxIdleConnsPerHost
+	}
+	openAfter = openAfter + a.nSkipDrainBody
 
 	a.openAfterBodyClose     = openAfter
 	a.openAfterCancel        = openAfter
-	a.openAfterClose         = openAfter
+
+	// Handle bodies being closed by Close()
+	if openAfter > maxIdleConnsPerHost - a.nSkipDrainBody {
+		a.openAfterClose     = maxIdleConnsPerHost
+	} else {
+		a.openAfterClose     = openAfter
+	}
 
 	testConns(t, a)
 
@@ -1407,6 +1409,39 @@ func TestLargeConnectionPools(t *testing.T) {
 	a.openAfterBodyClose     = a.nTasks
 	a.openAfterCancel        = a.nTasks
 	a.openAfterClose         = a.nTasks
+
+	testConns(t, a)
+
+	// Body Drain: skip
+	// Body Close: skip
+
+	a.nTasks                 = nTasks
+	a.nSuccessRetries        = 0
+	a.nFailRetries           = 0
+	a.nSkipDrainBody         = 500
+	a.nSkipCloseBody         = 500
+	a.nHttpTimeouts          = 0
+	a.openAtStart            = 0
+	a.openAfterTasksComplete = a.nTasks
+
+	// Truncate the good connections down to MaxIdleConnsPerHost
+	// plus whatever connections are yucky
+
+	openAfter := a.nTasks - a.nSkipDrainBody
+	if openAfter > maxIdleConnsPerHost {
+		openAfter = maxIdleConnsPerHost
+	}
+	openAfter = openAfter + a.nSkipDrainBody
+
+	a.openAfterBodyClose     = openAfter
+	a.openAfterCancel        = openAfter
+
+	// Handle bodies being closed by Close()
+	if openAfter > maxIdleConnsPerHost - a.nSkipDrainBody {
+		a.openAfterClose     = maxIdleConnsPerHost
+	} else {
+		a.openAfterClose     = openAfter
+	}
 
 	testConns(t, a)
 
@@ -1702,7 +1737,6 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 					if logLevel == logrus.DebugLevel {
 						t.Logf("Skipping draining response body for task %v", tsk.GetID())
 					}
-t.Logf("Skipping draining response body for task %v", tsk.GetID())
 				} else {
 					_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
 				}
@@ -1712,7 +1746,6 @@ t.Logf("Skipping draining response body for task %v", tsk.GetID())
 				if logLevel == logrus.DebugLevel {
 					t.Logf("Skipping closing response body for task %v", tsk.GetID())
 				}
-t.Logf("Skipping closing response body for task %v", tsk.GetID())
 				continue
 			}
 		}
@@ -1725,7 +1758,6 @@ t.Logf("Skipping closing response body for task %v", tsk.GetID())
 				if logLevel == logrus.DebugLevel {
 					t.Logf("Skipping draining response body for task %v", tsk.GetID())
 				}
-t.Logf("Skipping draining response body for task %v", tsk.GetID())
 			} else {
 				_, _ = io.Copy(io.Discard, tsk.Request.Response.Body)
 			}
