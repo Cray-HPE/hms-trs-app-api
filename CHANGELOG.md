@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unit tests: Error signature changed to make identifying errors easier
 - Unit tests: Reworked some existing unit tests
 - Unit tests: Numerous unit tests added to test connection states
+- Update required version of Go to 1.23 to avoid
+  https://github.com/golang/go/issues/59017
 
 ## [2.1.1] - 2024-10-31
 
