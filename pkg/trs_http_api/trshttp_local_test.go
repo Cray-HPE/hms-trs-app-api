@@ -1167,25 +1167,20 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 
 	a.openAtStart            = 0
 	a.openAfterLaunch        = a.nTasks
-
-/// NEW
-/*
-	a.openAfterTasksComplete = a.maxIdleConnsPerHost - a.nFailRetries
-	a.openAfterBodyClose     = a.openAfterTasksComplete
-	a.openAfterCancel        = a.openAfterTasksComplete
-	a.openAfterClose         = a.openAfterTasksComplete
-*/
-///
-
 	a.openAfterTasksComplete = a.maxIdleConnsPerHost	// successful tasks closed bodies already
 	a.openAfterBodyClose     = a.maxIdleConnsPerHost
 	a.openAfterCancel        = a.maxIdleConnsPerHost
 	a.openAfterClose         = a.maxIdleConnsPerHost
 
-	if a.nTasks < 1000 && a.nFailRetries < 10 {
-		retrySleep = 10	// So retries complete after
+	// Slow down the retries so that the completing tasks finish up first.
+	// Don't slow down too much though or we'll get a context timeout.
+	// SHould probably make retrySleep an initialRetrySleep so we only
+	// sleep once to avoid the issue
+
+	if a.nTasks <= 1000 && a.nFailRetries < 10 {
+		retrySleep = 5
 	} else {
-		retrySleep = 20	// So retries complete after
+		retrySleep = 9
 	}
 
 	testConns(t, a)
@@ -1256,13 +1251,10 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	// Body Drain: skip
 	// Body Close: skip
 	//
-	// Like the above test case, an open body stays open if the body is
-	// never closed and is not reusable for any other requests (unless
-	// body is later drained/closed).
-	//
-	// Unlike the case above, the connection is not marked "dirty" and is
-	// not closed unless the caller closes the body or IdleConnTimeout
-	// causes it to close.
+	// The connection stays open if the body is never closed but what is
+	// different in this case is that if the body was also NOT drained,
+	// then the connection gets closed if the context times out or is
+	// cancelled (or IdleConnTimeout is reached).
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
@@ -1274,32 +1266,17 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.openAtStart            = 0
 	a.openAfterLaunch        = a.nTasks
 	a.openAfterTasksComplete = a.openAfterLaunch
+	a.openAfterBodyClose     = a.openAfterLaunch
 
 	// Truncate the good connections down to MaxIdleConnsPerHost
-	// plus whatever connections are yucky
 
-/*
-/// NEW
-	a.openAfterCancel        = a.maxIdleConnsPerHost
-	a.openAfterClose         = a.maxIdleConnsPerHost
-///
-*/
-
-	openAfter = a.nTasks - a.nSkipDrainBody
+	openAfter = a.openAfterLaunch - a.nSkipDrainBody
 	if openAfter > a.maxIdleConnsPerHost {
 		openAfter = a.maxIdleConnsPerHost
 	}
-	openAfter = openAfter + a.nSkipDrainBody
 
 	a.openAfterCancel        = openAfter
-
-	// Unclosed bodies will now be closed by tloc.Close()
-
-	if openAfter > a.maxIdleConnsPerHost - a.nSkipDrainBody {
-		a.openAfterClose     = a.maxIdleConnsPerHost
-	} else {
-		a.openAfterClose     = openAfter
-	}
+	a.openAfterClose         = openAfter
 
 	testConns(t, a)
 

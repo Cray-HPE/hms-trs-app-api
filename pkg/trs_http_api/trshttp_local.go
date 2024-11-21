@@ -277,7 +277,6 @@ TESTLOGGER.Errorf("                    closing")
 		// Call next level down
 		c.closeIdleConnectionsFn()
 	}
-TESTLOGGER.Errorf("                   RESETTING SKIP COUNTER!!!! ===> ERROR")	// REMOVE ME
 TESTLOGGER.Errorf("                   done closing")
 }
 
