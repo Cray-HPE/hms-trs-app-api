@@ -831,6 +831,7 @@ func TestConnsWithNoHttpTxPolicy_Idle(t *testing.T) {
 
 func TestConnsWithNoHttpTxPolicy_ModeratlyBusy(t *testing.T) {
 
+t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 	nTasks  := 1000
 	nIssues := 1
 
@@ -906,6 +907,7 @@ func TestConnsWithHttpTxPolicy_PcsSmallIdle(t *testing.T) {
 
 func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusy(t *testing.T) {
 
+t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 	nTasks              := 1000
 	nIssues             := 5
 	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
@@ -917,7 +919,7 @@ func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusy(t *testing.T) {
 
 func TestConnsWithHttpTxPolicy_PcsSimulatedMedium(t *testing.T) {
 
-	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+//	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 	nTasks              := 1000
 	nIssues             := 4

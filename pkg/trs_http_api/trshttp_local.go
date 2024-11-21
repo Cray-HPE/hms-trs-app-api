@@ -55,14 +55,13 @@ const (
 //
 // ServiceName: Name of running service/application.
 // Return:      Error string if something went wrong.
-var TESTLOGGER *logrus.Logger	// REMOVE ME
 func (tloc *TRSHTTPLocal) Init(serviceName string, logger *logrus.Logger) error {
 	if logger != nil {
 		tloc.Logger = logger
 	} else {
 		tloc.Logger = logrus.New()
 	}
-TESTLOGGER = tloc.Logger	// REMOVE ME
+	//wrapperLogger = tloc.Logger	// only uncomment if debugging wrapper issues
 
 	tloc.ctx, tloc.ctxCancelFunc = context.WithCancel(context.Background())
 
@@ -232,32 +231,41 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 //
 //			 Will attempt to jump to Go 1.23 with this commit.
 
+//var wrapperLogger *logrus.Logger	// only uncomment if debugging wrapper issues
+
 func (c *trsRoundTripper) CloseIdleConnections() {
-TESTLOGGER.Errorf("=================> CloseIdleConnections:")	// REMOVE ME
+	//wrapperLogger.Errorf("=================> CloseIdleConnections:")	// REMOVE ME
+
 	// Skip closing idle connections if counter > 0
 
 	c.skipCloseMutex.Lock()
 	if c.skipCloseCount > 0 {
 		c.skipCloseCount--
-TESTLOGGER.Errorf("                    NOT CLOSING: skipCloseCount now %v", c.skipCloseCount) // REMOVE ME
+
+		//wrapperLogger.Errorf("                    NOT CLOSING: skipCloseCount now %v", c.skipCloseCount) // REMOVE ME
 
 		if c.skipCloseCount == 0 {
 			// Mark the time the counter last reached zero
 			c.timeLastClosedOrReachedZeroCloseCount = time.Now()
-TESTLOGGER.Errorf("                    NOTED TIME")
+
+			//wrapperLogger.Errorf("                    NOTED TIME")
 		}
 
 		if time.Since(c.timeLastClosedOrReachedZeroCloseCount) > (2 * time.Hour) {
 			// If its been two hours since we last closed idle connections
 			// or since the counter last reached zero, reset the counter to
 			// zero and proceed to close idle connections
-TESTLOGGER.Errorf("                   RESETTING SKIP COUNTER!!!! ===> ERROR")	// REMOVE ME
+
 			c.skipCloseCount = 0
+
+			//wrapperLogger.Errorf("                   RESETTING SKIP COUNTER!!!! ===> ERROR")	// REMOVE ME
 
 			// Time will be marked further below when we close idle
 			// connections
 		} else {
 			c.skipCloseMutex.Unlock()
+
+			//wrapperLogger.Errorf("                   RESETTING SKIP COUNTER!!!! ===> ERROR")	// REMOVE ME
 
 			return
 		}
@@ -268,16 +276,19 @@ TESTLOGGER.Errorf("                   RESETTING SKIP COUNTER!!!! ===> ERROR")	//
 	if c.closeIdleConnectionsFn == nil {
 		// Nothing to do so release mutex
 		c.skipCloseMutex.Unlock()
+
+		//wrapperLogger.Errorf("                   done closing")
 	} else {
 		// Mark the time of this call to close connections
 		c.timeLastClosedOrReachedZeroCloseCount = time.Now()
 
 		c.skipCloseMutex.Unlock()
-TESTLOGGER.Errorf("                    closing")
+
+		//wrapperLogger.Errorf("                    closing")
+
 		// Call next level down
 		c.closeIdleConnectionsFn()
 	}
-TESTLOGGER.Errorf("                   done closing")
 }
 
 // Custom request wrapper that includes a retry counter that we'll use to
@@ -295,8 +306,6 @@ type trsWrappedReq struct {
 // level system version that actually closes idle connections.
 
 func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {
-TESTLOGGER.Errorf("-----------------> trsCheckRetry: err=%v type=%T", err, err)
-
 	// Skip a retry for this request if it hit one of these specific timeouts
 
 	if err != nil {
@@ -307,8 +316,8 @@ TESTLOGGER.Errorf("-----------------> trsCheckRetry: err=%v type=%T", err, err)
 		// no reason to retry
 		if err.Error() == "net/http: request canceled" {
 			c.skipCloseCount++
-TESTLOGGER.Errorf("                   skipCloseCount now %v (lower level cancel)", c.skipCloseCount)
-			
+
+			//wrapperLogger.Errorf("                   skipCloseCount now %v (lower level cancel)", c.skipCloseCount)
 
 			c.skipCloseMutex.Unlock()
 
@@ -318,8 +327,8 @@ TESTLOGGER.Errorf("                   skipCloseCount now %v (lower level cancel)
 		// Context timeout set by TRS.  No request should retry.
 		if errors.Is(err, context.DeadlineExceeded) {
 			c.skipCloseCount++
-TESTLOGGER.Errorf("                   skipCloseCount now %v (DeadLineExceeded)", c.skipCloseCount)
-			
+
+			//wrapperLogger.Errorf("                   skipCloseCount now %v (DeadLineExceeded)", c.skipCloseCount)
 
 			c.skipCloseMutex.Unlock()
 
@@ -340,13 +349,15 @@ TESTLOGGER.Errorf("                   skipCloseCount now %v (DeadLineExceeded)",
 		// }
 
 		c.skipCloseMutex.Unlock()
-TESTLOGGER.Errorf("                   not indicating skip for this error")
+
+		//wrapperLogger.Errorf("                   not indicating skip for this error")
 	}
 
 	// If none of the above, delegate retry check to retryablehttp
 	shouldRetry, err := retryablehttp.DefaultRetryPolicy(ctx, resp, err)
 
-TESTLOGGER.Errorf("                    shouldRetry=%v", shouldRetry)
+	//wrapperLogger.Errorf("                    shouldRetry=%v", shouldRetry)
+
 	// Determine if we should override DefaultRetryPolicy()'s opinion
 	if shouldRetry {
 		// This is our own personal copy of the retry counter for this
@@ -354,7 +365,8 @@ TESTLOGGER.Errorf("                    shouldRetry=%v", shouldRetry)
 
 		trsWR := ctx.Value(trsRetryCountKey).(*trsWrappedReq)
 		trsWR.retryCount++
-TESTLOGGER.Errorf("                    trsWR.retryCount now %v)", trsWR.retryCount)
+
+		//wrapperLogger.Errorf("                    trsWR.retryCount now %v)", trsWR.retryCount)
 
 		// If the retry limit was reached we do not want to close all idle
 		// connections unnecessarily so imcrement skipCloseCount counter so
@@ -386,7 +398,7 @@ TESTLOGGER.Errorf("                    trsWR.retryCount now %v)", trsWR.retryCou
 			c.skipCloseCount++
 			c.skipCloseMutex.Unlock()
 
-TESTLOGGER.Errorf("                    overriding retry, skipCloseCount now %v and err is %v", c.skipCloseCount, err)
+			//wrapperLogger.Errorf("                    overriding retry, skipCloseCount now %v and err is %v", c.skipCloseCount, err)
 			
 			return false, err
 		}
