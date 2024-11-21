@@ -545,7 +545,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		retryMax:   cpack.insecure.RetryMax, // secure and insecure contain same value
 		retryCount: 0,
 	}
-	tct.task.context = context.WithValue(req.Request.Context(), trsRetryCountKey, trsWR)
+	tct.task.context = context.WithValue(tct.task.context, trsRetryCountKey, trsWR)
 
 	// Link retryablehttp's request context to the caller's request context
 	req.Request = req.Request.WithContext(tct.task.context)
