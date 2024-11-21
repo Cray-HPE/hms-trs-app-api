@@ -799,9 +799,9 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 // MANY CONNECTION TESTS BELOW ARE MARKED AS SKIP BECAUSE:
 //
 //	* The unit test framework in GitHub only allows 10 minutes for ALL
-//	  unit tests to complete
+//	  unit tests to complete.  It would take hours to run them all.
 //
-//	* Connection and task counts of more than 1000 sometimes do not match
+//	* Connection and task counts of at higher scale sometimes do not match
 //	  what one would expect to see based on observations at smaller
 //	  connection and task counts. That is not to say that things are not
 //	  behaving correctly. It's more likely the case that at higher counts
@@ -811,10 +811,11 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 //	  system level is nearly impossible. The counts that the unit tests
 //	  do detect at these higher counts are within a very reasonable small
 //	  deviation from what one would expect. For these reasons, the tests
-//	  at higher counts are not enabled by default.  When changes to TRS
-//	  are made in the future, developers should re-enable them and
-//	  reconfirm that the resultant behavior is still within a reasonable
-//	  deviation.
+//	  at higher counts are not enabled by default.
+//
+//	  When changes to TRS are made in the future, developers should re-
+//	  enable them and reconfirm that the resultant behavior is still within
+//	  a reasonable deviation.
 //
 ///////////////////////////////////////////////////////////////////////////
 
@@ -825,7 +826,7 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 
 func TestConnsWithNoHttpTxPolicy_Idle(t *testing.T) {
 
-	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	t.Skip()	/***************** COMMENT TO RUN TEST *****************/
 
 	nTasks  := 2	// default MaxIdleConnsPerHost
 	nIssues := 1
@@ -835,7 +836,8 @@ func TestConnsWithNoHttpTxPolicy_Idle(t *testing.T) {
 
 func TestConnsWithNoHttpTxPolicy_ModeratlyBusy(t *testing.T) {
 
-t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	//t.Skip()	/***************** COMMENT TO RUN TEST *****************/
+
 	nTasks  := 1000
 	nIssues := 1
 
@@ -844,7 +846,7 @@ t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 func TestConnsWithNoHttpTxPolicy_Busy(t *testing.T) {
 
-	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	t.Skip()	/***************** COMMENT TO RUN TEST *****************/
 
 	nTasks  := 4000
 	nIssues := 200
@@ -854,7 +856,7 @@ func TestConnsWithNoHttpTxPolicy_Busy(t *testing.T) {
 
 func TestConnsWithNoHttpTxPolicy_VeryBusy(t *testing.T) {
 
-	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	t.Skip()	/***************** COMMENT TO RUN TEST *****************/
 
 	nTasks  := 8000
 	nIssues := 40
@@ -898,7 +900,7 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int, nIssues int) {
 
 func TestConnsWithHttpTxPolicy_PcsSmallIdle(t *testing.T) {
 
-	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	t.Skip()	/***************** COMMENT TO RUN TEST *****************/
 
 	nTasks              := 4
 	nIssues             := 4
@@ -911,7 +913,8 @@ func TestConnsWithHttpTxPolicy_PcsSmallIdle(t *testing.T) {
 
 func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusy(t *testing.T) {
 
-t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	//t.Skip()	/***************** COMMENT TO RUN TEST *****************/
+
 	nTasks              := 1000
 	nIssues             := 5
 	maxIdleConnsPerHost := 4	// PCS default when using HttpTxPolicy
@@ -923,7 +926,7 @@ t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 func TestConnsWithHttpTxPolicy_PcsSimulatedMedium(t *testing.T) {
 
-	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	t.Skip()	/***************** COMMENT TO RUN TEST *****************/
 
 	nTasks              := 1000
 	nIssues             := 4
@@ -936,7 +939,7 @@ func TestConnsWithHttpTxPolicy_PcsSimulatedMedium(t *testing.T) {
 
 func TestConnsWithHttpTxPolicy_PcsSmallBusy(t *testing.T) {
 
-	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	t.Skip()	/***************** COMMENT TO RUN TEST *****************/
 
 	nTasks              := 4000
 	nIssues             := 10
@@ -949,7 +952,7 @@ func TestConnsWithHttpTxPolicy_PcsSmallBusy(t *testing.T) {
 
 func TestConnsWithHttpTxPolicy_PcsLargeBusy(t *testing.T) {
 
-//	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+//	t.Skip()	/***************** COMMENT TO RUN TEST *****************/
 
 	nTasks              := 8000
 	nIssues             := 1000
@@ -962,7 +965,7 @@ func TestConnsWithHttpTxPolicy_PcsLargeBusy(t *testing.T) {
 
 func TestConnsWithHttpTxPolicy_PcsHugeBusy(t *testing.T) {
 
-	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	t.Skip()	/***************** COMMENT TO RUN TEST *****************/
 
 	nTasks               := 24000  // TRS can handle larger but unit test vm can't
 	nIssues              := 2
