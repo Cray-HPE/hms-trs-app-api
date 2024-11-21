@@ -936,7 +936,7 @@ func TestConnsWithHttpTxPolicy_PcsSimulatedMedium(t *testing.T) {
 
 func TestConnsWithHttpTxPolicy_PcsSmallBusy(t *testing.T) {
 
-//	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 	nTasks              := 4000
 	nIssues             := 10
@@ -949,10 +949,10 @@ func TestConnsWithHttpTxPolicy_PcsSmallBusy(t *testing.T) {
 
 func TestConnsWithHttpTxPolicy_PcsLargeBusy(t *testing.T) {
 
-	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+//	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 	nTasks              := 8000
-	nIssues             := 10
+	nIssues             := 1000
 	maxIdleConnsPerHost := 8000  // We're only using one Host server so pretend
 	maxIdleConns        := 8000  // 8000 requests / 4 per host = 2000 BMCs
 	pcsStatusTimeout    := 60    // Increase for pitiful unit test vm 
@@ -1155,9 +1155,6 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.openAfterClose         = a.maxIdleConnsPerHost
 
 	// Slow down the retries so that the completing tasks finish up first.
-	// Don't slow down too much though or we'll get a context timeout.
-	// SHould probably make retrySleep an initialRetrySleep so we only
-	// sleep once to avoid the issue
 
 	if a.nTasks <= 1000 {
 		retrySleep = 5
