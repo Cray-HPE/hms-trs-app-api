@@ -583,8 +583,6 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		tloc.Logger.Tracef("No response received")
 	}
 
-tloc.Logger.Errorf("----> ExecuteTask(): task %v has pointer %p rsp %p rsp.body %p",
-           tct.task.id, tct.task, tct.task.Request.Response, tct.task.Request.Response.Body)
 	tct.taskListChannel <- tct.task
 }
 
@@ -631,13 +629,11 @@ func (tloc *TRSHTTPLocal) Launch(taskList *[]HttpTask) (chan *HttpTask, error) {
 			(*taskList)[ii].TimeStamp = time.Now().Format(time.RFC3339Nano)
 		}
 
-tloc.Logger.Errorf("----> Launch():      task %v has pointer %p (incoming)", (*taskList)[ii].id, &(*taskList)[ii])
 		//Setup the channel stuff
 		tct := taskChannelTuple{
 			taskListChannel: taskListChannel,
 			task:            &(*taskList)[ii],
 		}
-tloc.Logger.Errorf("----> Launch():      task %v has pointer %p (tct)", tct.task.id, tct.task)
 		tloc.taskMutex.Lock()
 		tloc.taskMap[(*taskList)[ii].id ] = &tct
 		tloc.taskMutex.Unlock()
