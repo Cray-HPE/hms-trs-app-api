@@ -234,21 +234,17 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 //var wrapperLogger *logrus.Logger	// only uncomment if debugging wrapper issues
 
 func (c *trsRoundTripper) CloseIdleConnections() {
-	//wrapperLogger.Errorf("=================> CloseIdleConnections:")	// REMOVE ME
-
 	// Skip closing idle connections if counter > 0
 
 	c.skipCloseMutex.Lock()
 	if c.skipCloseCount > 0 {
 		c.skipCloseCount--
 
-		//wrapperLogger.Errorf("                    NOT CLOSING: skipCloseCount now %v", c.skipCloseCount) // REMOVE ME
+		//wrapperLogger.Errorf("CloseIdleConnections: skipCloseCount now %v", c.skipCloseCount)
 
 		if c.skipCloseCount == 0 {
 			// Mark the time the counter last reached zero
 			c.timeLastClosedOrReachedZeroCloseCount = time.Now()
-
-			//wrapperLogger.Errorf("                    NOTED TIME")
 		}
 
 		if time.Since(c.timeLastClosedOrReachedZeroCloseCount) > (2 * time.Hour) {
@@ -258,14 +254,13 @@ func (c *trsRoundTripper) CloseIdleConnections() {
 
 			c.skipCloseCount = 0
 
-			//wrapperLogger.Errorf("                   RESETTING SKIP COUNTER!!!! ===> ERROR")	// REMOVE ME
+			//wrapperLogger.Errorf("CloseIdleConnections: skipCloseCount reset due to expired time")
 
-			// Time will be marked further below when we close idle
-			// connections
+			// Time will be marked below when we close idle connections
 		} else {
 			c.skipCloseMutex.Unlock()
 
-			//wrapperLogger.Errorf("                   RESETTING SKIP COUNTER!!!! ===> ERROR")	// REMOVE ME
+			//wrapperLogger.Errorf("CloseIdleConnections: returning without closing idle connections")
 
 			return
 		}
@@ -277,14 +272,14 @@ func (c *trsRoundTripper) CloseIdleConnections() {
 		// Nothing to do so release mutex
 		c.skipCloseMutex.Unlock()
 
-		//wrapperLogger.Errorf("                   done closing")
+		//wrapperLogger.Errorf("CloseIdleConnections: no lower closeIdleConnectionsFn() to call")
 	} else {
 		// Mark the time of this call to close connections
 		c.timeLastClosedOrReachedZeroCloseCount = time.Now()
 
 		c.skipCloseMutex.Unlock()
 
-		//wrapperLogger.Errorf("                    closing")
+		//wrapperLogger.Errorf("CloseIdleConnections: calling lower closeIdleConnectionsFn()")
 
 		// Call next level down
 		c.closeIdleConnectionsFn()
@@ -306,7 +301,7 @@ type trsWrappedReq struct {
 // level system version that actually closes idle connections.
 
 func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {
-	//wrapperLogger.Errorf("trsCheckRetry(): err=%v errType=%T", err, err)
+	//wrapperLogger.Errorf("trsCheckRetry: err=%v errType=%T", err, err)
 
 	// Skip a retry for this request if it hit one of these specific timeouts
 
@@ -361,7 +356,7 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 	// If none of the above, delegate retry check to retryablehttp
 	shouldRetry, err := retryablehttp.DefaultRetryPolicy(ctx, resp, err)
 
-	//wrapperLogger.Errorf("trsCheckRetry(): DefaultRetryPolicy(): shouldRetry=%v", shouldRetry)
+	//wrapperLogger.Errorf("trsCheckRetry: DefaultRetryPolicy: shouldRetry=%v", shouldRetry)
 
 	// Determine if we should override DefaultRetryPolicy()'s opinion
 	if shouldRetry {
@@ -371,7 +366,7 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 		trsWR := ctx.Value(trsRetryCountKey).(*trsWrappedReq)
 		trsWR.retryCount++
 
-		//wrapperLogger.Errorf("trsCheckRetry(): retryCount now %v", trsWR.retryCount)
+		//wrapperLogger.Errorf("trsCheckRetry: retryCount now %v", trsWR.retryCount)
 
 		// If the retry limit was reached we do not want to close all idle
 		// connections unnecessarily so imcrement skipCloseCount counter so
@@ -403,7 +398,7 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 			c.skipCloseCount++
 			c.skipCloseMutex.Unlock()
 
-			//wrapperLogger.Errorf("trsCheckRetry(): skipCloseCount now %v and err is %v", c.skipCloseCount, err)
+			//wrapperLogger.Errorf("trsCheckRetry: skipCloseCount now %v and err is %v", c.skipCloseCount, err)
 			
 			return false, err
 		}

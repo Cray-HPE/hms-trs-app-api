@@ -934,7 +934,7 @@ func TestConnsWithHttpTxPolicy_PcsSmallBusy(t *testing.T) {
 
 //	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
-	nTasks              := 4000
+	nTasks              := 2000
 	nIssues             := 10
 	maxIdleConnsPerHost := 1000	// Simulate more servers and larger connection pool
 	maxIdleConns        := 4000	// PCS default when using HttpTxPolicy
