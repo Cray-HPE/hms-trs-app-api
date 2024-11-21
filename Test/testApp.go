@@ -26,14 +26,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
 	"os"
-	trsapi "github.com/Cray-HPE/hms-trs-app-api/v2/pkg/trs_http_api"
 	"strconv"
 	"strings"
 	"time"
+
+	trsapi "github.com/Cray-HPE/hms-trs-app-api/v2/pkg/trs_http_api"
+	"github.com/sirupsen/logrus"
 )
 
 type PayloadData struct {
@@ -63,7 +64,7 @@ func main() {
 	numops := 2
 	opType := "GET"
 	cancelTime := -1
-	useChan := false
+	useChan := true
 
 	envstr = os.Getenv("IMPLEMENTATION")
 	if envstr == "REMOTE" {
@@ -179,6 +180,27 @@ func main() {
 			if tdone.Request.Response.StatusCode != 0 {
 				nErr++
 			}
+
+logrus.Printf("====> TDONE: task ? has pointer ? rsp %p rsp.body %p",
+			tdone.Request.Response, tdone.Request.Response.Body)
+
+type rspStuff struct {
+	task *trsapi.HttpTask
+	body []byte
+}
+rmp := rspStuff{task: tdone}
+logrus.Printf("====> RMP:  task ? has pointer ? rsp %p rsp.body %p",
+			rmp.task.Request.Response, rmp.task.Request.Response.Body)
+
+tdone.Request.Response.Body.Close()
+tdone.Request.Response.Body=nil
+
+logrus.Printf("====> TDONE: task ? has pointer ? rsp %p rsp.body %p",
+			tdone.Request.Response, tdone.Request.Response.Body)
+
+logrus.Printf("====> RMP:  task ? has pointer ? rsp %p rsp.body %p",
+			rmp.task.Request.Response, rmp.task.Request.Response.Body)
+
 			running, err := tloc.Check(&taskArray)
 			if err != nil {
 				goterr = true
