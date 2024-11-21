@@ -1169,18 +1169,18 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.openAfterLaunch        = a.nTasks
 
 /// NEW
+/*
 	a.openAfterTasksComplete = a.maxIdleConnsPerHost - a.nFailRetries
 	a.openAfterBodyClose     = a.openAfterTasksComplete
 	a.openAfterCancel        = a.openAfterTasksComplete
 	a.openAfterClose         = a.openAfterTasksComplete
+*/
 ///
-/*
 
 	a.openAfterTasksComplete = a.maxIdleConnsPerHost	// successful tasks closed bodies already
 	a.openAfterBodyClose     = a.maxIdleConnsPerHost
 	a.openAfterCancel        = a.maxIdleConnsPerHost
 	a.openAfterClose         = a.maxIdleConnsPerHost
-*/
 
 	if a.nTasks < 1000 && a.nFailRetries < 10 {
 		retrySleep = 10	// So retries complete after
@@ -1278,11 +1278,12 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	// Truncate the good connections down to MaxIdleConnsPerHost
 	// plus whatever connections are yucky
 
+/*
 /// NEW
 	a.openAfterCancel        = a.maxIdleConnsPerHost
 	a.openAfterClose         = a.maxIdleConnsPerHost
 ///
-/*
+*/
 
 	openAfter = a.nTasks - a.nSkipDrainBody
 	if openAfter > a.maxIdleConnsPerHost {
@@ -1299,7 +1300,6 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	} else {
 		a.openAfterClose     = openAfter
 	}
-*/
 
 	testConns(t, a)
 
