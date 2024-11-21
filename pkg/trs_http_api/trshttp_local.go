@@ -456,7 +456,8 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	tloc.clientMutex.Lock()
 	if _, ok := tloc.clientMap[tct.task.CPolicy]; !ok {
 		httpLogger := logrus.New()
-		httpLogger.SetLevel(tloc.Logger.GetLevel())
+		httpLogger.SetLevel(logrus.ErrorLevel)
+		httpLogger.SetLevel(logrus.InfoLevel)
 
 		// Do not use leveled logging for now.  See explanation further
 		// up in the source code.
@@ -504,7 +505,6 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		return
 	}
 
-// TODO: ONLY CONFIG IF NO TX POLICY SO IT CAN BE DISABLED IN FIELD BY DEPLOYMENT CHANGE
 	// Add our own retry counter to the context
 	trsWR := &trsWrappedReq{
 		orig:       tct.task.Request, // Assign the original request
