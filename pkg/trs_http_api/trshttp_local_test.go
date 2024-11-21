@@ -1641,7 +1641,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 					nBodyDrainSkipped++
 
-					if logLevel == logrus.DebugLevel {
+					if logLevel >= logrus.DebugLevel {
 						t.Logf("Skipping draining response body for task %v", tsk.GetID())
 					}
 				} else {
@@ -1650,7 +1650,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 				nBodyClosesSkipped++
 
-				if logLevel == logrus.DebugLevel {
+				if logLevel >= logrus.DebugLevel {
 					t.Logf("Skipping closing response body for task %v", tsk.GetID())
 				}
 				continue
@@ -1665,7 +1665,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 				nBodyDrainSkipped++
 
-				if logLevel == logrus.DebugLevel {
+				if logLevel >= logrus.DebugLevel {
 					t.Logf("Skipping draining response body for task %v", tsk.GetID())
 				}
 			} else {
