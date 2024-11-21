@@ -418,7 +418,7 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 	// context timeout.  We may want to revisit this if requests with
 	// different timeout values are used
 
-//	client.HTTPClient.Timeout   = task.Timeout * 9 / 10
+	client.HTTPClient.Timeout   = task.Timeout * 9 / 10
 
 	// Wrap httpretryable's DefaultRetryPolicy() so we can prevent
 	// retries when desired
@@ -449,7 +449,7 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 
 	if (httpTxPolicy.Enabled) {
 		tloc.Logger.Errorf("    tx.MaxIdleConns:           %v", tr.MaxIdleConns)
-		tloc.Logger.Errorf("    tx.MaxIdleConnsPerHost:    %v", tr.MaxConnsPerHost)
+		tloc.Logger.Errorf("    tx.MaxIdleConnsPerHost:    %v", tr.MaxIdleConnsPerHost)
 		tloc.Logger.Errorf("    tx.IdleConnTimeout:        %v", tr.IdleConnTimeout)
 		tloc.Logger.Errorf("    tx.ResponseHeaderTimeout:  %v", tr.ResponseHeaderTimeout)
 		tloc.Logger.Errorf("    tx.TLSHandshakeTimeout:    %v", tr.TLSHandshakeTimeout)
