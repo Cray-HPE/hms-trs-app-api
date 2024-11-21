@@ -435,17 +435,15 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 
 	client.HTTPClient.Transport = retryabletr
 
-	// Without setting a timeout on the http request, it could hang for an
-	// indefinite period of time.  The task's context timeout does put a cap
-	// on this and will cancel it.  But, let's constrain it to 90% of the
-	// incoming task's context timeout so it can be handled before the
-	// context timeout.  We may want to revisit this if requests with
-	// different timeout values are used
+	// We could set a global http timeout for all users of the client but
+	// that's a bit inflexible.  Let's keep it at the default (unlimited)
+	// and use the user provided context timeout to limit the request.
+	// The context timeout they provide could be different from caller to
+	// caller as well.
 	//
 	//client.HTTPClient.Timeout   = task.Timeout * 9 / 10
 
-	// Wrap httpretryable's DefaultRetryPolicy() so we can prevent
-	// retries when desired
+	// Wrap httpretryable's DefaultRetryPolicy() so we can override
 	client.CheckRetry = retryabletr.trsCheckRetry
 
 	// Configure the httpretryable client retry count
