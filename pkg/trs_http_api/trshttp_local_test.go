@@ -823,8 +823,7 @@ func TestConnsWithNoHttpTxPolicy_Idle(t *testing.T) {
 
 //	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
-	nTasks := 1
-//	nTasks  := 2	// default MaxIdleConnsPerHost
+	nTasks  := 2	// default MaxIdleConnsPerHost
 	nIssues := 1
 
 	testConnsWithNoHttpTxPolicy(t, nTasks, nIssues)
