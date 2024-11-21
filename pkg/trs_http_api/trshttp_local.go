@@ -527,6 +527,19 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	// Add user agent header to the request
 	base.SetHTTPUserAgent(tct.task.Request,tloc.svcName)
 
+	// Set up context to use for the request
+	// Add our own retry counter to the context
+	trsWR := &trsWrappedReq{
+		orig:       tct.task.Request, // Assign the original request
+		retryMax:   cpack.insecure.RetryMax, // secure and insecure contain same value
+		retryCount: 0,
+	}
+	baseCtx, cancel := context.WithTimeout(tloc.ctx, tct.task.Timeout)
+	ctxWithValue := context.WithValue(baseCtx, trsRetryCountKey, trsWR)
+	tct.task.context = ctxWithValue
+	tct.task.contextCancel = cancel
+
+/*
 	// Set context timeout
 	tct.task.context, tct.task.contextCancel = context.WithTimeout(tloc.ctx, tct.task.Timeout)
 
@@ -537,6 +550,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		retryCount: 0,
 	}
 	tct.task.context = context.WithValue(tct.task.context, trsRetryCountKey, trsWR)
+*/
 
 	// Create a retryablehttp request using the caller's request
 	req, err := retryablehttp.FromRequest(tct.task.Request)
