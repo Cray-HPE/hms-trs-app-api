@@ -819,7 +819,7 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 // if they updated to the latest TRS without configuring the transport,
 // which is a newer feature of TRS.
 
-func JoshOne(t *testing.T) {
+func TestOne(t *testing.T) {
 
 	nTasks  := 2	// default MaxIdleConnsPerHost
 	nIssues := 1
@@ -827,7 +827,7 @@ func JoshOne(t *testing.T) {
 	testConnsWithNoHttpTxPolicy(t, nTasks, nIssues)
 }
 
-func JoshTwo(t *testing.T) {
+func TestTwo(t *testing.T) {
 
 	nTasks  := 3	// default MaxIdleConnsPerHost
 	nIssues := 1
@@ -835,7 +835,7 @@ func JoshTwo(t *testing.T) {
 	testConnsWithNoHttpTxPolicy(t, nTasks, nIssues)
 }
 
-func JoshThree(t *testing.T) {
+func TestThree(t *testing.T) {
 
 	nTasks  := 4	// default MaxIdleConnsPerHost
 	nIssues := 1
