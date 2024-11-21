@@ -233,24 +233,25 @@ func (c *trsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 //			 Will attempt to jump to Go 1.23 with this commit.
 
 func (c *trsRoundTripper) CloseIdleConnections() {
-TESTLOGGER.Warnf("=================> CloseIdleConnections:")	// REMOVE ME
+TESTLOGGER.Errorf("=================> CloseIdleConnections:")	// REMOVE ME
 	// Skip closing idle connections if counter > 0
 
 	c.skipCloseMutex.Lock()
 	if c.skipCloseCount > 0 {
-TESTLOGGER.Warnf("                                          NOT CLOSING: skipCloseCount now %v", c.skipCloseCount) // REMOVE ME
 		c.skipCloseCount--
+TESTLOGGER.Errorf("                    NOT CLOSING: skipCloseCount now %v", c.skipCloseCount) // REMOVE ME
 
 		if c.skipCloseCount == 0 {
 			// Mark the time the counter last reached zero
 			c.timeLastClosedOrReachedZeroCloseCount = time.Now()
+TESTLOGGER.Errorf("                    NOTED TIME")
 		}
 
 		if time.Since(c.timeLastClosedOrReachedZeroCloseCount) > (2 * time.Hour) {
 			// If its been two hours since we last closed idle connections
 			// or since the counter last reached zero, reset the counter to
 			// zero and proceed to close idle connections
-TESTLOGGER.Errorf("                                          RESETTING SKIP COUNTER!!!! ===> ERROR")	// REMOVE ME
+TESTLOGGER.Errorf("                   RESETTING SKIP COUNTER!!!! ===> ERROR")	// REMOVE ME
 			c.skipCloseCount = 0
 
 			// Time will be marked further below when we close idle
@@ -272,11 +273,12 @@ TESTLOGGER.Errorf("                                          RESETTING SKIP COUN
 		c.timeLastClosedOrReachedZeroCloseCount = time.Now()
 
 		c.skipCloseMutex.Unlock()
-TESTLOGGER.Warnf("                                          closing")
+TESTLOGGER.Errorf("                    closing")
 		// Call next level down
 		c.closeIdleConnectionsFn()
 	}
-TESTLOGGER.Warnf("                                          done closing")
+TESTLOGGER.Errorf("                   RESETTING SKIP COUNTER!!!! ===> ERROR")	// REMOVE ME
+TESTLOGGER.Errorf("                   done closing")
 }
 
 // Our wrapper around retryablehttp's CheckRetry().  if we detect an http
@@ -286,7 +288,7 @@ TESTLOGGER.Warnf("                                          done closing")
 // level system version that actually closes idle connections.
 
 func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {
-TESTLOGGER.Warnf("-----------------> trsCheckRetry: err=%v type=%T", err, err)
+TESTLOGGER.Errorf("-----------------> trsCheckRetry: err=%v type=%T", err, err)
 
 	// Skip a retry for this request if it hit one of these specific timeouts
 
@@ -298,7 +300,7 @@ TESTLOGGER.Warnf("-----------------> trsCheckRetry: err=%v type=%T", err, err)
 		// no reason to retry
 		if err.Error() == "net/http: request canceled" {
 			c.skipCloseCount++
-TESTLOGGER.Warnf("                                      skipCloseCount now %v (lower level cancel)", c.skipCloseCount)
+TESTLOGGER.Errorf("                   skipCloseCount now %v (lower level cancel)", c.skipCloseCount)
 			
 
 			c.skipCloseMutex.Unlock()
@@ -309,7 +311,7 @@ TESTLOGGER.Warnf("                                      skipCloseCount now %v (l
 		// Context timeout set by TRS.  No request should retry.
 		if errors.Is(err, context.DeadlineExceeded) {
 			c.skipCloseCount++
-TESTLOGGER.Warnf("                                      skipCloseCount now %v (DeadLineExceeded)", c.skipCloseCount)
+TESTLOGGER.Errorf("                   skipCloseCount now %v (DeadLineExceeded)", c.skipCloseCount)
 			
 
 			c.skipCloseMutex.Unlock()
@@ -331,13 +333,13 @@ TESTLOGGER.Warnf("                                      skipCloseCount now %v (D
 		// }
 
 		c.skipCloseMutex.Unlock()
-TESTLOGGER.Warnf("                                      not indicating skip for this error")
+TESTLOGGER.Errorf("                   not indicating skip for this error")
 	}
 
 	// If none of the above, delegate retry check to retryablehttp
 	shouldRetry, err := retryablehttp.DefaultRetryPolicy(ctx, resp, err)
 
-TESTLOGGER.Warnf("                                       shouldRetry=%v", shouldRetry)
+TESTLOGGER.Errorf("                    shouldRetry=%v", shouldRetry)
 	// Determine if we should override DefaultRetryPolicy()'s opinion
 	if shouldRetry {
 		// This is our own personal copy of the retry counter for this
@@ -345,7 +347,7 @@ TESTLOGGER.Warnf("                                       shouldRetry=%v", should
 
 		trsWR := ctx.Value(trsRetryCountKey).(*trsWrappedReq)
 		trsWR.retryCount++
-TESTLOGGER.Warnf("                                       trsWR.retryCount now %v)", trsWR.retryCount)
+TESTLOGGER.Errorf("                    trsWR.retryCount now %v)", trsWR.retryCount)
 
 		// If the retry limit was reached we do not want to close all idle
 		// connections unnecessarily so imcrement skipCloseCount counter so
@@ -377,7 +379,7 @@ TESTLOGGER.Warnf("                                       trsWR.retryCount now %v
 			c.skipCloseCount++
 			c.skipCloseMutex.Unlock()
 
-TESTLOGGER.Warnf("                                       overriding retry, skipCloseCount now %v and err is %v", c.skipCloseCount, err)
+TESTLOGGER.Errorf("                    overriding retry, skipCloseCount now %v and err is %v", c.skipCloseCount, err)
 			
 			return false, err
 		}
