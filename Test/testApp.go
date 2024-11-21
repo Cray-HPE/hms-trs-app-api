@@ -61,7 +61,7 @@ func main() {
 
 
 	deadline := 10
-	numops := 2
+	numops := 1
 	opType := "GET"
 	cancelTime := -1
 	useChan := true
