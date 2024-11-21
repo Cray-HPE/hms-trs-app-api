@@ -188,7 +188,7 @@ var handlerLogger *testing.T	// Allows logging in the handlers
 var handlerSleep int    = 2 // time to sleep to simulate network/BMC delays
 var retrySleep int      = 0 // time to sleep before returning 503 for retry
 var nRetries int32      = 0 // how many retries before returning success
-var nHttpTimeouts int   = 0 // how many context timeouts
+var nCtxTimeouts int    = 0 // how many context timeouts
 
 func launchHandler(w http.ResponseWriter, req *http.Request) {
 	if (logLevel >= logrus.TraceLevel) {
@@ -735,7 +735,7 @@ type testConnsArg struct {
 	nFailRetries           int       // Number of retries to fail
 	nSkipDrainBody         int       // Number of response bodies to skip draining before closing
 	nSkipCloseBody         int       // Number of response bodies to skip closing
-	nHttpTimeouts          int       // Number of context timeouts
+	nCtxTimeouts           int       // Number of context timeouts
 	testIdleConnTimeout    bool 	 // Test idle connection timeout
 	runSecondTaskList	   bool      // Run a second task list after the first with same server
 	openAtStart            int       // Expected number of ESTAB connections at beginning
@@ -765,7 +765,7 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 	t.Logf("   nFailRetries:        %v", a.nFailRetries)
 	t.Logf("   nSkipDrainBody:      %v", a.nSkipDrainBody)
 	t.Logf("   nSkipCloseBody:      %v", a.nSkipCloseBody)
-	t.Logf("   nHttpTimeouts:       %v", a.nHttpTimeouts)
+	t.Logf("   nCtxTimeouts:        %v", a.nCtxTimeouts)
 	t.Logf("")
 	t.Logf("   testIdleConnTimeout: %v", a.testIdleConnTimeout)
 	t.Logf("   runSecondTaskList:   %v", a.runSecondTaskList)
@@ -818,14 +818,6 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 // configure the http transport.  This would be the case for TRS users
 // if they updated to the latest TRS without configuring the transport,
 // which is a newer feature of TRS.
-
-func TestThree(t *testing.T) {
-
-	nTasks  := 4	// default MaxIdleConnsPerHost
-	nIssues := 1
-
-	testConnsWithNoHttpTxPolicy(t, nTasks, nIssues)
-}
 
 func TestConnsWithNoHttpTxPolicy_Idle(t *testing.T) {
 
@@ -1063,7 +1055,7 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.nFailRetries           = 0
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 0
+	a.nCtxTimeouts           = 0
 
 	a.openAtStart            = 0
 	a.openAfterLaunch        = a.nTasks
@@ -1086,7 +1078,7 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.nFailRetries           = 0
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 0
+	a.nCtxTimeouts           = 0
 
 	a.openAtStart            = 0
 	a.openAfterLaunch        = a.nTasks
@@ -1106,7 +1098,7 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.nFailRetries           = nIssues
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 0
+	a.nCtxTimeouts           = 0
 
 	a.openAtStart            = 0
 
@@ -1147,7 +1139,7 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.nFailRetries           = nIssues
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 0
+	a.nCtxTimeouts           = 0
 
 	a.openAtStart            = 0
 	a.openAfterLaunch        = a.nTasks
@@ -1183,7 +1175,7 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.nFailRetries           = 0
 	a.nSkipDrainBody         = nIssues
 	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = 0
+	a.nCtxTimeouts           = 0
 
 	a.openAtStart            = 0
 	a.openAfterLaunch        = a.nTasks
@@ -1220,7 +1212,7 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.nFailRetries           = 0
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = nIssues
-	a.nHttpTimeouts          = 0
+	a.nCtxTimeouts           = 0
 
 	a.openAtStart            = 0
 	a.openAfterLaunch        = a.nTasks
@@ -1245,7 +1237,7 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.nFailRetries           = 0
 	a.nSkipDrainBody         = nIssues
 	a.nSkipCloseBody         = nIssues
-	a.nHttpTimeouts          = 0
+	a.nCtxTimeouts           = 0
 
 	a.openAtStart            = 0
 	a.openAfterLaunch        = a.nTasks
@@ -1272,17 +1264,15 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	testConns(t, a)
 
 	///////////////////////////////////////////////////////
-	// Timeouts.  The http timeout will trigger first if HttpTxPolicy is
-	// configured by the caller.  If HtppTxPolicy is not configured, only
-	// the context timeout is set (because default IdleConnTimeout is 0
-	// which means no http timeout).
+	// Timeouts.  There is no http timeout set, so the only timeout that
+	// will trigger will be the context timeout.
 
 	a.nTasks                 = nTasks
 	a.nSuccessRetries        = 0
 	a.nFailRetries           = 0
 	a.nSkipDrainBody         = 0
 	a.nSkipCloseBody         = 0
-	a.nHttpTimeouts          = nIssues
+	a.nCtxTimeouts           = nIssues
 
 	a.openAtStart            = 0
 	a.openAfterLaunch        = a.nTasks
@@ -1290,7 +1280,7 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	// Timed out connections will close but we also need to account for
 	// the max idle connections allowed per host
 
-	openAfter = a.openAfterLaunch - a.nHttpTimeouts
+	openAfter = a.openAfterLaunch - a.nCtxTimeouts
 	if openAfter > a.maxIdleConnsPerHost {
 		openAfter = a.maxIdleConnsPerHost
 	}
@@ -1357,7 +1347,7 @@ func testConns(t *testing.T, a testConnsArg) {
 		a.nSkipDrainBody         = 0	// We want no issues
 		a.nSkipCloseBody         = 0	// We want no issues
 		a.nSuccessRetries        = 0	// We want no issues
-		a.nHttpTimeouts          = 0	// We want no issues
+		a.nCtxTimeouts           = 0	// We want no issues
 		a.nFailRetries           = 0	// We want no issues
 
 		// If we tested that exceeding IdleConnTimeout closes all connections
@@ -1445,16 +1435,16 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		}
 	}
 
-	// Configure any requested http timeouts and put at end of task list
+	// Configure any requested timeouts and put at end of task list
 
-	nHttpTimeouts = a.nHttpTimeouts	// this signals the handler
+	nCtxTimeouts = a.nCtxTimeouts	// this signals the handler
 
-	for i := len(tList) - 1; i > len(tList) - 1 - a.nHttpTimeouts; i-- {
+	for i := len(tList) - 1; i > len(tList) - 1 - a.nCtxTimeouts; i-- {
 		// This header is what identifies this request to the handler
 
 		tList[i].Request.Header.Set("Trs-Context-Timeout", "true")
 
-		// TODO: Could put nHttpTimeouts into header to reduce complexity
+		// TODO: Could put nCtxTimeouts into header to reduce complexity
 
 		if (logLevel == logrus.DebugLevel) {
 			t.Logf("Set request header %v for task %v",
@@ -1464,7 +1454,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		// Create a channel which will allow us to later signal the stalled
 		// server handlers to return the response
 
-		stallCancel = make(chan bool, a.nHttpTimeouts * 2)
+		stallCancel = make(chan bool, a.nCtxTimeouts * 2)
 	}
 
 	// Launch the task list
@@ -1543,11 +1533,11 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	// only done if we were asked to test timeouts.  We do it to verify that
 	// the completed tasks had their connections closed at the right time
 
-	if a.nHttpTimeouts > 0 {
-		t.Logf("Waiting for %v non-timeout tasks to complete", a.nTasks - a.nHttpTimeouts)
+	if a.nCtxTimeouts > 0 {
+		t.Logf("Waiting for %v non-timeout tasks to complete", a.nTasks - a.nCtxTimeouts)
 
 		nWaitedFor := 0
-		for i := 0; i < (a.nTasks - a.nHttpTimeouts); i++ {
+		for i := 0; i < (a.nTasks - a.nCtxTimeouts); i++ {
 			<-taskListChannel
 			tasksToWaitFor--
 			nWaitedFor++
@@ -1555,7 +1545,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 		t.Logf("Draining/closing non-timeout response bodies early and canceling their contexts")
 
-		for i := 0; i < len(tList) - a.nHttpTimeouts; i++ {
+		for i := 0; i < len(tList) - a.nCtxTimeouts; i++ {
 			if tList[i].Request.Response != nil && tList[i].Request.Response.Body != nil {
 				_, _ = io.Copy(io.Discard, tList[i].Request.Response.Body)
 
@@ -1577,7 +1567,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		if nWaitedFor > a.maxIdleConnsPerHost {
 			oConns = a.maxIdleConnsPerHost
 		}
-		oConns += a.nHttpTimeouts
+		oConns += a.nCtxTimeouts
 
 		t.Logf("Testing connections after non-timeout request bodies closed (%v)", oConns)
 
@@ -1737,9 +1727,9 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	// handler.  Lets release them now so that we can cleanly stop the
 	// servers
 
-	if (a.nHttpTimeouts > 0) {
+	if (a.nCtxTimeouts > 0) {
 		t.Logf("Signaling stalled handlers ")
-		for i := 0; i < a.nHttpTimeouts * 2; i++ {
+		for i := 0; i < a.nCtxTimeouts * 2; i++ {
 			stallCancel <- true
 		}
 	}
