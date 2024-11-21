@@ -216,6 +216,10 @@ func launchHandler(w http.ResponseWriter, req *http.Request) {
 		// Delay retry based on test requirement
 		time.Sleep(time.Duration(retrySleep) * time.Second)
 
+		// Clear retrySleep so next retry is immediate - Yes there will be
+		// many requests doing the same thing but that's ok
+		retrySleep = 0
+
 		w.Header().Set("Content-Type","application/json")
 		w.Header().Set("Retry-After","1")
 		//w.Header().Set("Connection","keep-alive")
@@ -1155,10 +1159,10 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	// SHould probably make retrySleep an initialRetrySleep so we only
 	// sleep once to avoid the issue
 
-	if a.nTasks <= 1000 && a.nFailRetries < 10 {
+	if a.nTasks <= 1000 {
 		retrySleep = 5
-	} else if a.nTasks < 4000 && a.nFailRetries < 10 {
-		retrySleep = 9
+	} else if a.nTasks <= 4000 {
+		retrySleep = 10
 	} else {
 		retrySleep = 20
 	}
