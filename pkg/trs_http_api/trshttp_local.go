@@ -441,8 +441,8 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 	// incoming task's context timeout so it can be handled before the
 	// context timeout.  We may want to revisit this if requests with
 	// different timeout values are used
-
-	client.HTTPClient.Timeout   = task.Timeout * 9 / 10
+	//
+	//client.HTTPClient.Timeout   = task.Timeout * 9 / 10
 
 	// Wrap httpretryable's DefaultRetryPolicy() so we can prevent
 	// retries when desired
