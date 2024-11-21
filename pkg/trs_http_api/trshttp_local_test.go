@@ -919,7 +919,7 @@ t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 func TestConnsWithHttpTxPolicy_PcsSimulatedMedium(t *testing.T) {
 
-//	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 	nTasks              := 1000
 	nIssues             := 4
@@ -932,7 +932,7 @@ func TestConnsWithHttpTxPolicy_PcsSimulatedMedium(t *testing.T) {
 
 func TestConnsWithHttpTxPolicy_PcsSmallBusy(t *testing.T) {
 
-	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+//	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
 	nTasks              := 4000
 	nIssues             := 10
