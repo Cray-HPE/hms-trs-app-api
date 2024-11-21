@@ -248,6 +248,9 @@ func (c *trsRoundTripper) CloseIdleConnections() {
 			// or since the counter last reached zero, reset the counter to
 			// zero and proceed to close idle connections
 			c.skipCloseCount = 0
+
+			// Time will be marked further below when we close idle
+			// connections
 		} else {
 			c.skipCloseMutex.Unlock()
 
@@ -407,7 +410,15 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 	client = retryablehttp.NewClient()
 
 	client.HTTPClient.Transport = retryabletr
-	client.HTTPClient.Timeout   = task.Timeout * 9 / 10 // 90% of the task's context timeout
+
+	// Without setting a timeout on the http request, it could hang for an
+	// indefinite period of time.  The task's context timeout does put a cap
+	// on this and will cancel it.  But, let's constrain it to 90% of the
+	// incoming task's context timeout so it can be handled before the
+	// context timeout.  We may want to revisit this if requests with
+	// different timeout values are used
+
+//	client.HTTPClient.Timeout   = task.Timeout * 9 / 10
 
 	// Wrap httpretryable's DefaultRetryPolicy() so we can prevent
 	// retries when desired
@@ -427,12 +438,28 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 		client.RetryWaitMax = DFLT_BACKOFF_MAX * time.Second
 	}
 
-	// Log this client's configuration
-	tloc.Logger.Errorf("Created %s client with incoming policy %v " +
-					   "(to's %s and %s) (ll %v) (cpnum=%v) (goVer=%v)",
-					   clientType, task.CPolicy, task.Timeout,
-					   client.HTTPClient.Timeout, tloc.Logger.GetLevel(),
-					   len(tloc.clientMap) + 1, runtime.Version())
+	// Log this client's requested configuration and actual configuration
+
+	tloc.Logger.Errorf("Created %s TRS client", clientType)
+	tloc.Logger.Errorf("    CPolicy request:           %v", task.CPolicy)
+	tloc.Logger.Errorf("    RetryMax:                  %v", client.RetryMax)
+	tloc.Logger.Errorf("    RetryWaitMax:              %v", client.RetryWaitMax)
+	tloc.Logger.Errorf("    task.Timeout:              %v", task.Timeout)
+	tloc.Logger.Errorf("    HTTPClient.Timeout:        %v", client.HTTPClient.Timeout)
+
+	if (httpTxPolicy.Enabled) {
+		tloc.Logger.Errorf("    tx.MaxIdleConns:           %v", tr.MaxIdleConns)
+		tloc.Logger.Errorf("    tx.MaxIdleConnsPerHost:    %v", tr.MaxConnsPerHost)
+		tloc.Logger.Errorf("    tx.IdleConnTimeout:        %v", tr.IdleConnTimeout)
+		tloc.Logger.Errorf("    tx.ResponseHeaderTimeout:  %v", tr.ResponseHeaderTimeout)
+		tloc.Logger.Errorf("    tx.TLSHandshakeTimeout:    %v", tr.TLSHandshakeTimeout)
+		tloc.Logger.Errorf("    tx.DisableKeepAlives:      %v", tr.DisableKeepAlives)
+	}
+
+	tloc.Logger.Errorf("    Client pair count:         %v", len(tloc.clientMap) + 1)
+	//tloc.Logger.Errorf("    Log level:                 %v", tloc.Logger.GetLevel())
+	tloc.Logger.Errorf("    Log level:                 %v", logrus.ErrorLevel)
+	tloc.Logger.Errorf("    Go version:                %v", runtime.Version())
 
 	return client
 }
@@ -463,8 +490,10 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 
 		// Do not use leveled logging for now.  See explanation further
 		// up in the source code.  Instead, use standard logger set at
-		// error level
+		// error level to avoid excessive logging
 		//
+		//httpLogger := logrus.New()
+		//httpLogger.SetLevel(tloc.Logger.GetLevel())
 		//retryablehttpLogger := retryablehttp.LeveledLogger(&leveledLogrus{httpLogger})
 		//cpack.insecure.Logger = retryablehttpLogger
 
@@ -485,7 +514,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	}
 	tloc.clientMutex.Unlock()
 
-	// Found a client to use, now set up a request
+	// Found a client to use (or created a new one), now set up a request
 
 	// First validate our task
 	if ok, err := tct.task.Validate(); !ok {
@@ -532,6 +561,13 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 
 		//If the error is a TLS error, fall back to insecure and log it.
 		if (tmpError != nil) {
+			// But first make sure we drain/close the body of the failed
+			// response, if there was one
+			if tct.task.Request.Response != nil && tct.task.Request.Response.Body != nil {
+				_, _ = io.Copy(io.Discard, tct.task.Request.Response.Body)
+				tct.task.Request.Response.Body.Close()
+			}
+
 			tloc.Logger.Warnf("TLS request failed, retrying using INSECURE client (TLS failure: '%v')", tmpError)
 			tct.task.Request.Response, tmpError = cpack.insecure.Do(req)
 		}
@@ -547,6 +583,8 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 		tloc.Logger.Tracef("No response received")
 	}
 
+tloc.Logger.Errorf("----> ExecuteTask(): task %v has pointer %p rsp %p rsp.body %p",
+           tct.task.id, tct.task, tct.task.Request.Response, tct.task.Request.Response.Body)
 	tct.taskListChannel <- tct.task
 }
 
@@ -593,11 +631,13 @@ func (tloc *TRSHTTPLocal) Launch(taskList *[]HttpTask) (chan *HttpTask, error) {
 			(*taskList)[ii].TimeStamp = time.Now().Format(time.RFC3339Nano)
 		}
 
+tloc.Logger.Errorf("----> Launch():      task %v has pointer %p (incoming)", (*taskList)[ii].id, &(*taskList)[ii])
 		//Setup the channel stuff
 		tct := taskChannelTuple{
 			taskListChannel: taskListChannel,
 			task:            &(*taskList)[ii],
 		}
+tloc.Logger.Errorf("----> Launch():      task %v has pointer %p (tct)", tct.task.id, tct.task)
 		tloc.taskMutex.Lock()
 		tloc.taskMap[(*taskList)[ii].id ] = &tct
 		tloc.taskMutex.Unlock()

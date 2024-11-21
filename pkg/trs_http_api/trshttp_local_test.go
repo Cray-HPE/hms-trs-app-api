@@ -27,6 +27,7 @@ import (
 	"bytes"
 	"encoding/pem"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -1419,6 +1420,9 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	t.Logf("Calling tloc.CreateTaskList() to create %v tasks for URL %v", a.nTasks, srv.URL)
 	tList := tloc.CreateTaskList(a.tListProto, a.nTasks)
 
+for i := 0; i < len(tList); i++ {
+  t.Errorf("====> TEST 1: tsk %v has pointer %s", tList[i].id, fmt.Sprintf("%p", &tList[i]))
+}
 	// Configure any requested retries and put at start of task list
 
 	nRetries = a.nSuccessRetries	// this signals the handler
@@ -1616,6 +1620,10 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 	for _, tsk := range(tList) {
 		// Skip closing any requested response bodies
+t.Errorf("====> TEST 2: tsk %v has pointer %s rsp %s rsp.body %s", tsk.id, 
+         fmt.Sprintf("%p", &tsk),
+         fmt.Sprintf("%p", &tsk.Request.Response),
+         fmt.Sprintf("%p", &tsk.Request.Response.Body))
 
 		if nBodyClosesSkipped < a.nSkipCloseBody {
 			if tsk.Request.Response != nil && tsk.Request.Response.Body != nil {
