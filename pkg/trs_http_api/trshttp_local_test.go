@@ -821,9 +821,10 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 
 func TestConnsWithNoHttpTxPolicy_Idle(t *testing.T) {
 
-	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
+//	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
-	nTasks  := 2	// default MaxIdleConnsPerHost
+	nTasks := 1
+//	nTasks  := 2	// default MaxIdleConnsPerHost
 	nIssues := 1
 
 	testConnsWithNoHttpTxPolicy(t, nTasks, nIssues)
