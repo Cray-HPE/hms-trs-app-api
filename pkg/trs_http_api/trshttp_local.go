@@ -457,17 +457,17 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	if _, ok := tloc.clientMap[tct.task.CPolicy]; !ok {
 		httpLogger := logrus.New()
 		httpLogger.SetLevel(logrus.ErrorLevel)
-		httpLogger.SetLevel(logrus.ErrorLevel)
 
 		// Do not use leveled logging for now.  See explanation further
 		// up in the source code.
 		//
-		//retryablehttpLogger := retryablehttp.LeveledLogger(&leveledLogrus{httpLogger})
+		retryablehttpLogger := retryablehttp.LeveledLogger(&leveledLogrus{httpLogger})
 
 		cpack = new(clientPack)
 
 		cpack.insecure = createClient(tct.task, tloc, "insecure")
-		cpack.insecure.Logger = httpLogger
+		//cpack.insecure.Logger = httpLogger
+		cpack.insecure.Logger = retryablehttpLogger
 
 		if (tloc.CACertPool != nil) {
 			cpack.secure = createClient(tct.task, tloc, "secure")
