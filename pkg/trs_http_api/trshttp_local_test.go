@@ -1385,7 +1385,7 @@ func testConns(t *testing.T, a testConnsArg) {
 	// Cleaning up the task list system should close all connections.  Verify
 
 	time.Sleep(sleepTimeToStabilizeConns)
-	t.Logf("Testing connections after task list cleaned up")
+	t.Logf("Testing connections after task list cleaned up (0)")
 	testOpenConnections(t, 0)
 
 	t.Logf("Closing the server")
@@ -1398,7 +1398,7 @@ func testConns(t *testing.T, a testConnsArg) {
 func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest.Server) {
 	// Verify correct number of open conections at start
 
-	t.Logf("Testing connections at start")
+	t.Logf("Testing connections at start (%v)", a.openAtStart)
 	testOpenConnections(t, a.openAtStart)
 
 	// Create an http request
@@ -1482,7 +1482,6 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	// All tasks should now be runnind and all connections should be in
 	// the ESTAB(LISHED) state
 
-	t.Logf("Testing connections after Launch")
 	testOpenConnections(t, a.openAfterLaunch)
 
 	// If asked, here we attempt to close response bodies for tasks that have
@@ -1519,14 +1518,14 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		// Wait for underlying system to perform actions on connections
 		time.Sleep(sleepTimeToStabilizeConns)
 
-		t.Logf("Testing connections after non-retry request bodies closed (oabc=%v nfr=%v)",
-			    a.openAfterBodyClose, a.nFailRetries)
-
 		oConns := nWaitedFor
 		if nWaitedFor > a.maxIdleConnsPerHost {
 			oConns = a.maxIdleConnsPerHost
 		}
 		oConns += a.nFailRetries
+
+		t.Logf("Testing connections after non-retry request bodies closed (%v) (oabc=%v nfr=%v)",
+			    oConns, a.openAfterBodyClose, a.nFailRetries)
 
 		testOpenConnections(t, oConns)
 	}
@@ -1565,13 +1564,14 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		// Wait for underlying system to perform actions on connections
 
 		time.Sleep(sleepTimeToStabilizeConns)
-		t.Logf("Testing connections after non-timeout request bodies closed")
 
 		oConns := nWaitedFor
 		if nWaitedFor > a.maxIdleConnsPerHost {
 			oConns = a.maxIdleConnsPerHost
 		}
 		oConns += a.nHttpTimeouts
+
+		t.Logf("Testing connections after non-timeout request bodies closed (%v)", oConns)
 
 		testOpenConnections(t, oConns)
 	}
@@ -1596,7 +1596,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 		time.Sleep(5 * time.Second)
 	}
 
-	t.Logf("Testing connections after tasks complete")
+	t.Logf("Testing connections after tasks complete (%v)", a.openAfterTasksComplete)
 	testOpenConnections(t, a.openAfterTasksComplete)
 
 	// Set up custom read closer to test response body closure
@@ -1672,7 +1672,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 	// Wait for underlying system to perform actions on connections
 	time.Sleep(sleepTimeToStabilizeConns)
 
-	t.Logf("Testing connections after response bodies closed")
+	t.Logf("Testing connections after response bodies closed (%v)", a.openAfterBodyClose)
 	testOpenConnections(t, a.openAfterBodyClose)
 
 	// TRS users are not required to call tloc.Cancel() so lets test both ways
@@ -1687,7 +1687,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 		time.Sleep(sleepTimeToStabilizeConns)
 
-		t.Logf("Testing connections after task list cancelled")
+		t.Logf("Testing connections after task list cancelled (%v)", a.openAfterCancel)
 		testOpenConnections(t, a.openAfterCancel)
 	}
 
@@ -1701,7 +1701,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 	time.Sleep(sleepTimeToStabilizeConns)
 
-	t.Logf("Testing connections after task list closed")
+	t.Logf("Testing connections after task list closed (%v)", a.openAfterClose)
 	testOpenConnections(t, a.openAfterClose)
 
 	// Verify that tloc.Close() did indeed close the response bodies that
@@ -1741,7 +1741,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 	if a.testIdleConnTimeout && a.tListProto.CPolicy.Tx.Enabled {
 		// TODO: Should also comfirm no client "other" connections as well
-		t.Logf("Testing connections after idleConnTimeout")
+		t.Logf("Testing connections after idleConnTimeout (0)")
 
 		time.Sleep(a.tListProto.CPolicy.Tx.IdleConnTimeout)
 
