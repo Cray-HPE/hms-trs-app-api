@@ -934,7 +934,7 @@ func TestConnsWithHttpTxPolicy_PcsSmallBusy(t *testing.T) {
 
 //	t.Skip()	/***************** REMOVE TO RUN TEST *****************/
 
-	nTasks              := 2000
+	nTasks              := 4000
 	nIssues             := 10
 	maxIdleConnsPerHost := 1000	// Simulate more servers and larger connection pool
 	maxIdleConns        := 4000	// PCS default when using HttpTxPolicy
@@ -1157,8 +1157,10 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 
 	if a.nTasks <= 1000 && a.nFailRetries < 10 {
 		retrySleep = 5
-	} else {
+	} else if a.nTasks < 4000 && a.nFailRetries < 10 {
 		retrySleep = 9
+	} else {
+		retrySleep = 20
 	}
 
 	testConns(t, a)
