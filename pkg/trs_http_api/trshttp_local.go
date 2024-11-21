@@ -457,7 +457,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	if _, ok := tloc.clientMap[tct.task.CPolicy]; !ok {
 		httpLogger := logrus.New()
 		httpLogger.SetLevel(logrus.ErrorLevel)
-		httpLogger.SetLevel(logrus.InfoLevel)
+		httpLogger.SetLevel(logrus.ErrorLevel)
 
 		// Do not use leveled logging for now.  See explanation further
 		// up in the source code.
