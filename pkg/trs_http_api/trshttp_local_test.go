@@ -1250,7 +1250,6 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	a.openAtStart            = 0
 	a.openAfterLaunch        = a.nTasks
 	a.openAfterTasksComplete = a.openAfterLaunch
-	a.openAfterBodyClose     = a.openAfterLaunch
 
 	// Truncate the good connections down to MaxIdleConnsPerHost
 
@@ -1260,6 +1259,7 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	}
 	openAfter = openAfter + a.nSkipDrainBody
 
+	a.openAfterBodyClose     = openAfter
 	a.openAfterCancel        = openAfter
 	a.openAfterClose         = openAfter
 
