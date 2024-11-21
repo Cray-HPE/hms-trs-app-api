@@ -39,7 +39,7 @@ unittest:
 	# 
 	# -logLevel values: 0=Panic, 1=Fatal, 2=Error 3=Warn, 4=Info, 5=Debug, 6=Trace"
 	
-	go test -v ./pkg/trs_http_api/... -cover -logLevel=2
+	go test -v ./pkg/trs_http_api/... -cover -logLevel=5
 	
 	# no -v -tags musl
 
