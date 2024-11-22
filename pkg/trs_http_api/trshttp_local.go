@@ -399,7 +399,7 @@ func (c *trsRoundTripper) trsCheckRetry(ctx context.Context, resp *http.Response
 			c.skipCloseMutex.Unlock()
 
 			//wrapperLogger.Errorf("trsCheckRetry: skipCloseCount now %v and err is %v", c.skipCloseCount, err)
-			
+
 			return false, err
 		}
 	}
@@ -745,8 +745,8 @@ func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 			v.contextCancel()
 
 			// The caller should have closed the response body, but we'll also
-			// do it here to both prevent resource leaks.  Note that if that
-			// was the case, that connection was closed by the above cancel.
+			// do it here to prevent resource leaks.  Note that if that was
+			// the case, that connection was closed by the above cancel.
 
 			if v.Request.Response != nil && v.Request.Response.Body != nil {
 				_, _ = io.Copy(io.Discard, v.Request.Response.Body)
@@ -796,5 +796,4 @@ func (tloc *TRSHTTPLocal) Cleanup() {
 	}
 	tloc.Logger.Tracef("Cleanup() completed")
 	// this really just a big red button to STOP ALL? b/c im not clearing any memory
-	// TEST
 }

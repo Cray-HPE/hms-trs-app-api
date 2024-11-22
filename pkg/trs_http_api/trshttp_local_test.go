@@ -48,9 +48,13 @@ import (
 var svcName = "TestMe"
 
 // Note for unit test and TRS loggers: Log level can be controlled by
-// by modifying the 
+// by modifying the -logLevel command line option in the Makefile
+
 var logLevel logrus.Level	// use this for more than logrus
 
+// TestMain is not a test.  It runs before all other tests so that it can
+// do any necessary initialization.  Here we pars the command line arges
+// so we can apply any log level override for the unit test loggers
 func TestMain(m *testing.M) {
 	var logLevelInt int
 
@@ -70,7 +74,7 @@ func TestMain(m *testing.M) {
 }
 
 // Create a logger for trs_http_api (not unit tests) so we can see what's
-// going on in TRS when we hit errors
+// going on in TRS when we hit issues.
 func createLogger() *logrus.Logger {
 	trsLogger := logrus.New()
 
@@ -138,7 +142,8 @@ func hasUserAgentHeader(r *http.Request) bool {
     }
 
     _,ok := r.Header["User-Agent"]
-	return ok
+
+    return ok
 }
 
 // Check header for "Trs-Fail-All-Retries"
@@ -462,12 +467,12 @@ func TestLaunchTimeout(t *testing.T) {
 //			* Marked "dirty" and could get cleaned up any time since the
 //			  body was drained
 //
-//			* If/wen IdleConnTimeout is exceeded (by default is 0 which means
+//			* If/when IdleConnTimeout is exceeded (by default is 0 which means
 //			  no timeout in place), it will be closed and:
 //
 //			  	* I couldn't find a definitive answer if a minimal
 //				  resource leak (which would NOT include body data) would
-//			      be permanent or not in the Go client
+//			          be permanent or not in the Go client
 //				* Prior OS resource leak should now be freed (not sure I believe)
 //				* Prior Istio resource leak should now be freed (not sure I believe)
 //
@@ -477,8 +482,9 @@ func TestLaunchTimeout(t *testing.T) {
 //			* OS connection state:        open, unusable (resource leak)
 //			* Istio connection state:     open, unusable (resource leak)
 //
-//			* If/wen IdleConnTimeout is exceeded (by default is 0 which means
-//			  no timeout in place), it will be closed and:
+//			* If/when IdleConnTimeout is exceeded (by default is 0 which means
+//			  no timeout in place), OR if/when a context times out or is cancelled,
+//			  it will be closed and:
 //
 //				* Go client resource leak (including body data) will remain
 //				* Prior OS resource leak should now be freed (not sure I believe)
@@ -761,7 +767,7 @@ func logConnTestHeader(t *testing.T, a testConnsArg) {
 	t.Logf("")
 
 	if logLevel < logrus.ErrorLevel {
-		return 
+		return
 	}
 
 	t.Logf("   nTasks:              %v", a.nTasks)
@@ -958,7 +964,7 @@ func TestConnsWithHttpTxPolicy_PcsLargeBusy(t *testing.T) {
 	nIssues             := 1000
 	maxIdleConnsPerHost := 8000  // We're only using one Host server so pretend
 	maxIdleConns        := 8000  // 8000 requests / 4 per host = 2000 BMCs
-	pcsStatusTimeout    := 60    // Increase for pitiful unit test vm 
+	pcsStatusTimeout    := 60    // Increase for pitiful unit test vm
 
 	testConnsWithHttpTxPolicy(t, nTasks, nIssues, maxIdleConnsPerHost, maxIdleConns, pcsStatusTimeout)
 }
@@ -1210,7 +1216,7 @@ func testConnsPrep(t *testing.T, a testConnsArg, nTasks int, nIssues int) {
 	// Connection stays open if the body is never closed and is not reusable
 	// for any other requests (unless body is later drained/closed)
 	//
- 	// However, because it was marked "dirty" it can get cleaned up by
+	// However, because it was marked "dirty" it can get cleaned up by
 	// the system at any time. I've seen that using 'ss' in the tests
 	// can force this to happen immediately after tasks complete if the
 	// number of open connections is greater than maxIdleConnsPerHost
@@ -1411,8 +1417,8 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 
 	req, err := http.NewRequest(http.MethodGet, srv.URL, nil)
 	if err != nil {
-        t.Fatalf("=====> ERROR: Failed to create request: %v <=====", err)
-    }
+		t.Fatalf("=====> ERROR: Failed to create request: %v <=====", err)
+	}
 
 	// Set any necessary headers
 

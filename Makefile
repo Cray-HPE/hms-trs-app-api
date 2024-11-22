@@ -36,12 +36,12 @@ unittest:
 	#/opt/hostedtoolcache/go/1.21.13/x64/bin/go test -v ./pkg/trs_http_api/... -cover -logLevel=2
 	#/opt/hostedtoolcache/go/1.22.9/x64/bin/go test -v ./pkg/trs_http_api/... -cover -logLevel=2
 	#/opt/hostedtoolcache/go/1.23.3/x64/bin/go test -v ./pkg/trs_http_api/... -cover -logLevel=2
-	# 
+	#
 	# -logLevel values: 0=Panic, 1=Fatal, 2=Error 3=Warn, 4=Info, 5=Debug, 6=Trace"
 	#
 
 	go test -v ./pkg/trs_http_api/... -cover -logLevel=2
-	
+
 	# no -v -tags musl
 
 integration:
