@@ -83,7 +83,7 @@ type HttpTxPolicy struct {
 	MaxIdleConns			int
 	MaxIdleConnsPerHost		int
 	IdleConnTimeout			time.Duration
-	ResponseHeaderTimeout	time.Duration
+	ResponseHeaderTimeout   time.Duration
 	TLSHandshakeTimeout		time.Duration
 	DisableKeepAlives		bool
 }
