@@ -189,11 +189,11 @@ func hasTRSStallHeader(r *http.Request) bool {
 //	  response
 //	* Return a successful response immediately
 
-var handlerLogger *testing.T	// Allows logging in the handlers
-var handlerSleep int    = 2 // time to sleep to simulate network/BMC delays
-var retrySleep int      = 0 // time to sleep before returning 503 for retry
-var nRetries int32      = 0 // how many retries before returning success
-var nCtxTimeouts int    = 0 // how many context timeouts
+var handlerLogger *testing.T // Allows logging in the handlers
+var handlerSleep int    = 2  // time to sleep to simulate network/BMC delays
+var retrySleep int      = 0  // time to sleep before returning 503 for retry
+var nRetries int32      = 0  // how many retries before returning success
+var nCtxTimeouts int    = 0  // how many context timeouts
 
 func launchHandler(w http.ResponseWriter, req *http.Request) {
 	if (logLevel >= logrus.TraceLevel) {
@@ -747,7 +747,7 @@ type testConnsArg struct {
 	nSkipCloseBody         int       // Number of response bodies to skip closing
 	nCtxTimeouts           int       // Number of context timeouts
 	testIdleConnTimeout    bool 	 // Test idle connection timeout
-	runSecondTaskList	   bool      // Run a second task list after the first with same server
+	runSecondTaskList      bool      // Run a second task list after the first with same server
 	openAtStart            int       // Expected number of ESTAB connections at beginning
 	openAfterLaunch        int       // Expected number of ESTAB connections after Launch()
 	openAfterTasksComplete int       // Expected number of ESTAB connections after all tasks complete
@@ -1370,10 +1370,10 @@ func testConns(t *testing.T, a testConnsArg) {
 
 		if (a.testIdleConnTimeout) {
 			// They should have all timeed out and closed
-			a.openAtStart        = 0
+			a.openAtStart = 0
 		} else {
 			// What was open at the end of the last run should still be open
-			a.openAtStart        = a.openAfterClose
+			a.openAtStart = a.openAfterClose
 		}
 
 		// Carry forward the same number of tasks.  Since there will be no
