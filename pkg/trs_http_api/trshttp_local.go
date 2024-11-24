@@ -594,7 +594,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 
 		// Fall back to insecure only if the enclosing context was not
 		// cancelled or timed out.
-		if (tmpError != nil && tct.task.context.Err() != nil {
+		if tmpError != nil && tct.task.context.Err() != nil {
 			// But first make sure we drain/close the body of the failed
 			// response, if there was one
 			if tct.task.Request.Response != nil && tct.task.Request.Response.Body != nil {

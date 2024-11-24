@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TRS no longer closes all idle connections when request retry limits are reached
 - Reworked several sections of code for clarity and reduced code duplication
 - Fixed bug where contexts were never being cancelled which lead to resource leaks
+- Fixed bug to prevent 2nd request if 1st request's context timed out or canceled
 - Additional tracing added for debug purposes
 - Unit tests: Now run in verbose mode so failures are more easily analyzed
 - Unit tests: Enabled TRS logging from inside unit tests
