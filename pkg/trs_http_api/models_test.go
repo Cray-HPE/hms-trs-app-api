@@ -46,7 +46,7 @@ func GenerateStockHttpTask() (ht HttpTask) {
 		Timeout:       0,
 		CPolicy:       ClientPolicy{},
 		context:       nil,
-		contextCancel: nil,
+		ContextCancel: nil,
 	}
 	return ht
 }
