@@ -452,7 +452,9 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 	// Create the httpretryable client and start configuring it
 	client = retryablehttp.NewClient()
 
-	client.HTTPClient.Transport = retryabletr
+// XXXX
+//	client.HTTPClient.Transport = retryabletr
+client.HTTPClient.Transport = tr
 
 	// We could set a global http timeout for all users of the client but
 	// that's a bit inflexible.  Let's keep it at the default (unlimited)
@@ -463,7 +465,8 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 	//client.HTTPClient.Timeout   = task.Timeout * 9 / 10
 
 	// Wrap httpretryable's DefaultRetryPolicy() so we can override
-	client.CheckRetry = retryabletr.trsCheckRetry
+// XXXX
+//	client.CheckRetry = retryabletr.trsCheckRetry
 
 	// Configure the httpretryable client retry count
 	if (task.CPolicy.Retry.Retries >= 0) {
@@ -573,9 +576,12 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	// Create child context with timeout and our own retry counter
 
 	baseCtx, cancel := context.WithTimeout(tloc.ctx, tct.task.Timeout)
-	ctxWithValue := context.WithValue(baseCtx, trsRetryCountKey, trsWR)
+// XXXX
+//	ctxWithValue := context.WithValue(baseCtx, trsRetryCountKey, trsWR)
 
-	tct.task.context = ctxWithValue
+// XXXX
+//	tct.task.context = ctxWithValue
+tct.task.context = baseCtx
 	tct.task.contextCancel = cancel
 
 	// Create a retryablehttp request using the caller's request
@@ -768,15 +774,6 @@ func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
 		tloc.taskMutex.Unlock()
 
 	}
-// See if this helps memory leak
-for k := range tloc.clientMap {
-	if (tloc.clientMap[k].insecure != nil) {
-		tloc.clientMap[k].insecure.HTTPClient.CloseIdleConnections()
-	}
-	if (tloc.clientMap[k].secure != nil) {
-		tloc.clientMap[k].secure.HTTPClient.CloseIdleConnections()
-	}
-}
 
 	tloc.Logger.Tracef("Close() completed")
 }
