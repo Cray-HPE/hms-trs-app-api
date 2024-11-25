@@ -1,4 +1,4 @@
-module github.com/Cray-HPE/hms-trs-app-api/v2
+module github.com/Cray-HPE/hms-trs-app-api/v3
 
 go 1.23
 
