@@ -26,14 +26,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
 	"os"
-	trsapi "github.com/Cray-HPE/hms-trs-app-api/v2/pkg/trs_http_api"
 	"strconv"
 	"strings"
 	"time"
+
+	trsapi "github.com/Cray-HPE/hms-trs-app-api/v3/pkg/trs_http_api"
+	"github.com/sirupsen/logrus"
 )
 
 type PayloadData struct {
