@@ -443,11 +443,12 @@ func createClient(task *HttpTask, tloc *TRSHTTPLocal, clientType string) (client
 	}
 
 	// Wrap base transport with retryablehttp
-	retryabletr := &trsRoundTripper{
-		transport:                             tr,
-		closeIdleConnectionsFn:                tr.CloseIdleConnections,
-		timeLastClosedOrReachedZeroCloseCount: time.Now(),
-	}
+// XXXX
+//	retryabletr := &trsRoundTripper{
+//		transport:                             tr,
+//		closeIdleConnectionsFn:                tr.CloseIdleConnections,
+//		timeLastClosedOrReachedZeroCloseCount: time.Now(),
+//	}
 
 	// Create the httpretryable client and start configuring it
 	client = retryablehttp.NewClient()
@@ -566,12 +567,13 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 	// Wrap the request so trsCheckRetry() can keep its own retry count
 	// We'll attach this to the context further below so that it has access
 	// to it
-	trsWR := &trsWrappedReq{
-		orig:       tct.task.Request,        // Core request
-		retryCount: 0,                       // Counter for CLIC()
-		retryMax:   cpack.insecure.RetryMax, // CLIC() will need access to this
-		                                     // same for both secure & insecure
-	}
+// XXXX
+//	trsWR := &trsWrappedReq{
+//		orig:       tct.task.Request,        // Core request
+//		retryCount: 0,                       // Counter for CLIC()
+//		retryMax:   cpack.insecure.RetryMax, // CLIC() will need access to this
+//		                                     // same for both secure & insecure
+//	}
 
 	// Create child context with timeout and our own retry counter
 
