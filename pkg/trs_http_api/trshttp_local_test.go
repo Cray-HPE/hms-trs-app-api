@@ -1570,7 +1570,7 @@ func runTaskList(t *testing.T, tloc *TRSHTTPLocal, a testConnsArg, srv *httptest
 					t.Logf("Response headers: %s", tList[i].Request.Response.Header)
 				}
 			}
-			tList[i].ContextCancel()
+			tList[i].contextCancel()
 		}
 
 		// Wait for underlying system to perform actions on connections
