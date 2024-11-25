@@ -906,7 +906,7 @@ func testConnsWithNoHttpTxPolicy(t *testing.T, nTasks int, nIssues int) {
 
 func TestConnsWithHttpTxPolicy_PcsSmallIdle(t *testing.T) {
 
-	t.Skip()	/***************** COMMENT TO RUN TEST *****************/
+	//t.Skip()	/***************** COMMENT TO RUN TEST *****************/
 
 	nTasks              := 4
 	nIssues             := 4
@@ -919,7 +919,7 @@ func TestConnsWithHttpTxPolicy_PcsSmallIdle(t *testing.T) {
 
 func TestConnsWithHttpTxPolicy_PcsSmallModeratlyBusy(t *testing.T) {
 
-	//t.Skip()	/***************** COMMENT TO RUN TEST *****************/
+	t.Skip()	/***************** COMMENT TO RUN TEST *****************/
 
 	nTasks              := 1000
 	nIssues             := 5
