@@ -747,7 +747,7 @@ func (tloc *TRSHTTPLocal) Cancel(taskList *[]HttpTask) {
 // taskList:  Ptr to a recently launched task list.
 
 func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask) {
-	if tasklist != nil {
+	if taskList != nil {
 		for _, v := range *taskList {
 			if (v.Ignore == false) {
 				// The caller should have closed the response body, but we'll also
