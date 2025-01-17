@@ -3,8 +3,8 @@ module github.com/Cray-HPE/hms-trs-app-api/v3
 go 1.23
 
 require (
-	github.com/Cray-HPE/hms-base/v2 v2.1.1-0.20250115145051-38c3b67dad0b
-	github.com/Cray-HPE/hms-trs-kafkalib/v2 v2.0.2-0.20250115152934-9169af0750a9
+	github.com/Cray-HPE/hms-base/v2 v2.2.0
+	github.com/Cray-HPE/hms-trs-kafkalib/v2 v2.0.2
 	github.com/confluentinc/confluent-kafka-go/v2 v2.8.0
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-retryablehttp v0.7.7

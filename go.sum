@@ -6,10 +6,10 @@ github.com/AlecAivazis/survey/v2 v2.3.7 h1:6I/u8FvytdGsgonrYsVn2t8t4QiRnh6QSTqkk
 github.com/AlecAivazis/survey/v2 v2.3.7/go.mod h1:xUTIdE4KCOIjsBAE1JYsUPoCqYdZ1reCfTwbto0Fduo=
 github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 h1:UQHMgLO+TxOElx5B5HZ4hJQsoJ/PvUvKRhJHDQXO8P8=
 github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1/go.mod h1:xomTg63KZ2rFqZQzSB4Vz2SUXa1BpHTVz9L5PTmPC4E=
-github.com/Cray-HPE/hms-base/v2 v2.1.1-0.20250115145051-38c3b67dad0b h1:hEPcKGWf5p/tpPLJxCWxAxv/EOTF2iKZJm/9jATABmk=
-github.com/Cray-HPE/hms-base/v2 v2.1.1-0.20250115145051-38c3b67dad0b/go.mod h1:ljyY+aRYOzYJsSYfo7I9umGMLmowLgTqtxbmruTlsEo=
-github.com/Cray-HPE/hms-trs-kafkalib/v2 v2.0.2-0.20250115152934-9169af0750a9 h1:Rp65hQSm4h32WgeBAoeVBsS5jWV/kwQ0IUjufIF8LZI=
-github.com/Cray-HPE/hms-trs-kafkalib/v2 v2.0.2-0.20250115152934-9169af0750a9/go.mod h1:bncdeFK0qgIxk404FcJItaEbDF9DCoHF7Lo5MM5sC+s=
+github.com/Cray-HPE/hms-base/v2 v2.2.0 h1:UIC5edpFL4kg9RrUCAZzqz7nhXyR12b4s8ks4NqdxqA=
+github.com/Cray-HPE/hms-base/v2 v2.2.0/go.mod h1:ljyY+aRYOzYJsSYfo7I9umGMLmowLgTqtxbmruTlsEo=
+github.com/Cray-HPE/hms-trs-kafkalib/v2 v2.0.2 h1:pxOp8exE/gUojwjbcpHIH+02ESfVvZNLIv+RcK/uY4Y=
+github.com/Cray-HPE/hms-trs-kafkalib/v2 v2.0.2/go.mod h1:aCPDa5X/zZZk1BgEKwtYkNslkiXsDZ94eGSbL4RGMt8=
 github.com/Masterminds/semver/v3 v3.2.1 h1:RN9w6+7QoMeJVGyfmbcgs28Br8cvmnucEXnY0rYXWg0=
 github.com/Masterminds/semver/v3 v3.2.1/go.mod h1:qvl/7zhW3nngYb5+80sSMF+FG2BjYrf8m9wsX0PNOMQ=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
