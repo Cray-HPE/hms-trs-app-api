@@ -43,6 +43,7 @@ The typical use model is:
     - `Request` – the HTTP operation to perform
     - `Timeout` – overall operation timeout
     - `CPolicy` - if any default policies are not sufficient
+    - `Ignore`  - set to true at any time to have TRS ignore this task
 
 1. Create a new task list by calling `tloc.CreateTaskArray()`.
 
