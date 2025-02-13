@@ -6,11 +6,11 @@ services to use the Task Runner Service (TRS).
 ## Overview
 
 The goal of TRS is to reduce duplication and maintenance costs by
-providing a single highly scalable http communication mechanism for
+providing a single highly scalable HTTP communication mechanism for
 all HMS services. It's an engine that performs REST-based tasks. It
 takes as input requests to perform some number of tasks. It performs
 the tasks and returns the results. Applications utilize TRS as a GO
-library.
+module.
 
 There are two modes of TRS operation:
 
@@ -20,39 +20,39 @@ There are two modes of TRS operation:
 Remote mode was created to increase scalability but has not yet been
 adopted due to its added complexity.  Unless local mode shows itself
 to be inadequate, remote mode will likely remain a dormant feature.
-Testing as shown that local mode should scale beyond 24,000 concurrent
+Testing has shown that local mode should scale beyond 24,000 concurrent
 tasks.
 
 The remainder of this top level readme will document local mode.
 
 ## Typical High Level Use Model
 
-The typical use model will be:
+The typical use model is:
 
-1. Declare an instance of `TRSHTTPLocal{}` object (we will call it `tloc`)
+1. Declare an instance of a `TRSHTTPLocal{}` object (we will call it `tloc`)
 
 1. Call `tloc.Init()` to initialize a local HTTP task system
 
 1. Create and populate a source task descriptor.  Its contents will be
-   used to populate each task in a new task list array.  Later, after
-   the task list has been created, individual tasks may be customized
-   by the caller before the task list is launched.
+   used to populate each task in the task list.  Later, after the task
+   list has been created, individual tasks may be customized by the
+   caller before the task list is launched.
 
-   Notable fields to set in the source task:
+   Notable fields to set in the source task descriptor:
 
     - `Request` – the HTTP operation to perform
     - `Timeout` – overall operation timeout
     - `CPolicy` - if any default policies are not sufficient
 
-1. Create a task list by calling `tloc.CreateTaskArray()`.
+1. Create a new task list by calling `tloc.CreateTaskArray()`.
 
 1. If desired, iterate through the task list that was created and
-   customize any individual tasks.  Sometimes HTTP requests may need
-   to be tailored to each individual task.
+   customize any individual task descriptorss.  Often HTTP requests
+   need to be tailored to each individual task.
 
-1. Launch the array of tasks by calling `tloc.Launch()`. This function
-   returns a Go channel which can be listened on for responses as each
-   task completes.
+1. Launch the task list by calling `tloc.Launch()`. This will return a
+   Go channel that can be listened on for responses as each task
+   completes.
 
 1. Wait for completion by either monitoring the Go channel returned by
    `tloc.Launch()` or make periodic calls to `tloc.Check()` to check on
@@ -79,20 +79,18 @@ import (
 var hostnames := []string	// assumed to be populated
 
 func main() {
-	logger := logrus.New()
-
 	// Initialize a task system
 
 	var tloc trsapi.TRSHTTPLocal
 
-	tloc.Init("sampleApp", logger)
+	tloc.Init("sampleApp", logrus.New())
 
 	// Populate a source task descriptor
 
 	var source trsapi.HttpTask
 
-	source.Timeout = 10 * time.Second  // each task limited to 10 seconds to complete
-	source.RetryPolicy.Retries = 5     //max 5 retries on failure
+	source.Timeout = 10 * time.Second  // limit task completion to 10 seconds
+	source.RetryPolicy.Retries = 5     // max 5 retries on failure
 
 	// Create a task list with 100 tasks
 
@@ -109,7 +107,7 @@ func main() {
 
 	rchan,_ := tloc.Launch(&taskList)
 
-	// Wait for completion of the task list
+	// Wait for completion of all tasks
 
 	nDone := 0
 
@@ -128,7 +126,7 @@ func main() {
 	close(rchan)
 
 	// Create and launch additional task lists if desired.  When no
-	// more work to do, cleanup the local HTTP task system
+	// more work is left to do, cleanup the local HTTP task system
 
 	tloc.Cleanup()
 }
