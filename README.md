@@ -29,98 +29,114 @@ The remainder of this top level readme will document local mode.
 
 The typical use model will be:
 
-1. Declare an instance of `TRSHTTPLocal{}` object (we will call it `obj`)
+1. Declare an instance of `TRSHTTPLocal{}` object (we will call it `tloc`)
 
-1. Call `obj.Init()` to initialize a local HTTP task system
+1. Call `tloc.Init()` to initialize a local HTTP task system
 
-1. Create a task list by calling `obj.CreateTaskArray()`.  Prior to
-   calling this library function, create a source task descriptor and
-   populate its fields appropriately.  Its contents will be used to
-   populate each task in the new task list array.  After the task list
-   has been created, each entry may then be customized by the caller.
+1. Create and populate a source task descriptor.  Its contents will be
+   used to populate each task in a new task list array.  Later, after
+   the task list has been created, individual tasks may be customized
+   by the caller before the task list is launched.
 
-   Notable fields to set before calling `obj.CreateTaskArray()`:
+   Notable fields to set in the source task:
 
-    - `ServiceName` – the name of your service
     - `Request` – the HTTP operation to perform
     - `Timeout` – overall operation timeout
     - `CPolicy` - if any default policies are not sufficient
-    - `forceInsecure` - if insecure communication required
 
-1. If desired, iterate through the returned task list and customize
-   any individual tasks necessary.  Sometimes HTTP requests may need
+1. Create a task list by calling `tloc.CreateTaskArray()`.
+
+1. If desired, iterate through the task list that was created and
+   customize any individual tasks.  Sometimes HTTP requests may need
    to be tailored to each individual task.
 
-1. Launch the array of tasks by calling `obj.Launch()`. This function
+1. Launch the array of tasks by calling `tloc.Launch()`. This function
    returns a Go channel which can be listened on for responses as each
    task completes.
 
 1. Wait for completion by either monitoring the Go channel returned by
-   `obj.Launch()` or make periodic calls to `obj.Check()` to check on
+   `tloc.Launch()` or make periodic calls to `tloc.Check()` to check on
    the status of the task array.
 
-1. When the tasks are all finished, call `obj.Close()` and immediately
-   afterwards close the Go channel that was returned by `obj.Launch()`.
+1. When the tasks are all finished, call `tloc.Close()` and immediately
+   afterwards close the Go channel that was returned by `tloc.Launch()`.
 
 1. Additional task lists may be created and launched.
 
 1. When no futher task lists need to be created and launched, clean up
-   the local HTTP task system by calling `obj.Cleanup()`.
+   the local HTTP task system by calling `tloc.Cleanup()`.
 
 ## Sample Application
 
-Following is a very rough pseudo-go coded example of the scenarios listed above.
-
-**Parallel GET operations returning data**
+The following is a very rough pseudo-go coded example of the high level
+use model listed above.
 
 ```Go
-...
-var source trsapi.HttpTask
-var tloc trsapi.TRSHTTPLocal
-logger *logrus.Logger
+import (
+	trsapi "github.com/Cray-HPE/hms-trs-app-api/v3/pkg/trs_http_api"
+)
 
-logger = logrus.New()
-logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true,})
-logger.SetFormatter(&logrus.TextFormatter{FullTimestamp: true,})
-tloc.Init(myServiceName, logger)
+var hostnames := []string	// assumed to be populated
 
-source.Request = http.NewRequest("GET","http://www.example.com",nil)
-source.Timeout = 10 * time.Second  // each task should take no more than 10 seconds to complete
-source.RetryPolicy.Retries = 5     //max 5 retries on failure
-source.RetryPolicy.BackoffTimeout = 6 * time.Second //max back-off for retries
+func main() {
+	logger := logrus.New()
 
-taskArray := tloc.CreateTaskList(&source,100)  //create set of 100 HTTP tasks
+	// Initialize a task system
 
-// Set information specific to each task in the set
+	var tloc trsapi.TRSHTTPLocal
 
-for ii,_:= range(taskArray) {
-    taskArray[ii].Request.URL,_ = neturl.Parse(targetURL)  //target URL
+	tloc.Init("sampleApp", logger)
+
+	// Populate a source task descriptor
+
+	var source trsapi.HttpTask
+
+	source.Timeout = 10 * time.Second  // each task limited to 10 seconds to complete
+	source.RetryPolicy.Retries = 5     //max 5 retries on failure
+
+	// Create a task list with 100 tasks
+
+	taskList := tloc.CreateTaskList(&source, 100)
+
+	// Set information specific to each task in the list
+
+	for i,_ := range(taskList) {
+		url = "https://" + hostnames[i] + "/status"
+		taskList[ii].Request = http.NewRequest("GET", url, nil)
+	}
+
+	// Launch the task list
+
+	rchan,_ := tloc.Launch(&taskList)
+
+	// Wait for completion of the task list
+
+	nDone := 0
+
+	for {
+		tdone := <-rchan
+		log.Printf("Task complete, URL: %s, return data: '%s'\n", tdone.URL, string(tdone.Response.Payload))
+		nDone++
+		if (nDone == len(taskList)) {
+			break
+		}
+	}
+
+	// Close the task list and task channel
+
+	tloc.Close(&taskList)
+	close(rchan)
+
+	// Create and launch additional task lists if desired.  When no
+	// more work to do, cleanup the local HTTP task system
+
+	tloc.Cleanup()
 }
-
-rchan,err := tloc.Launch(&taskArray)   //execute tasks
-if (err != nil) {
-    //lib func failed for some reason
-}
-
-// Monitor the chan for responses
-
-nDone := 0
-
-for {
-    tdone := <-rchan
-    log.Printf("Task complete, URL: %s, return data: '%s'\n",tdone.URL,string(tdone.Response.Payload))
-    nDone ++
-    if (nDone == len(taskArray)) {
-               break
-        }
-}
-
-log.Printf("DONE!\n")
 ```
 
 ## API Reference
 
-### type TrsAPI Interface
+### TrsAPI Interface
 
 ```Go
 type TrsAPI interface {
@@ -136,7 +152,7 @@ type TrsAPI interface {
 }
 ```
 
-### func Init()
+### Init()
 
 ```Go
 // Initialize the local HTTP task system.
@@ -149,7 +165,7 @@ type TrsAPI interface {
 func (tloc *TRSHTTPLocal) Init(serviceName string, logger *logrus.Logger) error
 ```
 
-### func SetSecurity()
+### SetSecurity()
 
 ```Go
 type TRSHTTPLocalSecurity struct {
@@ -165,7 +181,7 @@ type TRSHTTPLocalSecurity struct {
 // target system. The CA cert bundle is required.  The client cert/key data
 // is optional.
 //
-// inParams: Ptr to a TRSHTTPLocalSecurity struct containing the CA cert
+// inParams: Pointer to a TRSHTTPLocalSecurity struct containing the CA cert
 //           bundle and optional client cert/key data.
 //
 // Return:   Nil on success; error string on failure
@@ -173,7 +189,7 @@ type TRSHTTPLocalSecurity struct {
 func (tloc *TRSHTTPLocal) SetSecurity(inParams interface{}) error {
 ```
 
-### func CreateTaskList()
+### CreateTaskList()
 
 ```Go
 type RetryPolicy struct {
@@ -204,7 +220,7 @@ type ClientPolicy struct {
 ```Go
 type HttpTask struct {
 	id            uuid.UUID          // message id
-	ServiceName   string             // name of the service
+	ServiceName   string             // name of the service (defaults to TRSHTTPLocal.svcName)
 	Request       *http.Request      // the http request
 	TimeStamp     string             // time the request was created/sent RFC3339Nano
 	Err           *error             // any error associated with the request
@@ -237,7 +253,7 @@ type HttpTask struct {
 func (tloc *TRSHTTPLocal) CreateTaskList(source *HttpTask, numTasks int) []HttpTask
 ```
 
-### func Launch()
+### Launch()
 
 ```Go
 // Launch an array of tasks.  This is non-blocking.  The caller can use
@@ -245,7 +261,7 @@ func (tloc *TRSHTTPLocal) CreateTaskList(source *HttpTask, numTasks int) []HttpT
 // caller should close all HTTP response bodies after they are received and
 // processed and close the returned Go channel when done.
 //
-// taskList:  Ptr to a list of HTTP tasks to launch
+// taskList:  Pointer to a list of HTTP tasks to launch
 //
 // Return:
 //
@@ -258,7 +274,7 @@ func (tloc *TRSHTTPLocal) CreateTaskList(source *HttpTask, numTasks int) []HttpT
 func (tloc *TRSHTTPLocal) Launch(taskList *[]HttpTask) (chan *HttpTask, error)
 ```
 
-### func Check()
+### Check()
 
 ```Go
 // Check the status of the launched task list.  This is an alternative to
@@ -274,7 +290,7 @@ func (tloc *TRSHTTPLocal) Launch(taskList *[]HttpTask) (chan *HttpTask, error)
 func (tloc *TRSHTTPLocal) Check(taskList *[]HttpTask) (bool, error)
 ```
 
-### func Cancel()
+### Cancel()
 
 ```Go
 // Cancel a currently-running task set.  Note that this won't kill
@@ -288,7 +304,7 @@ func (tloc *TRSHTTPLocal) Check(taskList *[]HttpTask) (bool, error)
 func (tloc *TRSHTTPLocal) Cancel(taskList *[]HttpTask)
 ```
 
-### func Close()
+### Close()
 
 ```Go
 // Close out a task list transaction.  This frees up resources so it
@@ -299,7 +315,7 @@ func (tloc *TRSHTTPLocal) Cancel(taskList *[]HttpTask)
 func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask)
 ```
 
-### func Alive()
+### Alive()
 
 ```Go
 // Check the health of the local HTTP task launch system.
@@ -312,7 +328,7 @@ func (tloc *TRSHTTPLocal) Close(taskList *[]HttpTask)
 func (tloc *TRSHTTPLocal) Alive()
 ```
 
-### func Cleanup()
+### Cleanup()
 
 ```Go
 // Clean up a local HTTP task system.  This is called when after it will no

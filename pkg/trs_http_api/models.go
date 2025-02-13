@@ -95,7 +95,7 @@ type ClientPolicy struct {
 
 type HttpTask struct {
 	id            uuid.UUID          // message id
-	ServiceName   string             // name of the service
+	ServiceName   string             // name of the service (defaults to TRSHTTPLocal.svcName)
 	Request       *http.Request      // the http request
 	TimeStamp     string             // time the request was created/sent RFC3339Nano
 	Err           *error             // any error associated with the request

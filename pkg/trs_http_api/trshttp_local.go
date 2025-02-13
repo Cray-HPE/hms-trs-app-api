@@ -90,7 +90,7 @@ func (tloc *TRSHTTPLocal) Init(serviceName string, logger *logrus.Logger) error 
 // target system. The CA cert bundle is required.  The client cert/key data
 // is optional.
 //
-// inParams: Ptr to a TRSHTTPLocalSecurity struct containing the CA cert
+// inParams: Pointer to a TRSHTTPLocalSecurity struct containing the CA cert
 //           bundle and optional client cert/key data.
 //
 // Return:   Nil on success; error string on failure
@@ -650,7 +650,7 @@ func ExecuteTask(tloc *TRSHTTPLocal, tct taskChannelTuple) {
 // caller should close all HTTP response bodies after they are received and
 // processed and close the returned Go channel when done.
 //
-// taskList:  Ptr to a list of HTTP tasks to launch
+// taskList:  Pointer to a list of HTTP tasks to launch
 //
 // Return:
 //
