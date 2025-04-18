@@ -4,7 +4,7 @@ github.com/Cray-HPE/hms-base/v2
 # github.com/Cray-HPE/hms-trs-kafkalib/v2 v2.0.2
 ## explicit; go 1.23
 github.com/Cray-HPE/hms-trs-kafkalib/v2/pkg/trs-kafkalib
-# github.com/confluentinc/confluent-kafka-go/v2 v2.8.0
+# github.com/confluentinc/confluent-kafka-go/v2 v2.10.0
 ## explicit; go 1.21
 github.com/confluentinc/confluent-kafka-go/v2/kafka
 github.com/confluentinc/confluent-kafka-go/v2/kafka/librdkafka_vendor
