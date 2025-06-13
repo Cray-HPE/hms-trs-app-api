@@ -1,6 +1,6 @@
 // MIT License
 //
-// (C) Copyright [2021,2024] Hewlett Packard Enterprise Development LP
+// (C) Copyright [2021,2024-2025] Hewlett Packard Enterprise Development LP
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -294,20 +294,26 @@ func stallHandler(w http.ResponseWriter, req *http.Request) {
 
 
 func TestLaunch(t *testing.T) {
-	testLaunch(t, 5, false, false)
+	testLaunch(t, 5, false, false, 8)
 }
 
 func TestSecureLaunch(t *testing.T) {
-	testLaunch(t, 1, true, false)
+	testLaunch(t, 1, true, false, 8)
 }
 
 func TestSecureLaunchBadCert(t *testing.T) {
 	// Despite cert being bad, TRS should retry using the insecure
 	// client and succeed
-	testLaunch(t, 1, true, true)
+	testLaunch(t, 1, true, true, 8)
 }
 
-func testLaunch(t *testing.T, numTasks int, testSecureLaunch bool, useBadCert bool) {
+func TestLaunchZeroTimeout(t *testing.T) {
+	// Passing zero should cause a non-zero default timout to be applied.
+	// If not, and zero is used for the timeout, the test will fail.
+	testLaunch(t, 5, false, false, 0)
+}
+
+func testLaunch(t *testing.T, numTasks int, testSecureLaunch bool, useBadCert bool, timeout time.Duration) {
 	tloc := &TRSHTTPLocal{}
 	tloc.Init(svcName, createLogger())
 
@@ -337,7 +343,7 @@ func testLaunch(t *testing.T, numTasks int, testSecureLaunch bool, useBadCert bo
 	handlerLogger = t
 
 	req,_ := http.NewRequest("GET",srv.URL,nil)
-	tproto := HttpTask{Request: req, Timeout: 8*time.Second,}
+	tproto := HttpTask{Request: req, Timeout: timeout * time.Second,}
 	tList := tloc.CreateTaskList(&tproto, numTasks)
 
 	tch,err := tloc.Launch(&tList)

@@ -220,7 +220,7 @@ type ClientPolicy struct {
 type HttpTask struct {
 	id            uuid.UUID          // message id
 	ServiceName   string             // name of the service (defaults to TRSHTTPLocal.svcName)
-	Request       *http.Request      // the http request
+	Request       *http.Request      // the http request (default is 30 seconds)
 	TimeStamp     string             // time the request was created/sent RFC3339Nano
 	Err           *error             // any error associated with the request
 	Timeout       time.Duration      // task's context timeout
